@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#ffffff">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://vmgas.vercel.app/">
+<meta property="og:title" content="VM Gsd">
+<meta property="og:description" content="Registro de Planta de Gas VM">
+<meta property="og:image" content="https://vmgas.vercel.app/icon.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://vmgas.vercel.app/icon.jpg">
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inicio de Sesión</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { 
+      /* Variables del tema Dark Glass (Por defecto) */
+      --glass: rgba(0, 0, 0, 0.5);
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --input-bg: rgba(0, 0, 0, 0.4);
+      --text-primary: #ffffff;
+      --accent: #FFD700;       
+      --error: #ff5e5e;        
+      --success: #00C851;      
+      --bg-color: #0d031a;
+      --bg-grad-1: #1e053a;
+      --bg-grad-2: #310d5e;
+      --bg-grad-3: #0d031a;
+      --bg-grad-4: #214d7a;
+      --btn-hover-text: #000000;
+    }
+
+    /* Variables del tema Light Glass */
+    body.light-mode {
+      --glass: rgba(255, 255, 255, 0.65);
+      --glass-border: rgba(0, 0, 0, 0.15);
+      --input-bg: rgba(255, 255, 255, 0.5);
+      --text-primary: #1a1a1a;
+      --accent: #d97706; 
+      --bg-color: #f8fafc;
+      --bg-grad-1: #e9d5ff;
+      --bg-grad-2: #bfdbfe;
+      --bg-grad-3: #fbcfe8;
+      --bg-grad-4: #bae6fd;
+      --btn-hover-text: #ffffff;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      font-family: 'Inter', sans-serif;
+      color: var(--text-primary);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      
+      background: radial-gradient(at 0% 0%, var(--bg-grad-1) 0%, transparent 50%),
+                  radial-gradient(at 100% 0%, var(--bg-grad-2) 0%, transparent 50%),
+                  radial-gradient(at 100% 100%, var(--bg-grad-3) 0%, transparent 50%),
+                  radial-gradient(at 0% 100%, var(--bg-grad-4) 0%, transparent 50%);
+      background-color: var(--bg-color); 
+      background-attachment: fixed;
+      transition: background 0.5s ease, color 0.5s ease;
+    }
+
+    .theme-toggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      color: var(--text-primary);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 22px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+    .theme-toggle:hover {
+      transform: scale(1.1);
+      border-color: var(--accent);
+    }
+
+    .login-box {
+      background: var(--glass);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      
+      padding: 40px 30px;
+      border-radius: 30px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-box:hover {
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+    body.light-mode .login-box:hover {
+      border-color: rgba(0, 0, 0, 0.25);
+    }
+
+    .login-logo { 
+      width: 80px; 
+      height: 80px; 
+      margin: 0 auto 20px; 
+      display: block; 
+      border-radius: 20px; 
+      object-fit: cover; 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .login-title { 
+      color: var(--accent); 
+      margin-bottom: 30px; 
+      font-size: 26px; 
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .input-field { 
+      width: 100%; 
+      height: 50px; 
+      padding: 0 15px; 
+      margin: 10px 0; 
+      background: var(--input-bg);
+      border: 1px solid var(--glass-border);
+      color: var(--text-primary);
+      border-radius: 12px;
+      font-size: 16px; 
+      font-family: 'Inter', sans-serif;
+      box-sizing: border-box; 
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    .input-field::placeholder { color: rgba(255, 255, 255, 0.4); }
+    body.light-mode .input-field::placeholder { color: rgba(0, 0, 0, 0.4); }
+    .input-field:focus { border-color: var(--accent); background: var(--glass); }
+
+    .password-container { position: relative; width: 100%; }
+
+    .toggle-password { 
+      position: absolute; 
+      right: 15px; 
+      top: 50%; 
+      transform: translateY(-50%); 
+      cursor: pointer; 
+      user-select: none; 
+      font-size: 18px; 
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    .toggle-password:hover { opacity: 1; }
+    body.light-mode .toggle-password { filter: invert(1); opacity: 0.5; }
+    body.light-mode .toggle-password:hover { opacity: 0.9; }
+
+    .login-btn { 
+      width: 100%; 
+      height: 50px; 
+      margin-top: 20px;
+      background: rgba(128, 128, 128, 0.1);
+      border: 1px solid var(--glass-border);
+      color: var(--text-primary);
+      font-size: 16px; 
+      font-weight: 700; 
+      letter-spacing: 1px;
+      cursor: pointer; 
+      border-radius: 12px;
+      transition: all 0.3s ease;
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+    }
+
+    .login-btn:hover { 
+      background: var(--accent); 
+      color: var(--btn-hover-text); 
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      border-color: var(--accent);
+    }
+    .login-btn:disabled { opacity: 0.5; transform: none; cursor: not-allowed; box-shadow: none; }
+
+    #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+    .toast { padding: 15px 20px; border-radius: 12px; color: #fff; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); opacity: 0; transform: translateY(20px); transition: all 0.3s ease; font-size: 14px; letter-spacing: 0.5px;}
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { background: rgba(255, 94, 94, 0.95); backdrop-filter: blur(10px); }
+    .toast.success { background: rgba(0, 200, 81, 0.95); backdrop-filter: blur(10px); }
+    .toast.info { background: rgba(255, 215, 0, 0.95); color: #000; backdrop-filter: blur(10px); }
+
+    .loading-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(13, 3, 26, 0.85); z-index: 100; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; 
+      opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease;
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    }
+    body.light-mode .loading-overlay { background: rgba(255, 255, 255, 0.85); }
+    .loading-overlay.active { opacity: 1; visibility: visible; }
+    
+    .spinner {
+      width: 55px; height: 55px; border: 4px solid rgba(128, 128, 128, 0.2);
+      border-left-color: var(--accent); border-radius: 50%;
+      animation: spin 1s linear infinite, pulseGlow 2s ease-in-out infinite;
+      margin-bottom: 20px; transition: all 0.3s ease;
+    }
+    .spinner.success-mode { border-left-color: var(--success); }
+    
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes pulseGlow { 0% { box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); } 50% { box-shadow: 0 0 20px rgba(0, 0, 0, 0.2); } 100% { box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); } }
+
+    .loading-text { color: var(--accent); font-size: 15px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; transition: color 0.3s; }
+    .loading-text.success-mode { color: var(--success); }
+
+  </style>
+</head>
+<body>
+  <script>
+    if(localStorage.getItem('vm_theme') !== 'dark') {
+      document.body.classList.add('light-mode');
+      localStorage.setItem('vm_theme', 'light');
+    }
+  </script>
+  <button class="theme-toggle" onclick="toggleTheme()" id="btnTheme">🌙</button>
+
+  <div id="toast-container"></div>
+
+  <div class="login-box">
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="spinner" id="loaderSpinner"></div>
+      <div class="loading-text" id="loaderText">VALIDANDO...</div>
+    </div>
+
+    <img src="icon.png" alt="Logo de la empresa" class="login-logo">
+    <h1 class="login-title">Inicio de Sesión</h1>
+
+    <input type="text" id="username" class="input-field" placeholder="Usuario" required
+           onkeydown="if(event.key === 'Enter') document.getElementById('password').focus()">
+
+    <div class="password-container">
+      <input type="password" id="password" class="input-field" placeholder="Contraseña" required
+             onkeydown="if(event.key === 'Enter') window.login()">
+      <span class="toggle-password" onclick="togglePassword()">👁️</span>
+    </div>
+
+    <button class="login-btn" onclick="window.login()">INGRESAR</button>
+  </div>
+
+  <script>
+    window.togglePassword = function() {
+      const passwordField = document.getElementById("password");
+      passwordField.type = passwordField.type === "password" ? "text" : "password";
+    };
+
+    window.toggleTheme = function() {
+      const isLight = document.body.classList.toggle('light-mode');
+      const btn = document.getElementById('btnTheme');
+      if (isLight) {
+        localStorage.setItem('vm_theme', 'light');
+        btn.textContent = '☀️';
+      } else {
+        localStorage.setItem('vm_theme', 'dark');
+        btn.textContent = '🌙';
+      }
+    };
+
+    if(localStorage.getItem('vm_theme') !== 'dark') {
+       document.getElementById('btnTheme').textContent = '☀️';
+    } else {
+       document.getElementById('btnTheme').textContent = '🌙';
+    }
+
+    window.showToast = function(msg, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = msg;
+        container.appendChild(toast);
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3500);
+    };
+
+    window.toggleLoader = function(show, text = 'VALIDANDO...', isSuccess = false) {
+        const overlay = document.getElementById('loadingOverlay');
+        const loaderText = document.getElementById('loaderText');
+        const spinner = document.getElementById('loaderSpinner');
+        
+        loaderText.textContent = text;
+        
+        if (isSuccess) {
+            spinner.classList.add('success-mode');
+            loaderText.classList.add('success-mode');
+        } else {
+            spinner.classList.remove('success-mode');
+            loaderText.classList.remove('success-mode');
+        }
+
+        if (show) overlay.classList.add('active');
+        else overlay.classList.remove('active');
+    };
+
+    // --- LÓGICA DE AUTENTICACIÓN PASADA A LA API DE VERCEL ---
+    window.login = async function() {
+      const username = document.getElementById("username").value.trim().toLowerCase();
+      const password = document.getElementById("password").value.trim();
+
+      if (!username || !password) {
+        window.showToast("Usuario y contraseña son obligatorios", "error");
+        return;
+      }
+
+      const btn = document.querySelector(".login-btn");
+      btn.disabled = true;
+
+      if (!navigator.onLine) {
+         window.showToast("⛔ Necesitás internet para iniciar sesión.", "error");
+         btn.disabled = false;
+         return;
+      }
+
+      window.toggleLoader(true, "CONECTANDO...");
+
+      try {
+        // Llamamos a nuestra nueva Vercel API
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            // Guardamos todo en sessionStorage
+            sessionStorage.setItem('vm_token', data.tokenId);
+            sessionStorage.setItem('vm_usuario', data.nombre);
+            sessionStorage.setItem('vm_perms', JSON.stringify(data.permisos));
+
+            // Velocidad Bruta: Saltamos a inicio
+            const target = new URL('inicio.html', window.location.href);
+            target.searchParams.set('k', data.tokenId); 
+            window.location.replace(target.toString());
+        } else {
+            window.toggleLoader(false);
+            window.showToast(data.error || "Credenciales incorrectas", "error");
+            btn.disabled = false;
+        }
+      } catch (error) {
+        console.error("Error conectando a la API:", error);
+        window.toggleLoader(false);
+        window.showToast("Error conectando al servidor", "error");
+        btn.disabled = false;
+      }
+    };
+  </script>
+
+<div id="capaMantenimiento" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,10,16,0.98); z-index:99999; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#fff; font-family:'Syne', sans-serif;">
+  <div style="font-size:40px; margin-bottom:20px;">🛠️</div>
+  <h2 style="color:var(--accent); letter-spacing:2px;">VENTANA DE MANTENIMIENTO</h2>
+  <p style="max-width:400px; color:var(--dim); font-family:'Inter', sans-serif; margin-top:10px;">
+    Estamos procesando los cierres y auditorías del día. <br>
+    El sistema volverá a estar operativo a las <b>00:06 AM</b>.
+  </p>
+  <div style="margin-top:30px; padding:10px 20px; border:1px solid var(--border); border-radius:4px; font-size:12px; color:var(--warn);">
+    AGUARDE UN MOMENTO...
+  </div>
+</div>
+
+<script>
+  function controlPatovica() {
+    const ahora = new Date();
+    const hora = ahora.getHours();
+    const min = ahora.getMinutes();
+    const capa = document.getElementById('capaMantenimiento');
+
+    const estaEnBloqueo = (hora === 23 && min >= 45) || (hora === 0 && min <= 5);
+
+    if (estaEnBloqueo) {
+      capa.style.display = 'flex';
+      document.onkeydown = function (e) { return false; };
+    } else {
+      capa.style.display = 'none';
+      document.onkeydown = null;
+    }
+  }
+
+  controlPatovica();
+  setInterval(controlPatovica, 30000);
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js');
+    });
+  }
+</script>
+
+</body>
+</html>
