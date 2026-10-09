@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>Menú Principal</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+<style>
+  :root {
+    /* Variables del tema Dark Glass (Por defecto) */
+    --glass: rgba(0, 0, 0, 0.5);
+    --glass-hover: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --text-primary: #ffffff;
+    --text-muted: rgba(255, 255, 255, 0.6);
+    --accent: #FFD700; 
+    --badge-bg: #ff375f;
+    --badge-text: #ffffff;
+    --ok: #2dd4bf; 
+    --error: #ff5e5e;
+    --pin-bg: rgba(255, 215, 0, 0.15); 
+    --pin-border: rgba(255, 215, 0, 0.4);
+    --bg-color: #0d031a;
+    --bg-grad-1: #1e053a;
+    --bg-grad-2: #310d5e;
+    --bg-grad-3: #0d031a;
+    --bg-grad-4: #214d7a;
+    --tile-hover-border: rgba(255,255,255,0.4);
+  }
+
+  /* Variables del tema Light Glass */
+  body.light-mode {
+    --glass: rgba(255, 255, 255, 0.65);
+    --glass-hover: rgba(0, 0, 0, 0.05);
+    --glass-border: rgba(0, 0, 0, 0.15);
+    --text-primary: #1a1a1a;
+    --text-muted: rgba(0, 0, 0, 0.6);
+    --accent: #d97706; 
+    --pin-bg: rgba(217, 119, 6, 0.15);
+    --pin-border: rgba(217, 119, 6, 0.4);
+    --bg-color: #f8fafc;
+    --bg-grad-1: #e9d5ff;
+    --bg-grad-2: #bfdbfe;
+    --bg-grad-3: #fbcfe8;
+    --bg-grad-4: #bae6fd;
+    --tile-hover-border: rgba(0,0,0,0.3);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: radial-gradient(at 0% 0%, var(--bg-grad-1) 0%, transparent 50%),
+                radial-gradient(at 100% 0%, var(--bg-grad-2) 0%, transparent 50%),
+                radial-gradient(at 100% 100%, var(--bg-grad-3) 0%, transparent 50%),
+                radial-gradient(at 0% 100%, var(--bg-grad-4) 0%, transparent 50%);
+    background-color: var(--bg-color);
+    background-attachment: fixed;
+    color: var(--text-primary);
+    display: flex;
+    justify-content: center;
+    opacity: 0; 
+    transition: background 0.5s ease, color 0.5s ease, opacity 0.5s ease;
+  }
+
+  /* Botón flotante para cambiar tema */
+  .theme-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 22px;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+  }
+  .theme-toggle:hover {
+    transform: scale(1.1);
+    border-color: var(--accent);
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: 1000px; 
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    padding-top: 10px;
+  }
+  header { 
+    padding: 30px 20px 20px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+  }
+  
+  .header-info { text-align: left; }
+  .header-info h1 { margin: 0 0 8px; font-weight: 800; font-size: clamp(24px, 6vw, 32px); text-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+  .header-info .hello { font-size: 12px; color: var(--accent); font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+  .session-info {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .session-info .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .session-info .status-dot.online { background: var(--ok); }
+  .session-info .status-dot.offline { background: var(--error); }
+  
+  .pin-display {
+    display: none; 
+    background: var(--pin-bg);
+    border: 1px solid var(--pin-border);
+    color: var(--accent);
+    padding: 8px 14px;
+    border-radius: 12px;
+    font-family: monospace;
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    transition: transform 0.1s, background 0.3s;
+    text-align: center;
+  }
+  .pin-display:active { transform: scale(0.95); background: var(--glass-border); }
+  
+  .grid {
+    padding: 10px 20px 40px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 20px; 
+    width: 100%;
+  }
+  .tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-align: center;
+    text-decoration: none;
+    color: var(--text-primary);
+    background: var(--glass);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    height: 120px;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    cursor: pointer;
+    padding: 10px;
+    overflow: visible; 
+    transition: transform 0.2s ease, border-color 0.3s ease;
+  }
+  .tile::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: inherit; 
+    background: radial-gradient(
+        250px circle at var(--x, 50%) var(--y, 50%), 
+        var(--glass-border), 
+        transparent 40%
+    );
+    opacity: 0; 
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .tile:hover::before { opacity: 1; }
+  .tile:hover { border-color: var(--tile-hover-border); transform: translateY(-3px); }
+  .tile:active { transform: scale(0.96); }
+  
+  .tile-icon {
+    font-size: 34px !important;
+    color: var(--text-primary); 
+    opacity: 0.85;
+    z-index: 2;
+    transition: transform 0.3s ease, color 0.3s ease;
+  }
+  
+  .tile:hover .tile-icon { 
+    transform: scale(1.15); 
+    color: var(--accent); 
+    opacity: 1;
+  }
+  .tile.logout:hover .tile-icon {
+    color: var(--error); 
+  }
+  .tile .title { 
+      font-weight: 600; font-size: 13px; line-height: 1.2; 
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2); 
+      position: relative; z-index: 2; 
+  }
+  .tile.finance { border-color: rgba(50, 205, 50, 0.3); } 
+  .tile.audit { border-color: rgba(138, 43, 226, 0.3); }   
+  .tile.flotantes { border-color: rgba(76, 175, 80, 0.3); }
+  .tile.treeview { border-color: rgba(255, 165, 0, 0.3); } 
+  .tile.micaja { border-color: rgba(45, 212, 191, 0.4); } 
+  
+  .badge {
+    position: absolute; top: -8px; right: -8px;
+    background: var(--badge-bg); color: #ffffff; /* Fijo blanco siempre */
+    border: 2px solid rgba(255,255,255,0.2);
+    font-weight: 800; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    min-width: 28px; height: 28px; padding: 0 6px;
+    border-radius: 99px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    z-index: 100;
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    white-space: nowrap; 
+  }
+  @keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+  
+  /* --- SISTEMA DE TOASTS --- */
+  #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+  .toast { padding: 15px 20px; border-radius: 12px; color: #fff; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); opacity: 0; transform: translateY(20px); transition: all 0.3s ease; font-size: 14px; letter-spacing: 0.5px;}
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: rgba(255, 94, 94, 0.95); backdrop-filter: blur(10px); }
+  .toast.success { background: rgba(45, 212, 191, 0.95); backdrop-filter: blur(10px); }
+  .toast.info { background: rgba(255, 215, 0, 0.95); color: #000; backdrop-filter: blur(10px); }
+  .toast.warning { background: rgba(255, 165, 0, 0.95); color: #000; backdrop-filter: blur(10px); }
+  
+  /* --- ANIMACIÓN DE CARGA (OVERLAY) --- */
+  .loading-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(13, 3, 26, 0.9); z-index: 9999; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; 
+    opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+  body.light-mode .loading-overlay { background: rgba(255, 255, 255, 0.85); }
+  .loading-overlay.active { opacity: 1; visibility: visible; }
+  
+  .spinner {
+    width: 60px; height: 60px; border: 4px solid rgba(128, 128, 128, 0.2);
+    border-left-color: var(--accent); border-radius: 50%;
+    animation: spin 1s linear infinite, pulseGlow 2s ease-in-out infinite;
+    margin-bottom: 20px; transition: all 0.3s ease;
+  }
+  .spinner.success-mode { border-left-color: var(--ok); }
+  
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  @keyframes pulseGlow { 0% { box-shadow: 0 0 10px rgba(0,0,0,0.1); } 50% { box-shadow: 0 0 25px rgba(0,0,0,0.2); } 100% { box-shadow: 0 0 10px rgba(0,0,0,0.1); } }
+  .loading-text { color: var(--accent); font-size: 15px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; transition: color 0.3s; }
+  .loading-text.success-mode { color: var(--ok); }
+</style>
+</head>
+<body>
+  <script>
+    // Aplicar tema instantáneamente
+    if(localStorage.getItem('vm_theme') !== 'dark') {
+      document.body.classList.add('light-mode');
+      localStorage.setItem('vm_theme', 'light');
+    }
+  </script>
+
+  <button class="theme-toggle" onclick="window.toggleTheme()" id="btnTheme">🌙</button>
+
+  <div id="toast-container"></div>
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner" id="loaderSpinner"></div>
+    <div class="loading-text" id="loaderText">AUTENTICANDO...</div>
+  </div>
+  
+  <div class="wrap">
+    <header>
+      <div class="header-info">
+        <h1>Menú Principal</h1>
+        <p class="hello" id="hello">CARGANDO...</p>
+        <div class="session-info">
+          <span class="status-dot online" id="statusDot"></span>
+          <span id="sessionStatus">VERIFICANDO...</span>
+        </div>
+      </div>
+      
+      <div id="pinBox" class="pin-display" onclick="window.revelarPin()" title="Tocar para ver PIN">****</div>
+    </header>
+    <main class="grid" id="mainGrid" style="display:none">
+      <a class="tile" id="tileFormulario" onclick="window.navegar('index4.html')" style="display:none">
+          <span class="material-symbols-rounded tile-icon">receipt_long</span>
+          <span class="title">Formulario<br>de Venta</span>
+      </a>
+      <a class="tile micaja" id="tileMiCaja" onclick="window.navegar('micaja.html')" style="display:none">
+          <span class="material-symbols-rounded tile-icon">wallet</span>
+          <span class="title">Mi Caja</span>
+      </a>
+      
+      <a class="tile" id="tileClientes"   onclick="window.navegar('clientes.html')" style="display:none">
+          <span class="material-symbols-rounded tile-icon">group</span>
+          <span class="title">Clientes</span>
+      </a>
+      
+      <a class="tile" id="tilePrecios"    onclick="window.navegar('precios.html')"  style="display:none">
+          <span class="material-symbols-rounded tile-icon">sell</span>
+          <span class="title">Precios</span>
+      </a>
+      
+      <a class="tile" id="tileUsuarios"   onclick="window.navegar('usuarios.html')" style="display:none">
+          <span class="material-symbols-rounded tile-icon">manage_accounts</span>
+          <span class="title">Usuarios</span>
+      </a>
+      
+      <a class="tile" id="tileAlarmas"    onclick="window.navegar('alarmas.html')"  style="display:none">
+          <span class="material-symbols-rounded tile-icon">notifications_active</span>
+          <span class="title">Alarmas</span>
+          <span class="badge" id="alarmBadge" style="display:none"></span>
+      </a>
+      
+      <a class="tile" id="tileTablero"    onclick="window.navegar('tablero.html')" style="display:none">
+          <span class="material-symbols-rounded tile-icon">dashboard</span>
+          <span class="title">Tablero</span>
+      </a>
+      
+      <a class="tile" id="tileStock"      onclick="window.navegar('controlstock.html')" style="display:none">
+          <span class="material-symbols-rounded tile-icon">inventory_2</span>
+          <span class="title">Control<br>Stock</span>
+      </a>
+      
+      <a class="tile" id="tileCarga"      onclick="window.navegar('controlcarga.html')" style="display:none">
+          <span class="material-symbols-rounded tile-icon">local_shipping</span>
+          <span class="title">Control<br>Carga</span>
+      </a>
+      
+      <a class="tile finance" id="tileFinanzas"   onclick="window.navegar('administrativo.html')" style="display:none">
+          <span class="material-symbols-rounded tile-icon">account_balance_wallet</span>
+          <span class="title">Administrativo</span>
+      </a>
+      
+      <a class="tile audit" id="tileConFinanzas" onclick="window.navegar('controlfinanzas.html')" style="display:none">
+          <span class="material-symbols-rounded tile-icon">query_stats</span>
+          <span class="title">Control<br>Finanzas</span>
+      </a>
+      <a class="tile treeview" id="tileTreeView" onclick="window.navegar('treeview.html')" style="display:none">
+          <span class="material-symbols-rounded tile-icon">account_tree</span>
+          <span class="title">Control<br>Movimientos</span>
+      </a>
+      <a class="tile flotantes" id="tileFlotantes" onclick="window.navegar('index_recepcion.html')" style="display:none">
+          <span class="material-symbols-rounded tile-icon">move_to_inbox</span>
+          <span class="title">Recepción<br>Flotantes</span>
+      </a>
+      <a class="tile logout" onclick="window.logout()" style="border-color: rgba(255,55,95,0.3);">
+          <span class="material-symbols-rounded tile-icon">logout</span>
+          <span class="title" style="color:#ff375f">Cerrar Sesión</span>
+      </a>
+    </main>
+  </div>
+
+<script type="module">
+// ================= IMPORTACIONES FIREBASE =================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getFirestore, doc, getDoc, collection, query, where, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
+    authDomain: "vmgaslr.firebaseapp.com",
+    projectId: "vmgaslr",
+    storageBucket: "vmgaslr.firebasestorage.app",
+    messagingSenderId: "75859850089",
+    appId: "1:75859850089:web:fc551c770bbf4ae25803f8",
+    measurementId: "G-RJCWWBMBFF"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ================= CONFIGURACIÓN Y TIMEOUT =================
+const TIMEOUT_SESION_INACTIVIDAD = 14400000;  // 4 horas máximo de inactividad física
+
+// ================= SEGURIDAD DE ARRANQUE =================
+const params = new URLSearchParams(window.location.search);
+window.k = params.get('k') || sessionStorage.getItem('vm_token');
+
+// Limpieza ninja de URL
+if (window.history.replaceState) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+// ================= FUNCIONES VISUALES GLOBALES =================
+window.showToast = function(msg, type = 'info') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3500);
+};
+
+window.toggleLoader = function(show, text = 'CARGANDO...', isSuccess = false) {
+    const overlay = document.getElementById('loadingOverlay');
+    const loaderText = document.getElementById('loaderText');
+    const spinner = document.getElementById('loaderSpinner');
+    
+    loaderText.textContent = text;
+    if (isSuccess) {
+        spinner.classList.add('success-mode'); loaderText.classList.add('success-mode');
+    } else {
+        spinner.classList.remove('success-mode'); loaderText.classList.remove('success-mode');
+    }
+    if (show) overlay.classList.add('active'); else overlay.classList.remove('active');
+};
+
+window.toggleTheme = function() {
+    const isLight = document.body.classList.toggle('light-mode');
+    const btn = document.getElementById('btnTheme');
+    if (isLight) {
+        localStorage.setItem('vm_theme', 'light');
+        btn.textContent = '☀️';
+    } else {
+        localStorage.setItem('vm_theme', 'dark');
+        btn.textContent = '🌙';
+    }
+};
+
+// Ajuste del icono inicial
+if(localStorage.getItem('vm_theme') !== 'dark') {
+    document.getElementById('btnTheme').textContent = '☀️';
+} else {
+    document.getElementById('btnTheme').textContent = '🌙';
+}
+
+window.expulsar = function() {
+    sessionStorage.clear();
+    window.location.replace('index.html');
+};
+
+window.logout = function() { 
+    window.toggleLoader(true, "CERRANDO SESIÓN...");
+    SessionManager.logout();
+};
+
+window.navegar = function(pagina) {
+    if(!window.k) return;
+    window.toggleLoader(true, "CARGANDO MÓDULO...");
+    window.location.replace(`${pagina}?k=${window.k}`);
+};
+
+// ================= SISTEMA DE SESIÓN (SOLO ONLINE) =================
+const SessionManager = {
+    sessionStartTime: null,
+    lastActivityTime: null,
+    
+    init() {
+        this.sessionStartTime = Date.now();
+        this.lastActivityTime = Date.now();
+        
+        // Caza la inactividad del mouse, tacto, etc.
+        ['mousemove', 'mousedown', 'touchstart', 'click', 'keydown', 'scroll'].forEach(evt => 
+            window.addEventListener(evt, () => this.recordActivity(), { passive: true })
+        );
+        
+        window.addEventListener('offline', () => window.showToast('📴 Se cortó internet. Recuperando...', 'warning'));
+        window.addEventListener('online', () => window.showToast('🔗 Conexión restaurada', 'success'));
+        
+        this.startWatchdog();
+        this.updateStatus();
+    },
+    
+    recordActivity() {
+        this.lastActivityTime = Date.now();
+    },
+    
+    startWatchdog() {
+        setInterval(() => {
+            const timeSinceActivity = Date.now() - this.lastActivityTime;
+            if (timeSinceActivity > TIMEOUT_SESION_INACTIVIDAD) {
+                window.showToast(`⏱️ Sesión expirada por inactividad.`, 'error');
+                this.logout();
+            }
+        }, 60000); 
+    },
+    
+    updateStatus() {
+        const text = document.getElementById('sessionStatus');
+        const horasDesdeInicio = Math.floor((Date.now() - this.sessionStartTime) / 3600000);
+        const minDesdeActividad = Math.floor((Date.now() - this.lastActivityTime) / 60000);
+        
+        text.textContent = `ONLINE • ${horasDesdeInicio}h activa • Inactividad: ${minDesdeActividad}m`;
+        setTimeout(() => this.updateStatus(), 30000);
+    },
+    
+    logout() {
+        window.expulsar();
+    }
+};
+
+// ================= LÓGICA PRINCIPAL CON FIREBASE =================
+let pinReal = null;
+
+async function iniciarSesion() {
+    if (!window.k) return window.expulsar();
+    
+    if (!navigator.onLine) {
+        window.showToast("⛔ Sin internet. La aplicación debe operar online.", "error");
+        setTimeout(() => window.expulsar(), 2000);
+        return;
+    }
+
+    try {
+        document.body.style.opacity = 1;
+        window.toggleLoader(true, "VERIFICANDO CREDENCIALES...");
+        
+        // 1. Buscamos el token en Firebase
+        const tokenRef = doc(db, "tokens", window.k);
+        const tokenSnap = await getDoc(tokenRef);
+
+        if (!tokenSnap.exists()) {
+            throw new Error("Token inválido o expirado");
+        }
+
+        const tokenData = tokenSnap.data();
+        const ahora = Date.now();
+
+        // 2. EL PATOVICA DEL TIEMPO (Control de expiración absoluto)
+        if (tokenData.expira && ahora > tokenData.expira) {
+            window.showToast("⏱️ El token ha vencido.", "error");
+            setTimeout(() => window.expulsar(), 1500);
+            return;
+        }
+
+        // 3. LA BOMBA DE TIEMPO (Si se vence mientras está con la pantalla abierta)
+        if (tokenData.expira) {
+            const tiempoRestante = tokenData.expira - ahora;
+            setTimeout(() => {
+                window.showToast("⏳ Sesión expirada por límite de tiempo.", "error");
+                window.expulsar();
+            }, Math.max(0, tiempoRestante));
+        }
+
+        const username = tokenData.usuario;
+
+        // 4. Traemos los permisos del usuario de Firebase
+        const userRef = doc(db, "usuarios", username);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+            throw new Error("Usuario no encontrado");
+        }
+
+        const userData = userSnap.data();
+        
+        // Guardamos el usuario en local para que el nuevo index4 lo pueda leer sin ir a Google Sheets
+        localStorage.setItem('vm_usuario', userData.nombre_mostrar || username);
+        
+        // Mapeamos los permisos para renderizarlos
+        const permisos = {
+            formulario: userData.FORMULARIO === true || userData.FORMULARIO === "true",
+            clientes: userData.CLIENTES === true || userData.CLIENTES === "true",
+            precios: userData.PRECIOS === true || userData.PRECIOS === "true",
+            usuarios: userData.USUARIOS === true || userData.USUARIOS === "true",
+            alarmas: userData.ALARMAS === true || userData.ALARMAS === "true",
+            tablero: userData.TABLERO === true || userData.TABLERO === "true",
+            stock: userData.STOCK === true || userData.STOCK === "true",
+            carga: userData.CARGA === true || userData.CARGA === "true",
+            finanzas: userData.FINANZAS === true || userData.FINANZAS === "true",
+            confinanzas: userData.CONFINANZAS === true || userData.CONFINANZAS === "true",
+            gastos: userData.GASTOS === true || userData.GASTOS === "true",
+            pin_dinamico: userData.PIN_DINAMICO === true || userData.PIN_DINAMICO === "true",
+            flotantes: userData.FLOTANTES === true || userData.FLOTANTES === "true"
+        };
+
+        renderizarInterfaz(userData.nombre_mostrar || username, permisos);
+        
+        if (permisos.pin_dinamico) {
+            buscarPinFirebase();
+        }
+
+        SessionManager.init();
+
+    } catch (e) {
+        console.error(e);
+        window.showToast("Acceso denegado.", "error");
+        setTimeout(() => window.expulsar(), 1500);
+    }
+}
+
+async function buscarPinFirebase() {
+    try {
+        const segRef = doc(db, "seguridad", "pin");
+        const segSnap = await getDoc(segRef);
+        
+        if (segSnap.exists() && segSnap.data().dinamico) {
+            pinReal = segSnap.data().dinamico;
+            document.getElementById('pinBox').style.display = 'block';
+        }
+    } catch(e) { console.log("No se pudo obtener el PIN desde Firebase", e); }
+}
+
+window.revelarPin = function() {
+    const box = document.getElementById('pinBox');
+    if (!pinReal) return;
+    
+    if (box.textContent.includes('*')) {
+        box.textContent = pinReal;
+        box.style.borderColor = '#ffffff';
+        box.style.background = 'rgba(255, 215, 0, 0.3)';
+        
+        setTimeout(() => {
+            box.textContent = '****';
+            box.style.borderColor = 'var(--pin-border)';
+            box.style.background = 'var(--pin-bg)';
+        }, 5000);
+    } else {
+        box.textContent = '****';
+        box.style.borderColor = 'var(--pin-border)';
+        box.style.background = 'var(--pin-bg)';
+    }
+};
+
+function renderizarInterfaz(nombre, p) {
+    // Velocidad: Apagamos el loader apenas tenemos los datos listos
+    window.toggleLoader(false);
+    
+    const grid = document.getElementById('mainGrid');
+    grid.style.display = 'grid'; 
+    const h = new Date().getHours();
+    const tramo = h < 12 ? 'BUENOS DÍAS' : (h < 19 ? 'BUENAS TARDES' : 'BUENAS NOCHES');
+    document.getElementById('hello').textContent = `${tramo}, ${nombre ? nombre.toUpperCase() : 'USUARIO'}`;
+    
+    const show = (id, condition) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = condition ? 'flex' : 'none';
+    };
+    
+    // VISIBILIDAD DE LOS MÓDULOS SEGÚN PERMISOS
+    show('tileFormulario',  p.formulario !== false); 
+    show('tileMiCaja',      p.formulario !== false); 
+    show('tileClientes',    p.clientes);
+    show('tilePrecios',     p.precios);
+    show('tileUsuarios',    p.usuarios);
+    show('tileAlarmas',     p.alarmas);
+    show('tileTablero',     p.tablero);
+    show('tileStock',       p.stock);
+    show('tileCarga',       p.carga);
+    show('tileFinanzas',    p.finanzas);
+    show('tileConFinanzas', p.confinanzas);
+    show('tileTreeView',    p.gastos); 
+    show('tileFlotantes',   p.flotantes);
+    
+    initHoverEffects();
+    
+    if (p.alarmas) {
+        loadAlarmBadgeFromFirebase();
+    }
+}
+
+function initHoverEffects() {
+    const tiles = document.querySelectorAll('.tile');
+    if (window.matchMedia("(hover: hover)").matches) {
+        tiles.forEach(tile => {
+            tile.addEventListener('mousemove', (e) => {
+                const rect = tile.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                tile.style.setProperty('--x', `${x}px`);
+                tile.style.setProperty('--y', `${y}px`);
+            });
+        });
+    }
+}
+
+// Carga ultra veloz directo desde Firebase usando getCountFromServer
+async function loadAlarmBadgeFromFirebase() {
+  try {
+    const alarmasRef = collection(db, "alarmas");
+    const q = query(alarmasRef, where("pendiente", "==", true));
+    
+    const snapshot = await getCountFromServer(q);
+    const n = snapshot.data().count;
+    
+    const badge = document.getElementById('alarmBadge');
+    if (n > 0) {
+      badge.textContent = n > 99 ? '99+' : String(n);
+      badge.style.display = 'flex'; 
+    } else {
+      badge.style.display = 'none'; 
+    }
+  } catch(e) {
+      console.error("Error cargando contador de alarmas:", e);
+  }
+}
+
+// Refrescar al volver del historial del navegador
+window.addEventListener('pageshow', function(event) {
+  if (event.persisted) window.location.reload();
+});
+
+iniciarSesion();
+</script>
+</body>
+</html>
