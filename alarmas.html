@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+
+<title>Gestión de Alarmas y Pagos</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --glass: rgba(0, 0, 0, 0.5);
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --text-primary: #ffffff;
+    --text-muted: rgba(255, 255, 255, 0.6);
+    --accent: #FFD700;
+    --chip-ok: #2dd4bf;
+    --chip-bad: #f97316;
+    --btn-bg: rgba(255, 255, 255, 0.1);
+    --bg-card: #12121a;
+  }
+
+  body.light-mode {
+    --glass: rgba(255, 255, 255, 0.9);
+    --glass-border: rgba(0, 0, 0, 0.15);
+    --text-primary: #18181b;
+    --text-muted: #52525b;
+    --accent: #0284c7; 
+    --chip-ok: #059669;
+    --chip-bad: #dc2626;
+    --btn-bg: rgba(0, 0, 0, 0.05);
+    --bg-card: #ffffff;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0; 
+    font-family: 'Inter', sans-serif;
+    background: radial-gradient(at 0% 0%, #1e053a 0%, transparent 50%),
+                radial-gradient(at 100% 0%, #310d5e 0%, transparent 50%),
+                radial-gradient(at 100% 100%, #0d031a 0%, transparent 50%),
+                radial-gradient(at 0% 100%, #214d7a 0%, transparent 50%);
+    background-color: #0d031a;
+    background-attachment: fixed;
+    color: var(--text-primary);
+    min-height: 100vh;
+    opacity: 0;
+    transition: opacity 0.5s ease, background-color 0.3s ease, color 0.3s ease;
+  }
+
+  body.light-mode {
+    background: #f4f4f5;
+    background-image: none;
+  }
+
+  .top-bar { display: flex; justify-content: flex-end; padding: 15px 20px 0; max-width: 900px; margin: 0 auto; }
+  .theme-toggle { width: 36px; height: 36px; border-radius: 50%; background: var(--bg-card); border: 1px solid var(--glass-border); color: var(--text-primary); display: flex; justify-content: center; align-items: center; font-size: 18px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+  .theme-toggle:hover { transform: scale(1.1); border-color: var(--accent); }
+
+  .wrap { max-width: 900px; margin: 0 auto; padding: 10px 20px 100px; }
+  h1 { font-size: clamp(24px, 4vw, 36px); text-align: center; margin: 0 0 10px; font-weight: 800; letter-spacing: -1px; }
+  .sub { color: var(--text-muted); text-align: center; font-size: 14px; margin-bottom: 30px; }
+
+  .actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 30px; }
+  .btn { border: 1px solid var(--glass-border); border-radius: 12px; padding: 12px 20px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; background: var(--btn-bg); color: var(--text-primary); backdrop-filter: blur(5px); transition: all 0.3s ease; font-size: 13px; }
+  .btn:hover { background: var(--accent); color: #fff; transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3); }
+  body.light-mode .btn:hover { color: #fff; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3); }
+
+  .btn-highlight { border-color: var(--accent); color: var(--accent); }
+  body.light-mode .btn-highlight { background: var(--accent); color: #fff; }
+
+  .list { display: grid; grid-template-columns: 1fr; gap: 20px; }
+  @media(min-width: 768px) { .list { grid-template-columns: 1fr 1fr; } }
+
+  .item { background: var(--glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 15px; transition: transform 0.2s ease, background 0.3s ease; }
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; font-size: 13px; color: var(--text-muted); border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; margin-bottom: 5px; }
+  .card-type { font-weight: 700; color: var(--accent); text-transform: uppercase; }
+  .msg { font-size: 15px; line-height: 1.5; color: var(--text-primary); opacity: 0.9; flex-grow: 1; }
+
+  .card-footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--glass-border); }
+  .footer-left { display: flex; flex-direction: column; gap: 8px; }
+
+  .user-info { font-size: 12px; color: var(--text-muted); font-style: italic; display: flex; align-items: center; gap: 5px; }
+
+  .chip { font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 99px; text-transform: uppercase; width: fit-content; }
+  .ok { background: rgba(45, 212, 191, 0.2); color: var(--chip-ok); border: 1px solid var(--chip-ok); }
+  .bad { background: rgba(249, 115, 22, 0.2); color: var(--chip-bad); border: 1px solid var(--chip-bad); }
+
+  .state { display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; background: var(--btn-bg); padding: 5px 10px; border-radius: 8px; transition: background 0.3s; }
+  input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+  .empty { text-align: center; color: var(--text-muted); margin-top: 40px; }
+
+  /* --- BOTÓN FLOTANTE --- */
+  .fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 32px; font-weight: 300; border: none; cursor: pointer; box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4); display: flex; align-items: center; justify-content: center; z-index: 100; transition: transform 0.2s; }
+  body.light-mode .fab { box-shadow: 0 4px 20px rgba(2, 132, 199, 0.4); }
+  .fab:hover { transform: scale(1.1); }
+
+  /* --- MODALES --- */
+  .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); opacity: 0; transition: opacity 0.3s; }
+  .modal-overlay.active { display: flex; opacity: 1; }
+  .modal-content { background: var(--bg-card); border: 1px solid var(--glass-border); border-radius: 20px; padding: 25px; width: 90%; max-width: 450px; max-height: 85vh; overflow-y: auto; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.8); transition: background 0.3s; }
+
+  .btn-close { position: absolute; top: 20px; right: 20px; background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; }
+  .modal-title { font-size: 20px; font-weight: 800; color: var(--text-primary); margin-top: 0; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+
+  .form-group { margin-bottom: 15px; }
+  .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; font-weight: 600; text-transform: uppercase; }
+  .form-group input, .form-group select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--btn-bg); color: var(--text-primary); font-family: inherit; font-size: 14px; outline: none; transition: border-color 0.3s, background 0.3s; }
+  .form-group input:focus, .form-group select:focus { border-color: var(--accent); background: var(--glass); }
+  body.light-mode .form-group input, body.light-mode .form-group select { background: #f4f4f5; }
+
+  /* ESTILOS LISTA VENCIMIENTOS */
+  .pago-item { background: var(--btn-bg); padding: 15px; border-radius: 12px; margin-bottom: 10px; border-left: 4px solid var(--accent); display: flex; justify-content: space-between; align-items: center; transition: background 0.3s; }
+  .pago-item.vencido { border-left-color: var(--chip-bad); background: rgba(249, 115, 22, 0.05); }
+  .pago-info { display: flex; flex-direction: column; gap: 4px; }
+  .pago-nombre { font-weight: 700; font-size: 14px; color: var(--text-primary); }
+  .pago-cat { font-size: 10px; color: var(--accent); text-transform: uppercase; font-weight: 800; }
+  .pago-fecha { font-size: 11px; color: var(--text-muted); }
+  .pago-monto { font-family: monospace; font-size: 16px; font-weight: 800; color: var(--text-primary); }
+
+  /* --- SISTEMA DE TOASTS --- */
+  #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+  .toast { padding: 15px 20px; border-radius: 12px; color: #fff; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--glass-border); opacity: 0; transform: translateY(20px); transition: all 0.3s ease; font-size: 14px; letter-spacing: 0.5px;}
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: rgba(255, 68, 68, 0.9); backdrop-filter: blur(10px); }
+  .toast.success { background: rgba(45, 212, 191, 0.9); backdrop-filter: blur(10px); }
+
+  /* --- ANIMACIÓN DE CARGA (OVERLAY) --- */
+  .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--glass); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .loading-overlay.active { opacity: 1; visibility: visible; }
+  .spinner { width: 60px; height: 60px; border: 4px solid var(--glass-border); border-left-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite, pulseGlow 2s ease-in-out infinite; margin-bottom: 20px; transition: all 0.3s ease; }
+  .spinner.success-mode { border-left-color: var(--chip-ok); }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  @keyframes pulseGlow { 0% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.1); } 50% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.4); } 100% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.1); } }
+  body.light-mode @keyframes pulseGlow { 0% { box-shadow: 0 0 10px rgba(2, 132, 199, 0.1); } 50% { box-shadow: 0 0 25px rgba(2, 132, 199, 0.4); } 100% { box-shadow: 0 0 10px rgba(2, 132, 199, 0.1); } }
+  
+  .loading-text { color: var(--accent); font-size: 15px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; transition: color 0.3s; }
+  .loading-text.success-mode { color: var(--chip-ok); }
+</style>
+</head>
+<body>
+
+  <script>
+    if (localStorage.getItem('vm_theme') === 'light') {
+      document.body.classList.add('light-mode');
+    }
+  </script>
+
+  <div id="toast-container"></div>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner" id="loaderSpinner"></div>
+    <div class="loading-text" id="loaderText">CARGANDO...</div>
+  </div>
+
+  <div class="top-bar">
+    <button class="theme-toggle" onclick="window.toggleTheme()" id="btnTheme">🌙</button>
+  </div>
+
+  <div class="wrap">
+    <h1>GESTIÓN DE ALARMAS</h1>
+    <div class="sub" id="statusHeader">Visualizando historial...</div>
+
+    <div class="actions">
+      <button class="btn btn-highlight" onclick="window.abrirModalPagos()">📅 Ver Vencimientos</button>
+      <button class="btn" onclick="window.save()" id="btnGuardar">Guardar Cambios</button>
+      <button class="btn" onclick="window.load()" id="btnRefresh">Refrescar</button>
+      <button class="btn" id="btnBack">Volver</button>
+    </div>
+
+    <div id="list" class="list"></div>
+    <div id="empty" class="empty" style="display:none">No hay alarmas pendientes.</div>
+  </div>
+
+  <button class="fab" onclick="window.abrirModalCarga()">+</button>
+
+  <div class="modal-overlay" id="modalCarga">
+    <div class="modal-content">
+      <button class="btn-close" onclick="window.cerrarModal('modalCarga')">✖</button>
+      <h2 class="modal-title">💸 Cargar Vencimiento</h2>
+
+      <div class="form-group">
+        <label>Nombre Corto</label>
+        <input type="text" id="pagoNombre" placeholder="Ej: Luz Planta, Sueldo Chofer" required>
+      </div>
+
+      <div class="form-group">
+        <label>Detalle / Nota</label>
+        <input type="text" id="pagoDetalle" placeholder="Opcional...">
+      </div>
+
+      <div style="display:flex; gap:10px;">
+        <div class="form-group" style="flex:1">
+          <label>Fecha Vencimiento</label>
+          <input type="date" id="pagoFecha" required>
+        </div>
+        <div class="form-group" style="flex:1">
+          <label>Importe Estimado ($)</label>
+          <input type="number" id="pagoImporte" placeholder="0.00" step="0.01" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Categoría</label>
+        <input type="text" id="pagoCat" list="catList" placeholder="Elegí o escribí una nueva" required>
+        <datalist id="catList">
+          <option value="Impuestos">
+          <option value="Sueldos">
+          <option value="Proveedores">
+          <option value="Servicios Fijos">
+          <option value="Mantenimiento">
+        </datalist>
+      </div>
+
+      <div class="form-group">
+        <label>Prioridad</label>
+        <select id="pagoPrio">
+          <option value="Media">🟡 Media</option>
+          <option value="Baja">🟢 Baja</option>
+          <option value="Crítica">🔴 Crítica</option>
+        </select>
+      </div>
+
+      <button class="btn btn-highlight" style="width:100%; margin-top:10px;" onclick="window.guardarPago()">Guardar en Calendario</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalPagos">
+    <div class="modal-content">
+      <button class="btn-close" onclick="window.cerrarModal('modalPagos')">✖</button>
+      <h2 class="modal-title">🗓️ Próximos 10 Vencimientos</h2>
+
+      <div id="listaPagosContainer">
+        <div class="empty">Cargando vencimientos...</div>
+      </div>
+    </div>
+  </div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getFirestore, doc, getDoc, collection, query, orderBy, limit, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
+    authDomain: "vmgaslr.firebaseapp.com",
+    projectId: "vmgaslr",
+    storageBucket: "vmgaslr.firebasestorage.app",
+    messagingSenderId: "75859850089",
+    appId: "1:75859850089:web:fc551c770bbf4ae25803f8"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const API = "https://script.google.com/macros/s/AKfycbzi1x000HsPSQsWgz65jYWDWZI3cNQoKhoU5XCKagYcqs4en-d1YzO2sbnmzWlLIa9Vvw/exec";
+const TIMEOUT_SESION = 300000; 
+
+window.toggleTheme = function() {
+  const isLight = document.body.classList.toggle('light-mode');
+  const btn = document.getElementById('btnTheme');
+  if (isLight) {
+      localStorage.setItem('vm_theme', 'light');
+      btn.textContent = '☀️';
+  } else {
+      localStorage.setItem('vm_theme', 'dark');
+      btn.textContent = '🌙';
+  }
+};
+document.getElementById('btnTheme').textContent = document.body.classList.contains('light-mode') ? '☀️' : '🌙';
+
+function showToast(msg, type = 'info') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3500);
+}
+
+function toggleLoader(show, text = 'CARGANDO...', isSuccess = false) {
+    const overlay = document.getElementById('loadingOverlay');
+    const loaderText = document.getElementById('loaderText');
+    const spinner = document.getElementById('loaderSpinner');
+    loaderText.textContent = text;
+    if (isSuccess) { spinner.classList.add('success-mode'); loaderText.classList.add('success-mode'); } 
+    else { spinner.classList.remove('success-mode'); loaderText.classList.remove('success-mode'); }
+    if (show) overlay.classList.add('active'); else overlay.classList.remove('active');
+}
+
+window.addEventListener('pageshow', (e) => { if (e.persisted || (window.performance && window.performance.navigation.type === 2)) window.location.reload(); });
+
+const params = new URLSearchParams(window.location.search);
+let k = params.get('k') || params.get('token');
+
+if (!k) k = sessionStorage.getItem('k');
+
+function expulsar() { sessionStorage.clear(); window.location.replace('inicio.html'); }
+if (!k) { expulsar(); } 
+else { 
+    sessionStorage.setItem('k', k);
+    if (window.history.replaceState) { window.history.replaceState({}, document.title, window.location.pathname); } 
+    validarSesionFirebase(); 
+}
+
+async function validarSesionFirebase() {
+    try {
+        document.body.style.opacity = 1;
+        toggleLoader(true, "VERIFICANDO SESIÓN...");
+        
+        const docRef = doc(db, "tokens", k);
+        const docSnap = await getDoc(docRef);
+        
+        if (!docSnap.exists()) {
+            throw new Error("Sesión inválida en base de datos.");
+        }
+        
+        const tokenData = docSnap.data();
+        if (tokenData.expira && Date.now() > tokenData.expira) {
+            throw new Error("La sesión ha expirado.");
+        }
+
+        window.load(); 
+    } catch (e) { 
+        console.error(e);
+        expulsar(); 
+    }
+}
+
+let tIdle;
+function resetTimer() { clearTimeout(tIdle); tIdle = setTimeout(expulsar, TIMEOUT_SESION); }
+['click','mousemove','keydown','touchstart'].forEach(ev => document.addEventListener(ev, resetTimer));
+resetTimer();
+
+document.getElementById('btnBack').onclick = () => { window.location.replace(`inicio.html?k=${k}`); };
+
+// ==========================================
+// LÓGICA DE ALARMAS DEL SISTEMA (FIREBASE)
+// ==========================================
+let alarms = [];
+let localStates = new Map();
+
+const fmtFechaFirestore = (timestamp) => {
+  try {
+    if (timestamp && timestamp.toDate) {
+        const dt = timestamp.toDate();
+        const d = dt.toLocaleDateString('es-AR');
+        const t = dt.toTimeString().slice(0, 5);
+        return `${d} ${t}`;
+    }
+    return 'Sin fecha';
+  } catch { return 'Error de fecha'; }
+};
+
+function render(){
+  const listEl = document.getElementById('list');
+  listEl.innerHTML = '';
+  if (!alarms.length){ document.getElementById('empty').style.display='block'; return; }
+  document.getElementById('empty').style.display='none';
+
+  alarms.forEach(a=>{
+    const pending = localStates.has(a.id) ? localStates.get(a.id) : !!a.pendiente;
+    const chipText = pending ? 'Pendiente' : 'Revisado';
+    const user = (a.usuario && String(a.usuario).trim()) ? String(a.usuario).trim() : 'Sin usuario';
+
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `
+      <div class="card-header">
+        <span class="card-type">${(a.tipo||'ALERTA')}</span>
+        <span>${fmtFechaFirestore(a.fecha_hora)}</span>
+      </div>
+      <div class="msg">${a.descripcion||''}</div>
+      <div class="card-footer">
+        <div class="footer-left">
+           <div class="user-info">👤 ${user}</div>
+           <span class="chip ${pending?'bad':'ok'}" data-chip="${a.id}">${chipText}</span>
+        </div>
+        <label class="state">
+          <span>Marcar</span>
+          <input type="checkbox" ${!pending?'checked':''} data-id="${a.id}">
+        </label>
+      </div>`;
+    listEl.appendChild(div);
+  });
+
+  listEl.querySelectorAll('input[type="checkbox"]').forEach(chk=>{
+    chk.onchange = (e) => {
+      const id = e.target.dataset.id;
+      const isPending = !e.target.checked;
+      localStates.set(id, isPending);
+      
+      const chip = document.querySelector(`.chip[data-chip="${id}"]`);
+      chip.textContent = isPending ? 'Pendiente' : 'Revisado';
+      chip.className = `chip ${isPending?'bad':'ok'}`;
+    };
+  });
+}
+
+window.load = async function(){
+  try{
+    toggleLoader(true, "OBTENIENDO ALARMAS...");
+    
+    // Consultamos directo a Firestore ordenando por fecha
+    const q = query(collection(db, "alarmas"), orderBy("fecha_hora", "desc"), limit(50));
+    const querySnapshot = await getDocs(q);
+    
+    alarms = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    localStates.clear();
+    alarms.forEach(a => localStates.set(a.id, !!a.pendiente));
+    
+    render();
+    document.getElementById('statusHeader').textContent = "Últimas 50 alarmas";
+    toggleLoader(false);
+  } catch(e){ 
+      console.error(e);
+      toggleLoader(false);
+      document.getElementById('statusHeader').textContent = "Error al cargar alarmas."; 
+      showToast('Error de conexión al cargar alarmas', 'error');
+  }
+}
+
+window.save = async function(){
+  try{
+    const btn = document.getElementById('btnGuardar');
+    btn.disabled = true; 
+    toggleLoader(true, "GUARDANDO CAMBIOS...");
+
+    const batch = writeBatch(db);
+    let hayCambios = false;
+
+    // Solo mandamos al servidor las alarmas que realmente cambiaron su estado
+    localStates.forEach((isPending, id) => {
+        const original = alarms.find(x => x.id === id);
+        if (original && original.pendiente !== isPending) {
+            const ref = doc(db, "alarmas", id);
+            batch.update(ref, { pendiente: isPending });
+            hayCambios = true;
+        }
+    });
+
+    if (hayCambios) {
+        await batch.commit();
+    }
+
+    toggleLoader(true, "¡CAMBIOS GUARDADOS!", true);
+    setTimeout(() => { window.location.replace(`inicio.html?k=${k}`); }, 1000);
+  } catch(e){ 
+      console.error(e);
+      toggleLoader(false);
+      showToast("Error al guardar: " + e.message, 'error'); 
+      document.getElementById('btnGuardar').disabled = false;
+  }
+}
+
+// ==========================================
+// LÓGICA DEL CALENDARIO FINANCIERO (GAS)
+// ==========================================
+
+window.abrirModalCarga = function() {
+  document.getElementById('modalCarga').classList.add('active');
+  document.getElementById('pagoFecha').valueAsDate = new Date();
+}
+
+window.abrirModalPagos = function() {
+  document.getElementById('modalPagos').classList.add('active');
+  cargarProximosPagos();
+}
+
+window.cerrarModal = function(id) {
+  document.getElementById(id).classList.remove('active');
+}
+
+window.guardarPago = async function() {
+  const nombre = document.getElementById('pagoNombre').value.trim();
+  const fecha = document.getElementById('pagoFecha').value;
+  const importe = document.getElementById('pagoImporte').value;
+  const categoria = document.getElementById('pagoCat').value;
+
+  if(!nombre || !fecha || !importe || !categoria) {
+    showToast("Completá todos los campos obligatorios", "error");
+    return;
+  }
+
+  try {
+    toggleLoader(true, "AGREGANDO PAGO...");
+    const fd = new FormData();
+    fd.append('action', 'add_pago');
+    fd.append('k', k);
+    fd.append('nombre', nombre);
+    fd.append('detalle', document.getElementById('pagoDetalle').value.trim());
+    fd.append('fecha', fecha);
+    fd.append('importe', importe);
+    fd.append('categoria', categoria);
+    fd.append('prioridad', document.getElementById('pagoPrio').value);
+
+    const r = await fetch(API, { method: 'POST', body: fd });
+    const j = await r.json();
+
+    if(j.status === 'success') {
+      window.cerrarModal('modalCarga');
+      document.getElementById('pagoNombre').value = '';
+      document.getElementById('pagoDetalle').value = '';
+      document.getElementById('pagoImporte').value = '';
+      showToast("Vencimiento agendado con éxito", "success");
+      toggleLoader(false);
+    } else {
+      throw new Error(j.message);
+    }
+  } catch (e) {
+    toggleLoader(false);
+    showToast("Error: " + e.message, "error");
+  }
+}
+
+async function cargarProximosPagos() {
+  const container = document.getElementById('listaPagosContainer');
+  container.innerHTML = '<div class="spinner" style="margin: 20px auto; width: 30px; height: 30px; border-width:3px;"></div>';
+
+  try {
+    const fd = new FormData();
+    fd.append('action', 'get_proximos_pagos');
+    fd.append('k', k);
+
+    const r = await fetch(API, { method: 'POST', body: fd });
+    const j = await r.json();
+
+    if(j.status === 'success') {
+      if(j.payload.length === 0) {
+        container.innerHTML = '<div class="empty">Estás al día. No hay vencimientos a la vista.</div>';
+        return;
+      }
+
+      let html = '';
+      const hoy = new Date();
+      hoy.setHours(0,0,0,0);
+
+      j.payload.forEach(p => {
+        const partesF = p.fechaStr.split('/');
+        let esVencido = false;
+
+        if(partesF.length === 3) {
+           const fVenc = new Date(partesF[2], partesF[1]-1, partesF[0]);
+           if (fVenc < hoy) esVencido = true;
+        }
+
+        const claseVencido = esVencido ? 'vencido' : '';
+        const iconoPrio = p.prioridad === 'Crítica' ? '🔴' : (p.prioridad === 'Media' ? '🟡' : '🟢');
+
+        html += `
+          <div class="pago-item ${claseVencido}">
+            <div class="pago-info">
+              <span class="pago-cat">${p.categoria} | ${iconoPrio}</span>
+              <span class="pago-nombre">${p.nombre}</span>
+              <span class="pago-fecha">Vence: ${p.fechaStr} ${esVencido ? '<b>(¡VENCIDO!)</b>' : ''}</span>
+            </div>
+            <div class="pago-monto">$${Number(p.importe).toLocaleString('es-AR')}</div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    } else {
+      throw new Error(j.message);
+    }
+  } catch (e) {
+    container.innerHTML = '<div class="empty" style="color:var(--chip-bad)">Error al cargar pagos.</div>';
+    console.error(e);
+  }
+}
+</script>
+</body>
+</html>
