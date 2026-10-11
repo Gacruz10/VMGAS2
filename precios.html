@@ -252,7 +252,7 @@
           <div class="category-title" style="margin-bottom:5px;">Parámetros y Escalas Globales</div>
           <div style="text-align:center; margin-bottom:20px;">
               <span class="sub-title" style="display:inline-block; margin-right:10px;">Recargo Envase Flotante ($):</span>
-              <input type="number" id="inpFlotante" class="price-input" style="width:120px; display:inline-block;" value="0">
+              <input type="number" inputmode="numeric" pattern="[0-9]*" id="inpFlotante" class="price-input" style="width:120px; display:inline-block;" value="0">
           </div>
           
           <div class="ranges-grid">
@@ -297,7 +297,7 @@
         </div>
         <div class="form-group">
             <label>Precio ($)</label>
-            <input type="number" id="inpPrecio" class="modal-input" placeholder="0" inputmode="numeric">
+            <input type="number" inputmode="numeric" pattern="[0-9]*" id="inpPrecio" class="modal-input" placeholder="0">
         </div>
         <button class="btn btn-save btn-full" id="btnGuardarNuevo">AGREGAR (No olvides Guardar Cambios)</button>
         <button class="btn btn-full btn-close" id="btnCancelar">CANCELAR</button>
@@ -460,7 +460,7 @@ function renderUI() {
                 return `
                     <div class="item-col">
                         <span class="item-label">${label}</span>
-                        <input type="number" class="price-input idx-precio" data-id="${item.id}" value="${item.precio}" inputmode="numeric">
+                        <input type="number" inputmode="numeric" pattern="[0-9]*" class="price-input idx-precio" data-id="${item.id}" value="${item.precio}">
                     </div>`;
             }).join('');
 
@@ -513,9 +513,9 @@ function addRowRango(kilos, min, max, com) {
     const row = document.createElement('div');
     row.className = 'range-row';
     row.innerHTML = `
-        <input type="number" class="r-min" value="${min}" placeholder="Mín">
-        <input type="number" class="r-max" value="${max}" placeholder="Máx">
-        <input type="number" class="r-com" value="${com}" placeholder="Comis.">
+        <input type="number" inputmode="numeric" pattern="[0-9]*" class="r-min" value="${min}" placeholder="Mín">
+        <input type="number" inputmode="numeric" pattern="[0-9]*" class="r-max" value="${max}" placeholder="Máx">
+        <input type="number" inputmode="numeric" pattern="[0-9]*" class="r-com" value="${com}" placeholder="Comis.">
         <button class="btn-del-range" onclick="window.delRango(this)">✖</button>
     `;
     box.appendChild(row);
