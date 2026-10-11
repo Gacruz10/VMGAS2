@@ -67,13 +67,15 @@
   }
   .theme-toggle:hover { transform: scale(1.1); border-color: var(--accent); }
 
+  /* BARRA DE ACCIONES STICKY */
   .action-bar {
     position: sticky; top: 10px; z-index: 90;
     background: var(--action-bar-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
     border: 1px solid var(--accent); border-radius: 16px; padding: 12px 15px;
     display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.15); gap: 10px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.15); gap: 10px; flex-wrap: wrap;
   }
+  .action-bar-buttons { display: flex; gap: 10px; flex: 1; justify-content: flex-end; }
 
   .btn {
     border: 1px solid var(--glass-border); padding: 10px 14px; border-radius: 12px;
@@ -84,7 +86,15 @@
   .btn-add { background: transparent; color: var(--accent); border-color: var(--accent); }
   .btn-save { background: var(--accent); color: #000 !important; border: none; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3); font-weight: 800; }
 
-  /* CARDS */
+  /* COMPORTAMIENTO CELULAR - ACTION BAR */
+  @media(max-width: 550px) {
+      .action-bar { flex-direction: column; align-items: stretch; }
+      .action-bar-buttons { display: flex; width: 100%; }
+      .action-bar-buttons .btn { flex: 1; text-align: center; padding: 12px; }
+      #btnVolver { width: 100%; text-align: center; }
+  }
+
+  /* CARDS Y GRILLAS */
   .grid-cards {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; padding-bottom: 30px;
   }
@@ -115,26 +125,57 @@
   .item-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 5px; }
 
   .price-input {
-    width: 100%; background: var(--input-bg); border: 1px solid var(--glass-border);
+    width: 100%; min-width: 0; box-sizing: border-box; /* CLAVE PARA RESPONSIVE */
+    background: var(--input-bg); border: 1px solid var(--glass-border);
     border-radius: 8px; color: var(--text-primary); font-size: 14px; font-weight: 700;
-    padding: 8px 5px; outline: none; transition: all 0.3s; text-align: center;
+    padding: 8px 4px; outline: none; transition: all 0.3s; text-align: center;
   }
   .price-input:focus { border-color: var(--accent); }
   .price-input.is-modified { border-color: var(--accent); background: rgba(255, 215, 0, 0.15); color: var(--accent); }
 
-  /* ZONA PARÁMETROS Y RANGOS (NUEVO) */
+  /* ZONA PARÁMETROS Y RANGOS (REFINADA) */
   .param-zone { grid-column: 1 / -1; background: rgba(20, 10, 40, 0.8); border-color: var(--accent); }
   body.light-mode .param-zone { background: rgba(255, 245, 230, 0.9); }
   
-  .ranges-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 15px; }
-  .range-box { border: 1px dashed rgba(255,255,255,0.2); padding: 10px; border-radius: 12px; background: rgba(0,0,0,0.2); }
-  body.light-mode .range-box { border-color: rgba(0,0,0,0.1); background: rgba(255,255,255,0.5); }
-  .range-header { display: grid; grid-template-columns: 1fr 1fr 1fr 30px; gap: 5px; font-size: 10px; color: var(--text-muted); text-align: center; font-weight: bold; margin-bottom: 5px;}
-  .range-row { display: grid; grid-template-columns: 1fr 1fr 1fr 30px; gap: 5px; margin-bottom: 5px; align-items: center;}
-  .range-row input { text-align: right; padding: 6px; font-size: 12px; font-family: monospace; }
-  .btn-del-range { background: transparent; color: var(--error); border: none; font-size: 16px; cursor: pointer; padding: 0;}
+  .ranges-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-top: 15px; }
+  .range-box { border: 1px dashed rgba(255,255,255,0.2); padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); }
+  body.light-mode .range-box { border-color: rgba(0,0,0,0.15); background: rgba(255,255,255,0.4); }
+  
+  /* GRID DE RANGOS CORREGIDO */
+  .range-header { 
+      display: grid; 
+      grid-template-columns: 1fr 1fr 1fr 28px; 
+      gap: 6px; 
+      font-size: 10px; 
+      color: var(--text-muted); 
+      text-align: center; 
+      font-weight: bold; 
+      margin-bottom: 8px;
+  }
+  .range-row { 
+      display: grid; 
+      grid-template-columns: 1fr 1fr 1fr 28px; 
+      gap: 6px; 
+      margin-bottom: 8px; 
+      align-items: center;
+  }
+  .range-row input { 
+      width: 100%; min-width: 0; box-sizing: border-box; /* CLAVE PARA RESPONSIVE */
+      text-align: center; 
+      padding: 6px 2px; 
+      font-size: 12px; 
+      font-family: monospace; 
+      border-radius: 6px;
+      border: 1px solid var(--glass-border);
+      background: var(--input-bg);
+      color: var(--text-primary);
+      outline: none;
+  }
+  .range-row input:focus { border-color: var(--accent); }
+  
+  .btn-del-range { background: transparent; color: var(--error); border: none; font-size: 18px; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;}
   .btn-del-range:hover { transform: scale(1.2); }
-  .btn-add-range { width: 100%; background: rgba(255,255,255,0.05); color: var(--accent); border: 1px dashed var(--accent); padding: 6px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-top: 5px;}
+  .btn-add-range { width: 100%; background: rgba(255,255,255,0.05); color: var(--accent); border: 1px dashed var(--accent); padding: 8px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-top: 5px; text-transform: uppercase; font-weight: bold;}
 
   /* MODAL */
   .modal-overlay {
@@ -150,7 +191,7 @@
   .form-group { margin-bottom: 15px; }
   .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; font-weight: bold;}
   .modal-input {
-    width: 100%; padding: 14px; background: var(--input-bg); border: 1px solid var(--glass-border);
+    width: 100%; padding: 14px; background: var(--input-bg); border: 1px solid var(--glass-border); box-sizing: border-box;
     border-radius: 12px; color: var(--text-primary); font-size: 15px; outline: none; font-weight: 600;
   }
   .modal-input:focus { border-color: var(--accent); }
@@ -199,7 +240,7 @@
 
   <div class="action-bar">
       <button class="btn" id="btnVolver">⬅ Volver</button>
-      <div style="display:flex; gap:10px;">
+      <div class="action-bar-buttons">
           <button class="btn btn-add" id="btnNuevo">+ Nuevo Precio</button>
           <button class="btn btn-save" id="btnGuardarLote">GUARDAR CAMBIOS</button>
       </div>
@@ -218,21 +259,21 @@
               <!-- 10 KG -->
               <div class="range-box">
                   <div class="sub-title" style="color:var(--success);">Escala Comisión 10 KG</div>
-                  <div class="range-header"><div>Desde $</div><div>Hasta $</div><div>Comisión $</div><div></div></div>
+                  <div class="range-header"><div>Desde</div><div>Hasta</div><div>Comis.</div><div></div></div>
                   <div id="boxRango10"></div>
                   <button class="btn-add-range" onclick="window.addRango('10')">+ Agregar Escala</button>
               </div>
               <!-- 15 KG -->
               <div class="range-box">
                   <div class="sub-title" style="color:var(--success);">Escala Comisión 15 KG</div>
-                  <div class="range-header"><div>Desde $</div><div>Hasta $</div><div>Comisión $</div><div></div></div>
+                  <div class="range-header"><div>Desde</div><div>Hasta</div><div>Comis.</div><div></div></div>
                   <div id="boxRango15"></div>
                   <button class="btn-add-range" onclick="window.addRango('15')">+ Agregar Escala</button>
               </div>
               <!-- 45 KG -->
               <div class="range-box">
                   <div class="sub-title" style="color:var(--success);">Escala Comisión 45 KG</div>
-                  <div class="range-header"><div>Desde $</div><div>Hasta $</div><div>Comisión $</div><div></div></div>
+                  <div class="range-header"><div>Desde</div><div>Hasta</div><div>Comis.</div><div></div></div>
                   <div id="boxRango45"></div>
                   <button class="btn-add-range" onclick="window.addRango('45')">+ Agregar Escala</button>
               </div>
@@ -325,7 +366,7 @@ setInterval(() => { if (Date.now() - ultimaActividad > 900000) window.expulsar()
 // ================= DATOS GLOBALES =================
 let preciosData = [];
 let parametrosGlob = { recargo_flotante: 0, comisiones_10: [], comisiones_15: [], comisiones_45: [] };
-let chismosoPrecios = {}; // Guarda IDs de precios tocados
+let chismosoPrecios = {}; 
 
 // ================= ARRANQUE =================
 async function init() {
@@ -348,7 +389,6 @@ async function init() {
 
 async function cargarTodoFirebase() {
     try {
-        // 1. Cargar Precios Estándar
         const qsPrecios = await getDocs(collection(db, "precios"));
         preciosData = [];
         const cats = new Set();
@@ -356,18 +396,16 @@ async function cargarTodoFirebase() {
 
         qsPrecios.forEach(d => {
             const val = d.data();
-            val.id = d.id; // Clave primaria
+            val.id = d.id; 
             preciosData.push(val);
             cats.add(val.categoria); prods.add(val.tipo);
         });
 
-        // Poblar Datalists
         const dlCat = document.getElementById('listaCategorias');
         const dlProd = document.getElementById('listaProductos');
         dlCat.innerHTML = ''; cats.forEach(c => dlCat.innerHTML += `<option value="${c}">`);
         dlProd.innerHTML = ''; prods.forEach(p => dlProd.innerHTML += `<option value="${p}">`);
 
-        // 2. Cargar Parámetros Globales (Rangos y Flotante)
         const docParam = await getDoc(doc(db, "configuracion", "parametros"));
         if(docParam.exists()) {
             parametrosGlob = { ...parametrosGlob, ...docParam.data() };
@@ -384,17 +422,13 @@ async function cargarTodoFirebase() {
 
 // ================= RENDERIZADO =================
 function renderUI() {
-    // 1. Renderizar Parámetros (Flotante)
     document.getElementById('inpFlotante').value = parametrosGlob.recargo_flotante || 0;
 
-    // 2. Renderizar Rangos de Comisiones
     renderRangos('10', parametrosGlob.comisiones_10);
     renderRangos('15', parametrosGlob.comisiones_15);
     renderRangos('45', parametrosGlob.comisiones_45);
 
-    // 3. Renderizar Tarjetas de Precios
     const container = document.getElementById('cards-container');
-    // Limpiar todo menos la tarjeta fija de parámetros
     Array.from(container.children).forEach(c => { if(c.id !== 'cardParametros') c.remove(); });
 
     const mapaCategorias = {};
@@ -402,7 +436,7 @@ function renderUI() {
         if(!mapaCategorias[p.categoria]) mapaCategorias[p.categoria] = { carga: [], envase: [], comision: [], otros: [] };
         if(['10','15','45'].includes(p.tipo)) mapaCategorias[p.categoria].carga.push(p);
         else if(['ENV10','ENV15','ENV45'].includes(p.tipo)) mapaCategorias[p.categoria].envase.push(p);
-        else if(p.tipo.toUpperCase().includes('COM')) mapaCategorias[p.categoria].comision.push(p); // Por compatibilidad vieja si quedan
+        else if(p.tipo.toUpperCase().includes('COM')) mapaCategorias[p.categoria].comision.push(p); 
         else mapaCategorias[p.categoria].otros.push(p);
     });
 
@@ -414,14 +448,13 @@ function renderUI() {
 
         const generarBloque = (items, titulo, claseColor) => {
             if(items.length === 0) return '';
-            items.sort((a,b) => (parseInt(a.tipo) || 99) - (parseInt(b.tipo) || 99)); // Orden precario por número
+            items.sort((a,b) => (parseInt(a.tipo) || 99) - (parseInt(b.tipo) || 99)); 
             
             let inputsHtml = items.map(item => {
                 let label = item.tipo.replace('ENV', '').replace('COM', '').replace('ISION', '');
                 if(label === '10' || label === '15' || label === '45') label += 'KG';
                 if(label === '') label = 'Gral';
 
-                // Guardamos foto original para el chismoso
                 item._original = item.precio; 
 
                 return `
@@ -447,7 +480,6 @@ function renderUI() {
         container.appendChild(card);
     });
 
-    // Listeners del chismoso para pintar los modificados
     document.querySelectorAll('.idx-precio').forEach(inp => {
         inp.addEventListener('input', (e) => {
             const input = e.target;
@@ -481,9 +513,9 @@ function addRowRango(kilos, min, max, com) {
     const row = document.createElement('div');
     row.className = 'range-row';
     row.innerHTML = `
-        <input type="number" class="r-min" value="${min}" placeholder="Mínimo">
-        <input type="number" class="r-max" value="${max}" placeholder="Máximo">
-        <input type="number" class="r-com" value="${com}" placeholder="Comisión">
+        <input type="number" class="r-min" value="${min}" placeholder="Mín">
+        <input type="number" class="r-max" value="${max}" placeholder="Máx">
+        <input type="number" class="r-com" value="${com}" placeholder="Comis.">
         <button class="btn-del-range" onclick="window.delRango(this)">✖</button>
     `;
     box.appendChild(row);
@@ -517,17 +549,13 @@ document.getElementById('btnGuardarNuevo').onclick = () => {
 
     if(!cat || !tip) return window.showToast("Completá categoría y tipo.", "error");
     
-    // Id compuesto como llave primaria para evitar duplicados en la base
     const idCompuesto = `${cat}_${tip}`.replace(/\s+/g, '_');
-    
     const nuevo = { id: idCompuesto, categoria: cat, tipo: tip, precio: pre };
     
-    // Verificamos si ya existe en memoria, lo pisamos, sino lo empujamos
     const idx = preciosData.findIndex(x => x.id === idCompuesto);
     if(idx >= 0) { preciosData[idx] = nuevo; } 
     else { preciosData.push(nuevo); }
     
-    // Forzamos al chismoso a registrar que hay que guardar esto
     chismosoPrecios[idCompuesto] = pre;
 
     renderUI();
@@ -540,7 +568,6 @@ document.getElementById('btnGuardarLote').onclick = async () => {
     const batch = writeBatch(db);
     let hayCambios = false;
 
-    // 1. Empaquetar Precios Estándar Tocados
     Object.keys(chismosoPrecios).forEach(docId => {
         const p = preciosData.find(x => x.id === docId);
         if(p) {
@@ -549,8 +576,6 @@ document.getElementById('btnGuardarLote').onclick = async () => {
         }
     });
 
-    // 2. Empaquetar Parámetros y Rangos Globales
-    // Como los rangos pueden borrarse o agregarse, es más seguro sobreescribir el documento entero de parámetros
     const paramNuevos = {
         recargo_flotante: parseInt(document.getElementById('inpFlotante').value) || 0,
         comisiones_10: recolectarRangos('10'),
@@ -558,7 +583,6 @@ document.getElementById('btnGuardarLote').onclick = async () => {
         comisiones_45: recolectarRangos('45')
     };
 
-    // Validamos rápido si los parámetros cambiaron convirtiéndolos a texto (forma rudimentaria pero efectiva)
     if(JSON.stringify(paramNuevos) !== JSON.stringify(parametrosGlob)) {
         batch.set(doc(db, "configuracion", "parametros"), paramNuevos, { merge: true });
         hayCambios = true;
@@ -569,7 +593,7 @@ document.getElementById('btnGuardarLote').onclick = async () => {
     window.toggleLoader(true, "IMPACTANDO EN FIREBASE...");
     try {
         await batch.commit();
-        chismosoPrecios = {}; // Reseteo
+        chismosoPrecios = {}; 
         parametrosGlob = paramNuevos;
         
         window.toggleLoader(true, "¡TODO ACTUALIZADO!", true);
