@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <title>Torre de Control - Carga</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --glass: rgba(0, 0, 0, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --accent: #FFD700; 
+      --ok: #2dd4bf; 
+      --error: #ff4444; 
+      --compra: #a855f7;
+      --text-primary: #ffffff;
+      --text-muted: rgba(255, 255, 255, 0.5);
+      --card-bg: rgba(255, 255, 255, 0.05);
+      --input-bg: rgba(0, 0, 0, 0.3);
+      --input-border: var(--glass-border);
+      
+      --bg-color: #0d031a;
+      --bg-grad-1: #1e053a;
+      --bg-grad-2: #310d5e;
+      --bg-grad-3: #0d031a;
+      --bg-grad-4: #214d7a;
+    }
+
+    body.light-mode {
+      --glass: rgba(255, 255, 255, 0.65);
+      --glass-border: rgba(0, 0, 0, 0.15);
+      --text-primary: #1a1a1a;
+      --text-muted: rgba(0, 0, 0, 0.6);
+      --card-bg: rgba(255, 255, 255, 0.5);
+      --accent: #d97706; 
+      --input-bg: rgba(255, 255, 255, 0.5);
+      --input-border: rgba(0, 0, 0, 0.2);
+      
+      --bg-color: #f8fafc;
+      --bg-grad-1: #e9d5ff;
+      --bg-grad-2: #bfdbfe;
+      --bg-grad-3: #fbcfe8;
+      --bg-grad-4: #bae6fd;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: 'Inter', sans-serif; color: var(--text-primary);
+      background: radial-gradient(at 0% 0%, var(--bg-grad-1) 0%, transparent 50%),
+                  radial-gradient(at 100% 0%, var(--bg-grad-2) 0%, transparent 50%),
+                  radial-gradient(at 100% 100%, var(--bg-grad-3) 0%, transparent 50%),
+                  radial-gradient(at 0% 100%, var(--bg-grad-4) 0%, transparent 50%);
+      background-color: var(--bg-color); background-attachment: fixed;
+      min-height: 100vh; padding: 20px; opacity: 0; transition: all 0.5s ease;
+    }
+    
+    .theme-toggle {
+      position: absolute; top: 20px; right: 20px; width: 45px; height: 45px; border-radius: 50%;
+      background: var(--glass); border: 1px solid var(--glass-border); color: var(--text-primary);
+      display: flex; justify-content: center; align-items: center; font-size: 22px; cursor: pointer;
+      backdrop-filter: blur(10px); transition: all 0.3s ease; z-index: 1000;
+    }
+    .theme-toggle:hover { transform: scale(1.1); border-color: var(--accent); }
+
+    .header { text-align: center; margin-bottom: 25px; position: relative; margin-top: 10px; }
+    .header h3 { color: var(--accent); font-weight: 800; margin: 0; font-size: 22px; text-transform: uppercase; transition: color 0.3s; }
+    
+    .btn-volver {
+        background: var(--glass); border: 1px solid var(--glass-border); color: var(--text-primary);
+        padding: 8px 12px; border-radius: 8px; cursor: pointer; position: absolute; left: 0; top: 0;
+        font-weight: bold; transition: all 0.3s ease;
+    }
+
+    .mode-switch-container { display: flex; justify-content: center; margin-bottom: 20px; }
+    .mode-switch { background: var(--input-bg); border-radius: 20px; padding: 4px; display: flex; border: 1px solid var(--glass-border); width: 80%; max-width: 400px; }
+    .mode-btn { flex: 1; text-align: center; padding: 10px; border-radius: 16px; cursor: pointer; font-weight: 800; font-size: 12px; transition: all 0.3s; color: var(--text-muted); }
+    .mode-btn.active.reparto { background: var(--accent); color: #000; box-shadow: 0 4px 15px rgba(217, 119, 6, 0.3); }
+    .mode-btn.active.compra { background: var(--compra); color: #fff; box-shadow: 0 4px 15px rgba(168,85,247,0.3); }
+
+    .container { max-width: 600px; margin: 0 auto; background: var(--glass); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); padding: 20px; border-radius: 24px; border: 1px solid var(--glass-border); }
+    .section { display: none; animation: slideIn 0.3s ease; }
+    .section.active { display: block; }
+    @keyframes slideIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+    select { width: 100%; padding: 14px; background: var(--input-bg); color: var(--text-primary); border: 1px solid var(--input-border); border-radius: 12px; font-size: 16px; font-weight: 600; outline: none; margin-bottom: 20px; }
+    option { background: var(--bg-color); color: var(--text-primary); }
+    option.ocupado { background-color: rgba(255, 68, 68, 0.2); color: var(--error); font-style: italic; }
+
+    .trip-list { display: grid; gap: 12px; }
+    .trip-card { background: var(--card-bg); border: 1px solid var(--glass-border); padding: 16px; border-radius: 12px; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center; }
+    .trip-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+    .trip-info h4 { margin: 0 0 5px 0; font-size: 16px; color: var(--text-primary); }
+    .trip-info span { font-size: 12px; color: var(--text-muted); display: block; }
+    .trip-detail { font-size: 11px; color: var(--accent); font-weight: bold; margin-top: 6px; background:rgba(217, 119, 6, 0.1); padding:4px 8px; border-radius:6px; display:inline-block;}
+    .trip-card.compra-mode { border-color: var(--compra); }
+    .trip-card.compra-mode .trip-detail { color: var(--compra); background: rgba(168,85,247,0.1); }
+    .trip-card.alert { border: 1px solid var(--error); background: rgba(255, 68, 68, 0.05); }
+
+    .grid-inputs { display: grid; gap: 8px; margin-top: 15px; }
+    .row-input { display: grid; grid-template-columns: 40px 1fr 1fr; gap: 8px; align-items: center; background: var(--input-bg); padding: 8px; border-radius: 10px; transition: background 0.3s; }
+    .label-kilo { font-weight: 900; color: var(--accent); text-align: center; font-size: 14px; transition: color 0.3s;}
+    
+    .input-disabled { opacity: 0.5; filter: grayscale(100%); pointer-events: none;}
+    .highlight-envase { background: rgba(255,68,68,0.15) !important; border-color: var(--error) !important; }
+    .highlight-lleno { background: rgba(45,212,191,0.15) !important; border-color: var(--ok) !important; }
+
+    .input-wrapper { position: relative; transition: all 0.3s; }
+    .input-wrapper label { position: absolute; top: -6px; left: 6px; font-size: 8px; background: var(--bg-color); padding: 0 4px; color: var(--text-muted); border-radius: 4px; z-index: 10; transition: background 0.3s;}
+    input[type="number"], input[type="text"] { width: 100%; padding: 12px; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 8px; color: var(--text-primary); text-align: center; font-weight: 700; outline: none; font-size: 16px; transition: all 0.3s; }
+    input[type="text"] { text-align: left; font-weight: normal; }
+
+    .diff-box { margin-top: 20px; padding: 10px; background: var(--input-bg); border-radius: 12px; font-size: 13px; min-height: 20px;}
+    .diff-item { display: flex; justify-content: space-between; margin-bottom: 5px; padding-bottom:5px; border-bottom:1px solid var(--glass-border);}
+    .diff-alert { color: var(--error); font-weight: bold; }
+    .diff-ok { color: var(--ok); font-weight: bold; }
+
+    textarea { width: 100%; height: 80px; background: var(--input-bg); border-radius: 8px; color: var(--text-primary); padding: 10px; resize: none; margin-top: 10px; font-family: 'Inter', sans-serif; border: 1px solid var(--input-border); transition: all 0.3s ease; }
+    .tx-novedad { border: 1px solid var(--accent) !important; }
+    .tx-novedad::placeholder { color: var(--accent); opacity: 0.7; }
+    .tx-obligatorio { border: 2px solid var(--error) !important; background: rgba(255, 68, 68, 0.1); }
+    .tx-obligatorio::placeholder { color: rgba(255, 68, 68, 0.8); font-weight: 800; text-transform: uppercase; }
+
+    .btn-main { width: 100%; padding: 16px; margin-top: 20px; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; cursor: pointer; transition: 0.2s; }
+    .btn-salida { background: var(--accent); color: #000; }
+    .btn-llegada { background: var(--ok); color: #000; }
+    .btn-salida-compra { background: var(--error); color: white; }
+    .btn-llegada-compra { background: var(--ok); color: #000; }
+    .btn-retro { background: #a855f7; color: white; font-size: 12px; padding: 12px; margin-top: 10px;}
+    
+    .retro-section { border: 1px dashed #a855f7; padding: 15px; border-radius: 12px; margin-top: 20px; display: none; }
+    
+    .audit-box { background: rgba(255, 68, 68, 0.1); border: 1px solid var(--error); padding: 12px; border-radius: 8px; margin-top: 15px; display: flex; flex-direction: column; gap: 10px; }
+    .audit-box p { color: var(--error); font-size: 11px; margin: 0; font-weight: 800; text-align: center; text-transform: uppercase;}
+    .audit-box label { display: flex; align-items: flex-start; gap: 8px; font-size: 11px; color: var(--text-primary); cursor: pointer; font-weight: 600; line-height: 1.4;}
+    .audit-box input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--error); cursor: pointer; }
+
+    .hidden { display: none; }
+
+    #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+    .toast { padding: 15px 20px; border-radius: 12px; color: #fff; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--glass-border); opacity: 0; transform: translateY(20px); transition: all 0.3s ease; font-size: 14px; letter-spacing: 0.5px;}
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { background: rgba(255, 68, 68, 0.9); backdrop-filter: blur(10px); }
+    .toast.success { background: rgba(45, 212, 191, 0.9); backdrop-filter: blur(10px); }
+    .toast.info { background: rgba(217, 119, 6, 0.9); color: #fff; backdrop-filter: blur(10px); }
+
+    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    .loading-overlay.active { opacity: 1; visibility: visible; }
+    .spinner { width: 60px; height: 60px; border: 4px solid rgba(128, 128, 128, 0.2); border-left-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite, pulseGlow 2s ease-in-out infinite; margin-bottom: 20px; transition: all 0.3s ease; }
+    .spinner.success-mode { border-left-color: var(--ok); }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes pulseGlow { 0% { box-shadow: 0 0 10px rgba(0,0,0,0.1); } 50% { box-shadow: 0 0 25px rgba(0,0,0,0.2); } 100% { box-shadow: 0 0 10px rgba(0,0,0,0.1); } }
+    .loading-text { color: var(--accent); font-size: 15px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; transition: color 0.3s; }
+    .loading-text.success-mode { color: var(--ok); }
+  </style>
+</head>
+<body>
+
+  <script>
+    if(localStorage.getItem('vm_theme') === 'light') {
+      document.body.classList.add('light-mode');
+    }
+  </script>
+  <button class="theme-toggle" onclick="window.toggleTheme()" id="btnTheme">🌙</button>
+
+  <div id="toast-container"></div>
+
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner" id="loaderSpinner"></div>
+    <div class="loading-text" id="loaderText">CARGANDO...</div>
+  </div>
+
+  <div class="header">
+    <button class="btn-volver" id="btnBack">⬅ VOLVER</button>
+    <h3 id="mainTitle">CONTROL DE CARGA</h3>
+  </div>
+
+  <div class="mode-switch-container">
+    <div class="mode-switch">
+        <div class="mode-btn active reparto" id="btnModeReparto" onclick="window.setMode('REPARTO')">🚚 REPARTO</div>
+        <div class="mode-btn compra" id="btnModeCompra" onclick="window.setMode('COMPRA')">🏭 COMPRA PLANTA</div>
+    </div>
+  </div>
+
+  <div class="container">
+    
+    <div id="viewMain" class="section active">
+        
+        <label style="font-size:11px; color:var(--text-muted); font-weight:800; letter-spacing:1px; margin-bottom:5px; display:block;">CHOFER</label>
+        <select id="selChofer"><option value="">Cargando...</option></select>
+        
+        <div class="grid-inputs" id="gridSalida"></div>
+        
+        <div class="diff-box" style="text-align:center;">
+             <span style="color:var(--text-muted); font-size:10px;">TOTAL A BORDO</span><br>
+             <span id="totalSalidaDisplay" style="font-size:24px; font-weight:900; color:var(--accent)">0</span>
+        </div>
+
+        <button class="btn-main btn-salida" id="btnRegistrarSalida">REGISTRAR SALIDA</button>
+        <div style="text-align:center; margin-top:15px;" id="linkRetro"><small style="color:#a855f7; cursor:pointer; text-decoration:underline;" onclick="window.toggleRetro()">Ingreso Excepcional (Retroactivo)</small></div>
+        
+        <div id="retroContainer" class="retro-section">
+            <div style="text-align:center; color:#a855f7; font-weight:800; margin-bottom:10px;">CARGA RETROACTIVA MANUAL</div>
+            <div id="gridRetro"></div> 
+            <div id="retroDiffBox" class="diff-box"></div>
+            <textarea id="retroMotivoTxt" class="tx-obligatorio" placeholder="Motivo de la diferencia / justificación obligatoria..." inputmode="text"></textarea>
+            
+            <div class="audit-box">
+                <p>⚠️ Alerta de Auditoría</p>
+                <label>
+                    <input type="checkbox" id="chkRetroAudit">
+                    Declaro bajo juramento que los datos ingresados son verídicos, asumiendo la responsabilidad por no haber registrado el viaje en el momento correspondiente.
+                </label>
+            </div>
+            <button class="btn-main btn-retro" id="btnRegistrarRetro">GUARDAR RETROACTIVO</button>
+        </div>
+
+        <hr style="border: 0; border-top: 1px dashed var(--glass-border); margin: 30px 0 20px 0;">
+        
+        <h4 id="tituloRuta" style="text-align: center; color: var(--accent); margin-top:0; margin-bottom: 15px; font-weight: 800; letter-spacing: 1px;">📥 CAMIONES EN RUTA</h4>
+        <div id="listViajes" class="trip-list"><div style="text-align:center; color:var(--text-muted);">Buscando camiones...</div></div>
+    </div>
+
+    <div id="viewLlegadaForm" class="section">
+        <button style="background:none; border:none; color:var(--text-muted); cursor:pointer; margin-bottom:10px; font-weight:bold; font-size: 14px;" onclick="window.cancelLlegada()">⬅ CANCELAR Y VOLVER</button>
+        <div style="color:var(--accent); font-weight:bold; font-size:18px; margin-bottom:10px;" id="lblChoferLlegada"></div>
+        
+        <div class="grid-inputs" id="gridLlegada"></div>
+        
+        <div id="llegadaDiffBox" class="diff-box">
+            <div style="text-align:center; color:var(--text-muted);">Ingrese la carga para calcular...</div>
+        </div>
+        
+        <div id="boxCompraEnvases" class="hidden" style="margin-top: 15px; border: 1px dashed var(--compra); border-radius: 12px; padding: 15px; background: rgba(168, 85, 247, 0.05);">
+            <div style="color:var(--compra); font-weight:900; font-size:12px; text-align:center; margin-bottom:12px; letter-spacing:1px;">🛒 DECLARAR COMPRA DE ENVASES (EFECTIVO)</div>
+            <div class="row-input" style="background: var(--input-bg); grid-template-columns: 45px 1fr 1fr 1fr;">
+                <div class="label-kilo" style="color:var(--compra)">CANT.</div>
+                <div class="input-wrapper"><label style="background:var(--compra); color:#000;">+10KG</label><input type="number" id="compraEnv10" class="calc-L" placeholder="0" inputmode="numeric" pattern="[0-9]*" style="border-color:var(--compra);"></div>
+                <div class="input-wrapper"><label style="background:var(--compra); color:#000;">+15KG</label><input type="number" id="compraEnv15" class="calc-L" placeholder="0" inputmode="numeric" pattern="[0-9]*" style="border-color:var(--compra);"></div>
+                <div class="input-wrapper"><label style="background:var(--compra); color:#000;">+45KG</label><input type="number" id="compraEnv45" class="calc-L" placeholder="0" inputmode="numeric" pattern="[0-9]*" style="border-color:var(--compra);"></div>
+            </div>
+            <div style="margin-top: 10px;">
+                <input type="number" id="montoCompraEnvases" placeholder="$ MONTO TOTAL PAGADO EN EFECTIVO" inputmode="numeric" pattern="[0-9]*" style="width: 100%; padding: 12px; background: var(--input-bg); border: 1px solid var(--compra); border-radius: 8px; color: var(--text-primary); text-align: center; font-weight: bold; font-size: 14px;">
+            </div>
+        </div>
+
+        <input type="text" id="txtRemitoCompra" class="tx-obligatorio hidden" placeholder="Nº DE REMITO (OBLIGATORIO)..." inputmode="text" style="margin-top: 10px; font-family: 'Inter', sans-serif;">
+        
+        <textarea id="txtMotivo" class="tx-novedad" placeholder="Novedades... (Opcional)" inputmode="text"></textarea>
+        
+        <button class="btn-main btn-llegada" id="btnFinalizar">FINALIZAR VIAJE ✅</button>
+    </div>
+
+  </div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getFirestore, doc, getDoc, collection, getDocs, writeBatch, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
+    authDomain: "vmgaslr.firebaseapp.com",
+    projectId: "vmgaslr",
+    storageBucket: "vmgaslr.firebasestorage.app",
+    messagingSenderId: "75859850089",
+    appId: "1:75859850089:web:fc551c770bbf4ae25803f8"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const params = new URLSearchParams(window.location.search);
+let k = params.get('k') || sessionStorage.getItem('k');
+
+// --- UI & TEMA ---
+window.toggleTheme = function() {
+    const isLight = document.body.classList.toggle('light-mode');
+    const btn = document.getElementById('btnTheme');
+    localStorage.setItem('vm_theme', isLight ? 'light' : 'dark');
+    btn.textContent = isLight ? '☀️' : '🌙';
+};
+document.getElementById('btnTheme').textContent = document.body.classList.contains('light-mode') ? '☀️' : '🌙';
+
+document.getElementById('btnBack').addEventListener('click', () => { window.location.href = `inicio.html?k=${k}`; });
+
+function normalizarStr(str) { return str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim() : ""; }
+const getFechaStr = () => { const d = new Date(); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; };
+const getHoraStr = () => { const d = new Date(); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`; };
+
+function aplicarFocoAuto() {
+    document.querySelectorAll('input[type="number"]').forEach(input => {
+        input.addEventListener('focus', function() { setTimeout(() => { try { this.select(); } catch(e){} }, 50); });
+    });
+}
+
+function showToast(msg, type = 'info') {
+    const c = document.getElementById('toast-container'); const t = document.createElement('div');
+    t.className = `toast ${type}`; t.textContent = msg; c.appendChild(t);
+    setTimeout(() => t.classList.add('show'), 10);
+    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3500);
+}
+
+function toggleLoader(show, text = 'CARGANDO...', isSuccess = false) {
+    const ov = document.getElementById('loadingOverlay'), txt = document.getElementById('loaderText'), sp = document.getElementById('loaderSpinner');
+    txt.textContent = text;
+    if (isSuccess) { sp.classList.add('success-mode'); txt.classList.add('success-mode'); } 
+    else { sp.classList.remove('success-mode'); txt.classList.remove('success-mode'); }
+    if (show) ov.classList.add('active'); else ov.classList.remove('active');
+}
+
+function logout() { sessionStorage.removeItem('k'); window.location.replace('index.html'); }
+if (!k) { alert("⚠️ Falta token de sesión."); logout(); } else { sessionStorage.setItem('k', k); window.history.replaceState({}, document.title, window.location.pathname); }
+
+// Inactividad
+let timerInterval = null;
+function refreshSession() {
+    if(timerInterval) clearTimeout(timerInterval);
+    timerInterval = setTimeout(() => { showToast('⏱️ Inactividad detectada. Cerrando.', 'error'); setTimeout(logout, 1500); }, 180000);
+}
+['click','mousemove','keydown','touchstart'].forEach(ev => document.addEventListener(ev, refreshSession));
+
+// --- ESTADO GLOBAL ---
+let modoActual = 'REPARTO';
+let viajesPendientes = [];
+let listaChoferes = [];
+let enRutaSet = new Set();
+let viajeSeleccionado = null;
+let hayDiferenciaLlegada = false;
+let usuarioActivo = 'SISTEMA';
+
+// --- INICIALIZACIÓN ---
+async function init() {
+    document.body.style.opacity = 1;
+    toggleLoader(true, "VALIDANDO SESIÓN...");
+    try {
+        const tokenSnap = await getDoc(doc(db, "tokens", k));
+        if (!tokenSnap.exists() || (tokenSnap.data().expira && Date.now() > tokenSnap.data().expira)) return logout();
+        usuarioActivo = tokenSnap.data().usuario || 'SISTEMA';
+    } catch(e) { return logout(); }
+
+    toggleLoader(true, "DESCARGANDO DATOS...");
+    refreshSession();
+    renderGrid('gridSalida', 'S'); renderGrid('gridLlegada', 'L'); document.getElementById('gridRetro').innerHTML = renderRetroInputs();
+    aplicarFocoAuto(); setupCalc('S', updateSalidaTotal); setupCalc('L', calcLlegadaDiff); setupCalc('R', calcRetroDiff);
+
+    await cargarTodoFirebase();
+    
+    document.getElementById('selChofer').addEventListener('change', function() {
+        const opt = this.options[this.selectedIndex];
+        if (opt.dataset.ocupado === "true") {
+            showToast(`⛔ ${opt.text.replace('⛔ ','').replace(' (En Ruta)','')} YA ESTÁ EN RUTA.`, "error");
+            this.value = ""; 
+        }
+    });
+    window.setMode('REPARTO');
+    toggleLoader(false);
+    document.getElementById('viewMain').classList.add('active');
+}
+
+// --- CONSULTAS FIREBASE PARA REEMPLAZAR GOOGLE SHEETS ---
+async function cargarTodoFirebase() {
+    try {
+        // 1. Cargar choferes
+        const qsUsuarios = await getDocs(collection(db, "usuarios"));
+        listaChoferes = [];
+        qsUsuarios.forEach(d => {
+            const u = d.data();
+            // Asumimos que los choferes tienen rol 'CHOFER' o los traemos todos
+            if (u.rol === 'CHOFER' || u.tipo === 'CHOFER') listaChoferes.push({ usuario: u.usuario || d.id, nombreMostrar: u.nombre || d.id });
+        });
+
+        // 2. Cargar viajes pendientes (en ruta)
+        const qViajes = query(collection(db, "ccarga"), where("estado", "in", ["EN_RUTA", "COMPRA_EN_RUTA"]));
+        const qsViajes = await getDocs(qViajes);
+        viajesPendientes = [];
+        enRutaSet = new Set();
+
+        for (const vDoc of qsViajes.docs) {
+            const row = vDoc.data();
+            enRutaSet.add(normalizarStr(row.chofer));
+            
+            const isCompra = row.tipoViaje === 'COMPRA';
+            let sug = { 10: {L:0, V:0}, 15: {L:0, V:0}, 45: {L:0, V:0} };
+            let totalEntregas = 0;
+            let cargaLabel = "";
+
+            if (isCompra) {
+                const totalVacios = (row.sV10||0) + (row.sV15||0) + (row.sV45||0);
+                cargaLabel = `Llevó: ${totalVacios} Vacíos a Planta`;
+            } else {
+                // AQUÍ OCURRE LA MAGIA: Calculamos sugerencias al instante cruzando con BD1
+                const qVentas = query(collection(db, "bd1"), where("ID_VIAJE", "==", vDoc.id));
+                const qsVentas = await getDocs(qVentas);
+                
+                let b10=0, s10=0, b15=0, s15=0, b45=0, s45=0;
+                
+                qsVentas.forEach(vtaDoc => {
+                    const v = vtaDoc.data();
+                    const tipo = String(v.TIPO || '').toUpperCase();
+                    if (['VENTA', 'FLOTANTE'].includes(tipo)) {
+                        b10 += Number(v.ALL10||0); s10 += Number(v.AV10||0);
+                        b15 += Number(v.ALL15||0); s15 += Number(v.AV15||0);
+                        b45 += Number(v.ALL45||0); s45 += Number(v.AV45||0);
+                    } else if (['CONSIGNACION', 'VENTA_ENVASE', 'COMODATO'].includes(tipo)) {
+                        b10 += Number(v.ALL10||0); b15 += Number(v.ALL15||0); b45 += Number(v.ALL45||0);
+                    } else if (tipo === 'RECUPERO') {
+                        s10 += Number(v.AV10||0); s15 += Number(v.AV15||0); s45 += Number(v.AV45||0);
+                    }
+                });
+
+                sug[10].L = Math.max(0, (row.sL10||0) - b10); sug[10].V = (row.sV10||0) + s10;
+                sug[15].L = Math.max(0, (row.sL15||0) - b15); sug[15].V = (row.sV15||0) + s15;
+                sug[45].L = Math.max(0, (row.sL45||0) - b45); sug[45].V = (row.sV45||0) + s45;
+                
+                totalEntregas = b10 + b15 + b45;
+                cargaLabel = `Ideal -> 10kg: ${sug[10].L}L|${sug[10].V}V - 15kg: ${sug[15].L}L|${sug[15].V}V`;
+            }
+
+            // Mapeamos al formato que ya maneja la UI
+            viajesPendientes.unshift({
+                idViaje: vDoc.id, chofer: row.chofer, tipoViaje: row.tipoViaje || 'REPARTO',
+                fechaSalida: row.fechaSalida, horaSalida: row.horaSalida, cargaLabel: cargaLabel,
+                isLate: false, // Puedes agregar lógica de isLate comparando timestamps si quieres
+                sDetails: { l10: row.sL10||0, v10: row.sV10||0, l15: row.sL15||0, v15: row.sV15||0, l45: row.sL45||0, v45: row.sV45||0 },
+                sugerencia: sug, totalEntregas: totalEntregas
+            });
+        }
+        
+        procesarChoferes();
+        syncDropdownConViajesActivos();
+    } catch(e) {
+        console.error(e); showToast("Error al obtener datos de Firebase", "error");
+    }
+}
+
+// --- RENDERIZADOS Y DOM ---
+function procesarChoferes() {
+    const sel = document.getElementById('selChofer');
+    sel.innerHTML = '<option value="">-- Seleccionar --</option>';
+    listaChoferes.forEach(item => {
+        const idReal = String(item.usuario || '').trim();
+        const estaOcupado = enRutaSet.has(normalizarStr(idReal));
+        const o = document.createElement('option');
+        o.value = idReal; o.text = item.nombreMostrar;
+        o.dataset.backendOcupado = estaOcupado ? "true" : "false";
+        sel.add(o);
+    });
+}
+
+function syncDropdownConViajesActivos() {
+    const selChofer = document.getElementById('selChofer');
+    const choferesEnCalle = viajesPendientes.map(v => normalizarStr(v.chofer));
+    Array.from(selChofer.options).forEach(opt => {
+        if (!opt.value) return; 
+        const optText = normalizarStr(opt.text.replace('⛔ ', '').replace(' (En Ruta)', ''));
+        const enRuta = choferesEnCalle.includes(optText) || opt.dataset.backendOcupado === "true";
+        if (enRuta) {
+            if (!opt.text.includes('⛔')) opt.text = `⛔ ${opt.text} (En Ruta)`;
+            opt.className = "ocupado"; opt.dataset.ocupado = "true";
+        } else {
+            opt.text = opt.text.replace('⛔ ', '').replace(' (En Ruta)', '');
+            opt.className = ""; opt.dataset.ocupado = "false";
+        }
+    });
+}
+
+window.setMode = function(modo) {
+    modoActual = modo;
+    const btnReparto = document.getElementById('btnModeReparto'), btnCompra = document.getElementById('btnModeCompra');
+    const title = document.getElementById('mainTitle'), btnSalida = document.getElementById('btnRegistrarSalida');
+    const titleRuta = document.getElementById('tituloRuta');
+
+    if(document.getElementById('viewLlegadaForm').classList.contains('active')) window.cancelLlegada();
+
+    document.querySelectorAll('input[type="number"]').forEach(i => { i.value = ''; i.classList.remove('highlight-envase', 'highlight-lleno', 'input-disabled'); });
+    document.querySelectorAll('.input-wrapper').forEach(w => w.classList.remove('input-disabled'));
+    updateSalidaTotal();
+
+    if (modo === 'REPARTO') {
+        btnReparto.classList.add('active'); btnCompra.classList.remove('active');
+        title.style.color = "var(--accent)"; document.getElementById('totalSalidaDisplay').style.color = "var(--accent)";
+        titleRuta.style.color = "var(--accent)"; titleRuta.innerText = "📥 CAMIONES EN RUTA";
+        ['10','15','45'].forEach(kg => document.getElementById(`SL${kg}`).classList.add('highlight-lleno'));
+        btnSalida.className = "btn-main btn-salida"; btnSalida.innerHTML = "REGISTRAR SALIDA A REPARTO";
+        document.getElementById('linkRetro').style.display = "block"; document.getElementById('retroContainer').style.display = "none";
+    } else {
+        btnCompra.classList.add('active'); btnReparto.classList.remove('active');
+        title.style.color = "var(--compra)"; document.getElementById('totalSalidaDisplay').style.color = "var(--compra)";
+        titleRuta.style.color = "var(--compra)"; titleRuta.innerText = "🏭 COMPRAS EN PLANTA";
+        ['10','15','45'].forEach(kg => document.getElementById(`SV${kg}`).classList.add('highlight-envase'));
+        btnSalida.className = "btn-main btn-salida-compra"; btnSalida.innerHTML = "REGISTRAR SALIDA A PLANTA";
+        document.getElementById('linkRetro').style.display = "none"; document.getElementById('retroContainer').style.display = "none";
+    }
+    renderTripList();
+}
+
+function renderTripList() {
+    const list = document.getElementById('listViajes'); list.innerHTML = '';
+    const filtrados = viajesPendientes.filter(v => v.tipoViaje === modoActual);
+    if(!filtrados.length) return list.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-muted); font-weight:bold;">No hay movimientos pendientes en la calle.</div>`;
+
+    filtrados.forEach(v => {
+        const isC = v.tipoViaje === 'COMPRA';
+        const card = document.createElement('div'); card.className = `trip-card ${v.isLate ? 'alert' : ''} ${isC ? 'compra-mode' : ''}`; card.onclick = () => selectTrip(v);
+        card.innerHTML = `<div class="trip-info"><h4>${v.chofer} ${isC ? '🏭' : '🚚'}</h4><span>${v.fechaSalida} - ${v.horaSalida}</span><div class="trip-detail">${v.cargaLabel}</div></div><div style="font-size:20px;">${v.isLate ? '⚠️' : '⬅️'}</div>`;
+        list.appendChild(card);
+    });
+}
+
+function renderGrid(id, pre) {
+    document.getElementById(id).innerHTML = [10, 15, 45].map(kg => `
+        <div class="row-input">
+            <div class="label-kilo">${kg}</div>
+            <div class="input-wrapper" id="${pre}_wrap_L${kg}"><label>LLENOS</label><input type="number" id="${pre}L${kg}" class="calc-${pre}" placeholder="0" inputmode="numeric" pattern="[0-9]*"></div>
+            <div class="input-wrapper" id="${pre}_wrap_V${kg}"><label>VACÍOS</label><input type="number" id="${pre}V${kg}" class="calc-${pre}" placeholder="0" inputmode="numeric" pattern="[0-9]*"></div>
+        </div>
+    `).join('');
+}
+function renderRetroInputs() {
+    return [10,15,45].map(kg => `
+        <div style="margin-top:10px; border-top:1px solid var(--glass-border); padding-top:5px;">
+            <div style="text-align:center; font-size:10px; color:var(--accent); font-weight:bold; margin-bottom:5px;">${kg} KG</div>
+            <div class="row-input" style="background:rgba(255,215,0,0.05)">
+                <div style="font-size:9px; color:var(--text-muted);">SALIO</div>
+                <input type="number" id="R_SL${kg}" class="calc-R" placeholder="Llenos" inputmode="numeric" pattern="[0-9]*">
+                <input type="number" id="R_SV${kg}" class="calc-R" placeholder="Vacíos" inputmode="numeric" pattern="[0-9]*">
+            </div>
+            <div class="row-input" style="background:rgba(45,212,191,0.05)">
+                <div style="font-size:9px; color:var(--text-muted);">VOLVIO</div>
+                <input type="number" id="R_RL${kg}" class="calc-R" placeholder="Llenos" inputmode="numeric" pattern="[0-9]*">
+                <input type="number" id="R_RV${kg}" class="calc-R" placeholder="Vacíos" inputmode="numeric" pattern="[0-9]*">
+            </div>
+        </div>
+    `).join('');
+}
+
+async function selectTrip(trip) {
+    viajeSeleccionado = trip; const isC = trip.tipoViaje === 'COMPRA';
+    document.querySelectorAll('#viewLlegadaForm input[type="number"]').forEach(i => { i.value = ''; i.classList.remove('highlight-envase', 'highlight-lleno', 'input-disabled'); });
+
+    document.getElementById('viewMain').classList.remove('active'); document.getElementById('viewLlegadaForm').classList.add('active');
+    
+    if (isC) {
+        document.getElementById('lblChoferLlegada').innerHTML = `${trip.chofer} <span style="font-size:12px; color:var(--compra); margin-left:10px;">(Volviendo de Planta)</span>`;
+        document.getElementById('btnFinalizar').className = "btn-main btn-llegada-compra"; document.getElementById('btnFinalizar').innerHTML = "CONFIRMAR INGRESO DE COMPRA ✅";
+        document.getElementById('txtRemitoCompra').classList.remove('hidden'); document.getElementById('boxCompraEnvases').classList.remove('hidden');
+        ['10','15','45'].forEach(kg => {
+            document.getElementById(`LL${kg}`).value = trip.sDetails[`v${kg}`] + (trip.sDetails[`l${kg}`] || 0); 
+            document.getElementById(`LV${kg}`).value = 0;
+            document.getElementById(`LL${kg}`).classList.add('highlight-lleno');
+        });
+    } else {
+        document.getElementById('lblChoferLlegada').innerHTML = `${trip.chofer} <span style="font-size:12px; color:var(--ok); margin-left:10px;">(Entregó: ${trip.totalEntregas || 0})</span>`;
+        document.getElementById('txtRemitoCompra').classList.add('hidden'); document.getElementById('boxCompraEnvases').classList.add('hidden');
+        ['10','15','45'].forEach(kg => {
+            document.getElementById(`LL${kg}`).value = trip.sugerencia ? (trip.sugerencia[kg]?.L || 0) : 0;
+            document.getElementById(`LV${kg}`).value = trip.sugerencia ? (trip.sugerencia[kg]?.V || 0) : 0;
+        });
+    }
+    calcLlegadaDiff();
+}
+window.cancelLlegada = function() { viajeSeleccionado = null; document.getElementById('viewLlegadaForm').classList.remove('active'); document.getElementById('viewMain').classList.add('active'); }
+
+// --- CALCULADORAS ---
+const val = (id) => Number(document.getElementById(id).value) || 0;
+const updateSalidaTotal = () => { document.getElementById('totalSalidaDisplay').textContent = val('SL10')+val('SV10')+val('SL15')+val('SV15')+val('SL45')+val('SV45'); };
+const setupCalc = (cls, fn) => { document.querySelectorAll(`.calc-${cls}`).forEach(i => i.addEventListener('input', fn)); }
+window.toggleRetro = function() { const el = document.getElementById('retroContainer'); el.style.display = el.style.display === 'block' ? 'none' : 'block'; }
+
+function calcLlegadaDiff() {
+    if(!viajeSeleccionado) return;
+    const isC = viajeSeleccionado.tipoViaje === 'COMPRA'; let diff = 0;
+    
+    if (isC) { 
+        diff += Math.abs((val('LL10') + val('LV10')) - (viajeSeleccionado.sDetails.v10 + viajeSeleccionado.sDetails.l10 + val('compraEnv10'))); 
+        diff += Math.abs((val('LL15') + val('LV15')) - (viajeSeleccionado.sDetails.v15 + viajeSeleccionado.sDetails.l15 + val('compraEnv15'))); 
+        diff += Math.abs((val('LL45') + val('LV45')) - (viajeSeleccionado.sDetails.v45 + viajeSeleccionado.sDetails.l45 + val('compraEnv45'))); 
+    } else {
+        diff += Math.abs(val('LL10') - viajeSeleccionado.sugerencia[10].L); diff += Math.abs(val('LV10') - viajeSeleccionado.sugerencia[10].V);
+        diff += Math.abs(val('LL15') - viajeSeleccionado.sugerencia[15].L); diff += Math.abs(val('LV15') - viajeSeleccionado.sugerencia[15].V);
+        diff += Math.abs(val('LL45') - viajeSeleccionado.sugerencia[45].L); diff += Math.abs(val('LV45') - viajeSeleccionado.sugerencia[45].V);
+    }
+    
+    hayDiferenciaLlegada = diff > 0;
+    const txt = document.getElementById('txtMotivo'), box = document.getElementById('llegadaDiffBox');
+    if (hayDiferenciaLlegada) { txt.className = "tx-obligatorio"; txt.placeholder = "⚠️ MOTIVO DE LA DIFERENCIA (OBLIGATORIO)..."; box.innerHTML = `<div style="text-align:center; color:var(--error); font-weight:bold;">⚠️ NO COINCIDE. DIFERENCIA: ${diff}</div>`; } 
+    else { txt.className = "tx-novedad"; txt.placeholder = "Novedades... (Opcional)"; box.innerHTML = '<div style="text-align:center; color:var(--ok); font-weight:bold;">✅ CARGA COINCIDE PERFECTO</div>'; }
+}
+
+function calcRetroDiff() {
+    const d10 = (val('R_SL10')+val('R_SV10')) - (val('R_RL10')+val('R_RV10'));
+    const d15 = (val('R_SL15')+val('R_SV15')) - (val('R_RL15')+val('R_RV15'));
+    const d45 = (val('R_SL45')+val('R_SV45')) - (val('R_RL45')+val('R_RV45'));
+    let html = ''; let hasDiff = false;
+    const row = (kg, diff) => { if(diff === 0) return ''; hasDiff = true; return `<div class="diff-item"><span>${kg}kg</span><span class="diff-alert">${diff > 0 ? `Faltan ${diff}` : `Sobran ${Math.abs(diff)}`}</span></div>`; };
+    html += row(10, d10) + row(15, d15) + row(45, d45);
+    if(!hasDiff && (val('R_SL10')+val('R_SL15')+val('R_SL45')) > 0) html = '<div style="text-align:center; color:var(--ok); font-weight:bold;">✅ COINCIDE</div>';
+    document.getElementById('retroDiffBox').innerHTML = html;
+    
+    const txtRetro = document.getElementById('retroMotivoTxt');
+    if(hasDiff) { txtRetro.className = "tx-obligatorio"; txtRetro.style.display = 'block'; } 
+    else { txtRetro.className = "tx-novedad"; txtRetro.style.display = 'none'; }
+}
+
+// --- ESCRITURA BATCH EN FIREBASE (EL MOTOR PRINCIPAL) ---
+async function enviarBatch(payload) {
+    if(!confirm(`¿Confirmar operación de ${payload.modo}?`)) return;
+    document.querySelectorAll('button').forEach(b => {b.disabled=true;});
+    toggleLoader(true, "GUARDANDO EN FIREBASE...");
+    
+    try {
+        const batch = writeBatch(db);
+        const refCcarga = collection(db, "ccarga");
+        
+        if (payload.modo === 'SALIDA') {
+            const nuevoId = "V-" + Date.now().toString(36).toUpperCase();
+            batch.set(doc(refCcarga, nuevoId), {
+                idViaje: nuevoId,
+                estado: payload.tipoViaje === 'COMPRA' ? 'COMPRA_EN_RUTA' : 'EN_RUTA',
+                chofer: payload.chofer,
+                fechaSalida: getFechaStr(),
+                horaSalida: getHoraStr(),
+                sL10: payload.L10, sV10: payload.V10,
+                sL15: payload.L15, sV15: payload.V15,
+                sL45: payload.L45, sV45: payload.V45,
+                tipoViaje: payload.tipoViaje,
+                auditor: usuarioActivo,
+                timestampMs: Date.now()
+            });
+        } 
+        else if (payload.modo === 'LLEGADA') {
+            const esC = payload.tipoViaje === 'COMPRA';
+            batch.update(doc(refCcarga, payload.idViaje), {
+                estado: esC ? 'COMPRA_FINALIZADA' : 'FINALIZADO',
+                fechaLlegada: getFechaStr(),
+                horaLlegada: getHoraStr(),
+                lL10: payload.L10, lV10: payload.V10,
+                lL15: payload.L15, lV15: payload.V15,
+                lL45: payload.L45, lV45: payload.V45,
+                diferencia: hayDiferenciaLlegada ? "SI" : "NO", // Puedes afinar el número exacto si quieres
+                motivo: payload.motivo || "",
+                remito: payload.remitoPlanta || "",
+                timestampLlegadaMs: Date.now()
+            });
+
+            // Registrar salida de efectivo en bd1 si declararon compra
+            if (esC && payload.montoCompraEnv > 0) {
+                const idTransaccion = "CE-" + Date.now().toString(36).toUpperCase();
+                batch.set(doc(collection(db, "bd1"), idTransaccion), {
+                    USUARIO: usuarioActivo,
+                    TIPO: 'COMPRA_ENVASE',
+                    FECHA: getFechaStr(),
+                    HORA: getHoraStr(),
+                    ID_VIAJE: payload.idViaje,
+                    "E$": -payload.montoCompraEnv,
+                    TOTAL: -payload.montoCompraEnv,
+                    G: `COMPRA ENVASES: 10kg(${payload.compraEnv10}) 15kg(${payload.compraEnv15}) 45kg(${payload.compraEnv45}) | Remito: ${payload.remitoPlanta}`,
+                    timestampMs: Date.now()
+                });
+            }
+        } 
+        else if (payload.modo === 'RETROACTIVO') {
+            const nuevoId = "V-" + Date.now().toString(36).toUpperCase() + "-R";
+            batch.set(doc(refCcarga, nuevoId), {
+                idViaje: nuevoId,
+                estado: payload.diferencia !== 0 ? 'CON_DIFERENCIA' : 'FINALIZADO',
+                chofer: payload.chofer,
+                fechaSalida: getFechaStr(), horaSalida: getHoraStr(),
+                fechaLlegada: getFechaStr(), horaLlegada: getHoraStr(),
+                sL10: payload.SL10, sV10: payload.SV10, lL10: payload.RL10, lV10: payload.RV10,
+                sL15: payload.SL15, sV15: payload.SV15, lL15: payload.RL15, lV15: payload.RV15,
+                sL45: payload.SL45, sV45: payload.SV45, lL45: payload.RL45, lV45: payload.RV45,
+                motivo: payload.motivo,
+                alertaAuditoria: payload.alertaAuditoria ? "SI" : "NO",
+                tipoViaje: "REPARTO",
+                auditor: usuarioActivo,
+                timestampMs: Date.now()
+            });
+        }
+
+        await batch.commit();
+        
+        toggleLoader(true, "¡GUARDADO!", true);
+        setTimeout(() => { window.location.reload(); }, 1200);
+        
+    } catch(e) {
+        console.error(e);
+        toggleLoader(false);
+        showToast('Error de red al guardar en Firebase', 'error');
+        document.querySelectorAll('button').forEach(b => {b.disabled=false;});
+    }
+}
+
+// --- EVENTOS BOTONES ---
+document.getElementById('btnRegistrarSalida').onclick = () => {
+    const sel = document.getElementById('selChofer'); const c = sel.value;
+    const tot = val('SL10')+val('SV10')+val('SL15')+val('SV15')+val('SL45')+val('SV45');
+    if(!c) return showToast('Selecciona chofer', 'error');
+    if(sel.options[sel.selectedIndex].dataset.ocupado === "true") return showToast("⛔ ERROR: Chofer en ruta.", 'error');
+    if(tot === 0) return showToast('La carga está vacía', 'error');
+
+    enviarBatch({ 
+        modo: 'SALIDA', tipoViaje: modoActual, chofer: c, 
+        L10: val('SL10'), V10: val('SV10'), L15: val('SL15'), V15: val('SV15'), L45: val('SL45'), V45: val('SV45') 
+    });
+};
+
+document.getElementById('btnFinalizar').onclick = () => {
+    const isC = viajeSeleccionado.tipoViaje === 'COMPRA';
+    const motivo = document.getElementById('txtMotivo').value.trim();
+    const remito = document.getElementById('txtRemitoCompra').value.trim();
+    
+    if (isC && !remito) return showToast("⚠️ Debes ingresar el Nº de Remito que entregó la Planta", "error");
+    if (hayDiferenciaLlegada && !motivo) return showToast("⚠️ Faltan explicar las diferencias detectadas", "error");
+    
+    enviarBatch({ 
+        modo: 'LLEGADA', idViaje: viajeSeleccionado.idViaje, tipoViaje: viajeSeleccionado.tipoViaje, 
+        motivo: motivo, remitoPlanta: remito, 
+        L10: val('LL10'), V10: val('LV10'), L15: val('LL15'), V15: val('LV15'), L45: val('LL45'), V45: val('LV45'),
+        compraEnv10: val('compraEnv10'), compraEnv15: val('compraEnv15'), compraEnv45: val('compraEnv45'),
+        montoCompraEnv: Number(document.getElementById('montoCompraEnvases').value) || 0
+    });
+};
+
+document.getElementById('btnRegistrarRetro').onclick = () => {
+    const c = document.getElementById('selChofer').value;
+    const motivo = document.getElementById('retroMotivoTxt').value.trim();
+    const chk = document.getElementById('chkRetroAudit').checked;
+    
+    if(!c) return showToast('Selecciona chofer arriba', 'error');
+    if(!chk) return showToast('⚠️ Debes aceptar la Declaración Jurada.', 'error');
+    if(!motivo) return showToast('⚠️ El motivo es obligatorio.', 'error');
+    
+    const totS = val('R_SL10')+val('R_SV10')+val('R_SL15')+val('R_SV15')+val('R_SL45')+val('R_SV45');
+    const totL = val('R_RL10')+val('R_RV10')+val('R_RL15')+val('R_RV15')+val('R_RL45')+val('R_RV45');
+    if(totS === 0) return showToast('Salida vacía', 'error');
+
+    enviarBatch({
+        modo: 'RETROACTIVO', chofer: c, motivo: motivo, alertaAuditoria: true,
+        diferencia: totS - totL,
+        SL10: val('R_SL10'), SV10: val('R_SV10'), SL15: val('R_SL15'), SV15: val('R_SV15'), SL45: val('R_SL45'), SV45: val('R_SV45'),
+        RL10: val('R_RL10'), RV10: val('R_RV10'), RL15: val('R_RL15'), RV15: val('R_RV15'), RL45: val('R_RL45'), RV45: val('R_RV45')
+    });
+};
+
+init();
+</script>
+</body>
+</html>
