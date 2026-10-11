@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+
+<title>Gestión de Precios y Parámetros</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Dark Mode (Default) */
+    --glass: rgba(0, 0, 0, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --accent: #FFD700; 
+    --text-primary: #ffffff;
+    --text-muted: #aaaaaa;
+    --success: #2dd4bf;
+    --error: #ff5e5e;
+    --bg-color: #0d031a;
+    --bg-grad-1: #1e053a;
+    --bg-grad-2: #0d031a;
+    --bg-solid: #020617;
+    --input-bg: rgba(0,0,0,0.6);
+    --modal-bg: #1a0b2e;
+    --action-bar-bg: rgba(13, 3, 26, 0.85);
+    --btn-color: white;
+  }
+
+  body.light-mode {
+    /* Light Mode */
+    --glass: rgba(255, 255, 255, 0.8);
+    --glass-border: rgba(0, 0, 0, 0.15);
+    --accent: #d97706;
+    --text-primary: #1a1a1a;
+    --text-muted: #4b5563;
+    --bg-color: #f8fafc;
+    --bg-grad-1: #e9d5ff;
+    --bg-grad-2: #bae6fd;
+    --bg-solid: #f8fafc;
+    --input-bg: rgba(255, 255, 255, 0.9);
+    --modal-bg: #ffffff;
+    --action-bar-bg: rgba(255, 255, 255, 0.85);
+    --btn-color: #1a1a1a;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: 'Inter', sans-serif; color: var(--text-primary);
+    background: radial-gradient(at 0% 0%, var(--bg-grad-1) 0%, transparent 50%),
+                radial-gradient(at 100% 100%, var(--bg-grad-2) 0%, transparent 50%), var(--bg-solid);
+    background-attachment: fixed; min-height: 100vh; padding: 20px;
+    opacity: 0; 
+    transition: opacity 0.5s ease, background 0.5s ease, color 0.5s ease;
+  }
+  
+  .header { display: flex; justify-content: center; align-items: center; margin-bottom: 15px; position: relative; }
+  h1 { font-size: 1.5rem; color: var(--accent); margin: 0; text-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+  
+  .theme-toggle {
+    position: absolute; left: 0; width: 40px; height: 40px; border-radius: 50%;
+    background: var(--glass); border: 1px solid var(--glass-border); color: var(--text-primary);
+    display: flex; justify-content: center; align-items: center; font-size: 20px; cursor: pointer;
+    backdrop-filter: blur(10px); transition: all 0.3s ease; z-index: 1000;
+  }
+  .theme-toggle:hover { transform: scale(1.1); border-color: var(--accent); }
+
+  .action-bar {
+    position: sticky; top: 10px; z-index: 90;
+    background: var(--action-bar-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+    border: 1px solid var(--accent); border-radius: 16px; padding: 12px 15px;
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.15); gap: 10px;
+  }
+
+  .btn {
+    border: 1px solid var(--glass-border); padding: 10px 14px; border-radius: 12px;
+    background: rgba(128,128,128,0.1); color: var(--btn-color); cursor: pointer; font-weight: 700;
+    transition: 0.3s; font-size: 13px; text-transform: uppercase;
+  }
+  .btn:hover { background: rgba(128,128,128,0.2); }
+  .btn-add { background: transparent; color: var(--accent); border-color: var(--accent); }
+  .btn-save { background: var(--accent); color: #000 !important; border: none; box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3); font-weight: 800; }
+
+  /* CARDS */
+  .grid-cards {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; padding-bottom: 30px;
+  }
+  
+  .category-card {
+    background: var(--glass); border: 1px solid var(--glass-border);
+    border-radius: 20px; padding: 20px; position: relative;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  }
+  
+  .category-title {
+    font-size: 1.2rem; color: var(--accent); font-weight: 800; margin-bottom: 15px;
+    text-transform: uppercase; letter-spacing: 1px; text-align: center;
+  }
+
+  /* SUB-BLOQUES PRECIOS */
+  .sub-block { border-radius: 12px; padding: 12px; margin-bottom: 12px; border: 1px solid var(--glass-border); }
+  .block-carga { background: rgba(45, 212, 191, 0.05); border-color: rgba(45, 212, 191, 0.3); }
+  .block-envase { background: rgba(255, 215, 0, 0.05); border-color: rgba(255, 215, 0, 0.3); }
+  .block-comision { background: rgba(255, 94, 94, 0.05); border-color: rgba(255, 94, 94, 0.3); }
+  .block-otros { background: rgba(128, 128, 128, 0.05); }
+
+  .sub-title { font-size: 11px; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 1px; color: var(--text-primary); text-align: center; opacity: 0.8;}
+
+  .items-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 10px; }
+  .item-col { display: flex; flex-direction: column; align-items: center; }
+  .item-label { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 5px; }
+
+  .price-input {
+    width: 100%; background: var(--input-bg); border: 1px solid var(--glass-border);
+    border-radius: 8px; color: var(--text-primary); font-size: 14px; font-weight: 700;
+    padding: 8px 5px; outline: none; transition: all 0.3s; text-align: center;
+  }
+  .price-input:focus { border-color: var(--accent); }
+  .price-input.is-modified { border-color: var(--accent); background: rgba(255, 215, 0, 0.15); color: var(--accent); }
+
+  /* ZONA PARÁMETROS Y RANGOS (NUEVO) */
+  .param-zone { grid-column: 1 / -1; background: rgba(20, 10, 40, 0.8); border-color: var(--accent); }
+  body.light-mode .param-zone { background: rgba(255, 245, 230, 0.9); }
+  
+  .ranges-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 15px; }
+  .range-box { border: 1px dashed rgba(255,255,255,0.2); padding: 10px; border-radius: 12px; background: rgba(0,0,0,0.2); }
+  body.light-mode .range-box { border-color: rgba(0,0,0,0.1); background: rgba(255,255,255,0.5); }
+  .range-header { display: grid; grid-template-columns: 1fr 1fr 1fr 30px; gap: 5px; font-size: 10px; color: var(--text-muted); text-align: center; font-weight: bold; margin-bottom: 5px;}
+  .range-row { display: grid; grid-template-columns: 1fr 1fr 1fr 30px; gap: 5px; margin-bottom: 5px; align-items: center;}
+  .range-row input { text-align: right; padding: 6px; font-size: 12px; font-family: monospace; }
+  .btn-del-range { background: transparent; color: var(--error); border: none; font-size: 16px; cursor: pointer; padding: 0;}
+  .btn-del-range:hover { transform: scale(1.2); }
+  .btn-add-range { width: 100%; background: rgba(255,255,255,0.05); color: var(--accent); border: 1px dashed var(--accent); padding: 6px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-top: 5px;}
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+    z-index: 100; display: none; justify-content: center; align-items: center;
+  }
+  .modal-box {
+    background: var(--modal-bg); border: 1px solid var(--accent); width: 90%; max-width: 400px;
+    padding: 25px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  }
+  .modal-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 20px; color: var(--accent); text-align: center; text-transform: uppercase;}
+  .form-group { margin-bottom: 15px; }
+  .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; font-weight: bold;}
+  .modal-input {
+    width: 100%; padding: 14px; background: var(--input-bg); border: 1px solid var(--glass-border);
+    border-radius: 12px; color: var(--text-primary); font-size: 15px; outline: none; font-weight: 600;
+  }
+  .modal-input:focus { border-color: var(--accent); }
+  .btn-full { width: 100%; padding: 15px; font-size: 15px; margin-top: 10px; }
+  .btn-close { background: transparent; color: var(--error); border: 1px solid var(--error); margin-top: 10px; }
+
+  /* UTILS */
+  #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+  .toast { padding: 15px 20px; border-radius: 12px; color: #fff; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); opacity: 0; transform: translateY(20px); transition: all 0.3s ease; font-size: 14px;}
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: rgba(255, 94, 94, 0.95); }
+  .toast.success { background: rgba(45, 212, 191, 0.95); }
+  .toast.info { background: rgba(255, 215, 0, 0.95); color: #000; }
+
+  .loading-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(13, 3, 26, 0.9);
+    z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; 
+    opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s; backdrop-filter: blur(10px);
+  }
+  body.light-mode .loading-overlay { background: rgba(255,255,255,0.9); }
+  .loading-overlay.active { opacity: 1; visibility: visible; }
+  .spinner {
+    width: 60px; height: 60px; border: 4px solid rgba(128, 128, 128, 0.2);
+    border-left-color: var(--accent); border-radius: 50%;
+    animation: spin 1s linear infinite, pulseGlow 2s ease-in-out infinite; margin-bottom: 20px;
+  }
+  .spinner.success-mode { border-left-color: var(--success); }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  @keyframes pulseGlow { 0% { box-shadow: 0 0 10px rgba(0,0,0,0.1); } 50% { box-shadow: 0 0 25px rgba(0,0,0,0.2); } 100% { box-shadow: 0 0 10px rgba(0,0,0,0.1); } }
+  .loading-text { color: var(--accent); font-size: 15px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+  .loading-text.success-mode { color: var(--success); }
+</style>
+</head>
+<body>
+
+  <div id="toast-container"></div>
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner" id="loaderSpinner"></div>
+    <div class="loading-text" id="loaderText">CARGANDO...</div>
+  </div>
+
+  <div class="header">
+    <button class="theme-toggle" id="btnTheme">🌙</button>
+    <h1>Precios & Parámetros</h1>
+  </div>
+
+  <div class="action-bar">
+      <button class="btn" id="btnVolver">⬅ Volver</button>
+      <div style="display:flex; gap:10px;">
+          <button class="btn btn-add" id="btnNuevo">+ Nuevo Precio</button>
+          <button class="btn btn-save" id="btnGuardarLote">GUARDAR CAMBIOS</button>
+      </div>
+  </div>
+
+  <div id="cards-container" class="grid-cards">
+      <!-- TARJETA FIJA DE PARÁMETROS GLOBALES -->
+      <div class="category-card param-zone" id="cardParametros">
+          <div class="category-title" style="margin-bottom:5px;">Parámetros y Escalas Globales</div>
+          <div style="text-align:center; margin-bottom:20px;">
+              <span class="sub-title" style="display:inline-block; margin-right:10px;">Recargo Envase Flotante ($):</span>
+              <input type="number" id="inpFlotante" class="price-input" style="width:120px; display:inline-block;" value="0">
+          </div>
+          
+          <div class="ranges-grid">
+              <!-- 10 KG -->
+              <div class="range-box">
+                  <div class="sub-title" style="color:var(--success);">Escala Comisión 10 KG</div>
+                  <div class="range-header"><div>Desde $</div><div>Hasta $</div><div>Comisión $</div><div></div></div>
+                  <div id="boxRango10"></div>
+                  <button class="btn-add-range" onclick="window.addRango('10')">+ Agregar Escala</button>
+              </div>
+              <!-- 15 KG -->
+              <div class="range-box">
+                  <div class="sub-title" style="color:var(--success);">Escala Comisión 15 KG</div>
+                  <div class="range-header"><div>Desde $</div><div>Hasta $</div><div>Comisión $</div><div></div></div>
+                  <div id="boxRango15"></div>
+                  <button class="btn-add-range" onclick="window.addRango('15')">+ Agregar Escala</button>
+              </div>
+              <!-- 45 KG -->
+              <div class="range-box">
+                  <div class="sub-title" style="color:var(--success);">Escala Comisión 45 KG</div>
+                  <div class="range-header"><div>Desde $</div><div>Hasta $</div><div>Comisión $</div><div></div></div>
+                  <div id="boxRango45"></div>
+                  <button class="btn-add-range" onclick="window.addRango('45')">+ Agregar Escala</button>
+              </div>
+          </div>
+      </div>
+      <!-- ACÁ ABAJO SE INYECTAN LOS PRECIOS POR CATEGORÍA -->
+  </div>
+
+  <div class="modal-overlay" id="modal">
+    <div class="modal-box">
+        <div class="modal-title">Agregar Precio / Nuevo</div>
+        <div class="form-group">
+            <label>Categoría (Elegir o escribir nueva)</label>
+            <input type="text" id="inpCategoria" class="modal-input" placeholder="Ej: COMERCIO..." list="listaCategorias">
+            <datalist id="listaCategorias"></datalist>
+        </div>
+        <div class="form-group">
+            <label>Producto / Tipo</label>
+            <input type="text" id="inpProducto" class="modal-input" placeholder="Ej: 10, ENV10..." list="listaProductos">
+            <datalist id="listaProductos"></datalist>
+        </div>
+        <div class="form-group">
+            <label>Precio ($)</label>
+            <input type="number" id="inpPrecio" class="modal-input" placeholder="0" inputmode="numeric">
+        </div>
+        <button class="btn btn-save btn-full" id="btnGuardarNuevo">AGREGAR (No olvides Guardar Cambios)</button>
+        <button class="btn btn-full btn-close" id="btnCancelar">CANCELAR</button>
+    </div>
+  </div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getFirestore, doc, getDoc, collection, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
+    authDomain: "vmgaslr.firebaseapp.com",
+    projectId: "vmgaslr",
+    storageBucket: "vmgaslr.firebasestorage.app",
+    messagingSenderId: "75859850089",
+    appId: "1:75859850089:web:fc551c770bbf4ae25803f8"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const params = new URLSearchParams(window.location.search);
+window.k = params.get('k') || sessionStorage.getItem('vm_token');
+
+if (!window.k) window.location.replace('index.html');
+if (window.history.replaceState) window.history.replaceState({}, document.title, window.location.pathname);
+
+// ================= TEMA =================
+const btnTheme = document.getElementById('btnTheme');
+btnTheme.onclick = () => {
+    const isLight = document.body.classList.toggle('light-mode');
+    localStorage.setItem('vm_theme', isLight ? 'light' : 'dark');
+    btnTheme.textContent = isLight ? '☀️' : '🌙';
+};
+if(localStorage.getItem('vm_theme') !== 'dark') {
+    document.body.classList.add('light-mode'); btnTheme.textContent = '☀️';
+} else { btnTheme.textContent = '🌙'; }
+
+// ================= UTILS =================
+window.showToast = function(msg, type = 'info') {
+    const c = document.getElementById('toast-container');
+    const t = document.createElement('div');
+    t.className = `toast ${type}`; t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(() => t.classList.add('show'), 10);
+    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3500);
+}
+window.toggleLoader = function(show, text = 'CARGANDO...', isSuccess = false) {
+    const ov = document.getElementById('loadingOverlay');
+    const txt = document.getElementById('loaderText');
+    const sp = document.getElementById('loaderSpinner');
+    txt.textContent = text;
+    if (isSuccess) { sp.classList.add('success-mode'); txt.classList.add('success-mode'); } 
+    else { sp.classList.remove('success-mode'); txt.classList.remove('success-mode'); }
+    if (show) ov.classList.add('active'); else ov.classList.remove('active');
+}
+window.expulsar = function() { sessionStorage.clear(); window.location.replace('index.html'); };
+
+// ================= INACTIVIDAD =================
+let ultimaActividad = Date.now();
+const registrarActividad = () => ultimaActividad = Date.now();
+['click', 'mousemove', 'keydown', 'touchstart', 'scroll'].forEach(evt => document.addEventListener(evt, registrarActividad, { passive: true }));
+setInterval(() => { if (Date.now() - ultimaActividad > 900000) window.expulsar(); }, 10000);
+
+// ================= DATOS GLOBALES =================
+let preciosData = [];
+let parametrosGlob = { recargo_flotante: 0, comisiones_10: [], comisiones_15: [], comisiones_45: [] };
+let chismosoPrecios = {}; // Guarda IDs de precios tocados
+
+// ================= ARRANQUE =================
+async function init() {
+    try {
+        const permsLocales = JSON.parse(sessionStorage.getItem('vm_perms') || '{}');
+        if (permsLocales.precios !== true && permsLocales.PRECIOS !== true && permsLocales.precios !== "true") {
+            alert("⛔ Acceso denegado. No tienes permisos para gestionar Precios.");
+            return window.location.replace(`inicio.html?k=${window.k}`);
+        }
+        document.body.style.opacity = 1;
+        
+        window.toggleLoader(true, "VERIFICANDO SESIÓN...");
+        const tokenSnap = await getDoc(doc(db, "tokens", window.k));
+        if (!tokenSnap.exists() || (tokenSnap.data().expira && Date.now() > tokenSnap.data().expira)) throw new Error("Sesión inválida");
+        
+        window.toggleLoader(true, "LEYENDO BASE DE DATOS...");
+        await cargarTodoFirebase();
+    } catch(e) { window.expulsar(); }
+}
+
+async function cargarTodoFirebase() {
+    try {
+        // 1. Cargar Precios Estándar
+        const qsPrecios = await getDocs(collection(db, "precios"));
+        preciosData = [];
+        const cats = new Set();
+        const prods = new Set();
+
+        qsPrecios.forEach(d => {
+            const val = d.data();
+            val.id = d.id; // Clave primaria
+            preciosData.push(val);
+            cats.add(val.categoria); prods.add(val.tipo);
+        });
+
+        // Poblar Datalists
+        const dlCat = document.getElementById('listaCategorias');
+        const dlProd = document.getElementById('listaProductos');
+        dlCat.innerHTML = ''; cats.forEach(c => dlCat.innerHTML += `<option value="${c}">`);
+        dlProd.innerHTML = ''; prods.forEach(p => dlProd.innerHTML += `<option value="${p}">`);
+
+        // 2. Cargar Parámetros Globales (Rangos y Flotante)
+        const docParam = await getDoc(doc(db, "configuracion", "parametros"));
+        if(docParam.exists()) {
+            parametrosGlob = { ...parametrosGlob, ...docParam.data() };
+        }
+
+        renderUI();
+        window.toggleLoader(false);
+    } catch(e) {
+        console.error(e);
+        window.toggleLoader(false);
+        window.showToast("Error crítico de conexión", "error");
+    }
+}
+
+// ================= RENDERIZADO =================
+function renderUI() {
+    // 1. Renderizar Parámetros (Flotante)
+    document.getElementById('inpFlotante').value = parametrosGlob.recargo_flotante || 0;
+
+    // 2. Renderizar Rangos de Comisiones
+    renderRangos('10', parametrosGlob.comisiones_10);
+    renderRangos('15', parametrosGlob.comisiones_15);
+    renderRangos('45', parametrosGlob.comisiones_45);
+
+    // 3. Renderizar Tarjetas de Precios
+    const container = document.getElementById('cards-container');
+    // Limpiar todo menos la tarjeta fija de parámetros
+    Array.from(container.children).forEach(c => { if(c.id !== 'cardParametros') c.remove(); });
+
+    const mapaCategorias = {};
+    preciosData.forEach(p => {
+        if(!mapaCategorias[p.categoria]) mapaCategorias[p.categoria] = { carga: [], envase: [], comision: [], otros: [] };
+        if(['10','15','45'].includes(p.tipo)) mapaCategorias[p.categoria].carga.push(p);
+        else if(['ENV10','ENV15','ENV45'].includes(p.tipo)) mapaCategorias[p.categoria].envase.push(p);
+        else if(p.tipo.toUpperCase().includes('COM')) mapaCategorias[p.categoria].comision.push(p); // Por compatibilidad vieja si quedan
+        else mapaCategorias[p.categoria].otros.push(p);
+    });
+
+    Object.keys(mapaCategorias).forEach(cat => {
+        const catData = mapaCategorias[cat];
+        const card = document.createElement('div');
+        card.className = 'category-card';
+        let htmlCard = `<div class="category-title">${cat}</div>`;
+
+        const generarBloque = (items, titulo, claseColor) => {
+            if(items.length === 0) return '';
+            items.sort((a,b) => (parseInt(a.tipo) || 99) - (parseInt(b.tipo) || 99)); // Orden precario por número
+            
+            let inputsHtml = items.map(item => {
+                let label = item.tipo.replace('ENV', '').replace('COM', '').replace('ISION', '');
+                if(label === '10' || label === '15' || label === '45') label += 'KG';
+                if(label === '') label = 'Gral';
+
+                // Guardamos foto original para el chismoso
+                item._original = item.precio; 
+
+                return `
+                    <div class="item-col">
+                        <span class="item-label">${label}</span>
+                        <input type="number" class="price-input idx-precio" data-id="${item.id}" value="${item.precio}" inputmode="numeric">
+                    </div>`;
+            }).join('');
+
+            return `
+                <div class="sub-block ${claseColor}">
+                    <div class="sub-title">${titulo}</div>
+                    <div class="items-grid">${inputsHtml}</div>
+                </div>`;
+        };
+
+        htmlCard += generarBloque(catData.carga, "Solo Carga", "block-carga");
+        htmlCard += generarBloque(catData.envase, "Carga + Envase", "block-envase");
+        htmlCard += generarBloque(catData.comision, "Comisión Fija (Obsoleto)", "block-comision");
+        htmlCard += generarBloque(catData.otros, "Otros", "block-otros");
+
+        card.innerHTML = htmlCard;
+        container.appendChild(card);
+    });
+
+    // Listeners del chismoso para pintar los modificados
+    document.querySelectorAll('.idx-precio').forEach(inp => {
+        inp.addEventListener('input', (e) => {
+            const input = e.target;
+            const docId = input.getAttribute('data-id');
+            const p = preciosData.find(x => x.id === docId);
+            const val = parseInt(input.value) || 0;
+
+            if (val !== p._original) {
+                input.classList.add('is-modified');
+                chismosoPrecios[docId] = val;
+            } else {
+                input.classList.remove('is-modified');
+                delete chismosoPrecios[docId];
+            }
+        });
+    });
+}
+
+// ================= LÓGICA RANGOS EN DOM =================
+function renderRangos(kilos, arrayRangos) {
+    const box = document.getElementById(`boxRango${kilos}`);
+    box.innerHTML = '';
+    (arrayRangos || []).forEach(r => addRowRango(kilos, r.min, r.max, r.com));
+}
+
+window.addRango = function(kilos) { addRowRango(kilos, 0, 0, 0); };
+window.delRango = function(btn) { btn.closest('.range-row').remove(); };
+
+function addRowRango(kilos, min, max, com) {
+    const box = document.getElementById(`boxRango${kilos}`);
+    const row = document.createElement('div');
+    row.className = 'range-row';
+    row.innerHTML = `
+        <input type="number" class="r-min" value="${min}" placeholder="Mínimo">
+        <input type="number" class="r-max" value="${max}" placeholder="Máximo">
+        <input type="number" class="r-com" value="${com}" placeholder="Comisión">
+        <button class="btn-del-range" onclick="window.delRango(this)">✖</button>
+    `;
+    box.appendChild(row);
+}
+
+function recolectarRangos(kilos) {
+    const box = document.getElementById(`boxRango${kilos}`);
+    const arr = [];
+    box.querySelectorAll('.range-row').forEach(row => {
+        arr.push({
+            min: parseInt(row.querySelector('.r-min').value) || 0,
+            max: parseInt(row.querySelector('.r-max').value) || 0,
+            com: parseInt(row.querySelector('.r-com').value) || 0
+        });
+    });
+    return arr;
+}
+
+// ================= ALTA DE PRECIOS =================
+const modal = document.getElementById('modal');
+document.getElementById('btnNuevo').onclick = () => {
+    document.getElementById('inpCategoria').value = ""; document.getElementById('inpProducto').value = ""; document.getElementById('inpPrecio').value = "";
+    modal.style.display = 'flex';
+};
+document.getElementById('btnCancelar').onclick = () => modal.style.display = 'none';
+
+document.getElementById('btnGuardarNuevo').onclick = () => {
+    const cat = document.getElementById('inpCategoria').value.trim().toUpperCase();
+    const tip = document.getElementById('inpProducto').value.trim().toUpperCase();
+    const pre = parseInt(document.getElementById('inpPrecio').value) || 0;
+
+    if(!cat || !tip) return window.showToast("Completá categoría y tipo.", "error");
+    
+    // Id compuesto como llave primaria para evitar duplicados en la base
+    const idCompuesto = `${cat}_${tip}`.replace(/\s+/g, '_');
+    
+    const nuevo = { id: idCompuesto, categoria: cat, tipo: tip, precio: pre };
+    
+    // Verificamos si ya existe en memoria, lo pisamos, sino lo empujamos
+    const idx = preciosData.findIndex(x => x.id === idCompuesto);
+    if(idx >= 0) { preciosData[idx] = nuevo; } 
+    else { preciosData.push(nuevo); }
+    
+    // Forzamos al chismoso a registrar que hay que guardar esto
+    chismosoPrecios[idCompuesto] = pre;
+
+    renderUI();
+    modal.style.display = 'none';
+    window.showToast("Agregado. Apretá GUARDAR CAMBIOS para impactar en Firebase.", "success");
+};
+
+// ================= ESCRITURA MASIVA FIREBASE =================
+document.getElementById('btnGuardarLote').onclick = async () => {
+    const batch = writeBatch(db);
+    let hayCambios = false;
+
+    // 1. Empaquetar Precios Estándar Tocados
+    Object.keys(chismosoPrecios).forEach(docId => {
+        const p = preciosData.find(x => x.id === docId);
+        if(p) {
+            batch.set(doc(db, "precios", docId), { categoria: p.categoria, tipo: p.tipo, precio: chismosoPrecios[docId] }, { merge: true });
+            hayCambios = true;
+        }
+    });
+
+    // 2. Empaquetar Parámetros y Rangos Globales
+    // Como los rangos pueden borrarse o agregarse, es más seguro sobreescribir el documento entero de parámetros
+    const paramNuevos = {
+        recargo_flotante: parseInt(document.getElementById('inpFlotante').value) || 0,
+        comisiones_10: recolectarRangos('10'),
+        comisiones_15: recolectarRangos('15'),
+        comisiones_45: recolectarRangos('45')
+    };
+
+    // Validamos rápido si los parámetros cambiaron convirtiéndolos a texto (forma rudimentaria pero efectiva)
+    if(JSON.stringify(paramNuevos) !== JSON.stringify(parametrosGlob)) {
+        batch.set(doc(db, "configuracion", "parametros"), paramNuevos, { merge: true });
+        hayCambios = true;
+    }
+
+    if(!hayCambios) return window.showToast("No hay cambios nuevos para guardar.", "info");
+
+    window.toggleLoader(true, "IMPACTANDO EN FIREBASE...");
+    try {
+        await batch.commit();
+        chismosoPrecios = {}; // Reseteo
+        parametrosGlob = paramNuevos;
+        
+        window.toggleLoader(true, "¡TODO ACTUALIZADO!", true);
+        setTimeout(() => { window.toggleLoader(false); renderUI(); }, 1200);
+    } catch(e) {
+        console.error(e);
+        window.toggleLoader(false);
+        window.showToast("Error crítico al guardar.", "error");
+    }
+};
+
+document.getElementById('btnVolver').onclick = () => window.location.replace(`inicio.html?k=${window.k}`);
+
+init();
+</script>
+</body>
+</html>
