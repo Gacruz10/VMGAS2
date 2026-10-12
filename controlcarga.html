@@ -308,7 +308,7 @@ function toggleLoader(show, text = 'CARGANDO...', isSuccess = false) {
     if (show) ov.classList.add('active'); else ov.classList.remove('active');
 }
 
-function logout() { sessionStorage.removeItem('k'); window.location.replace('index.html'); }
+function logout() { sessionStorage.removeItem('k'); window.location.replace('inicio.html'); }
 if (!k) { alert("⚠️ Falta token de sesión."); logout(); } else { sessionStorage.setItem('k', k); window.history.replaceState({}, document.title, window.location.pathname); }
 
 // Inactividad
