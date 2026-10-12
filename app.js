@@ -1,3 +1,19 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getFirestore, doc, getDoc, collection, getDocs, writeBatch, increment } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
+    authDomain: "vmgaslr.firebaseapp.com",
+    projectId: "vmgaslr",
+    storageBucket: "vmgaslr.firebasestorage.app",
+    messagingSenderId: "75859850089",
+    appId: "1:75859850089:web:fc551c770bbf4ae25803f8",
+    measurementId: "G-RJCWWBMBFF"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzi1x000HsPSQsWgz65jYWDWZI3cNQoKhoU5XCKagYcqs4en-d1YzO2sbnmzWlLIa9Vvw/exec";
 const params = new URLSearchParams(window.location.search);
 const k = params.get('k') || params.get('token');
@@ -5,7 +21,6 @@ const k = params.get('k') || params.get('token');
 if (!k) window.location.replace('index.html');
 if (window.history.replaceState) window.history.replaceState({}, document.title, window.location.pathname);
 
-// MODIFICACIÓN CRÍTICA: Escucha de red y auto-sync
 window.addEventListener('online', function () {
     actualizarIndicadorOffline();
     sincronizarCola();
@@ -26,7 +41,7 @@ let audioChunks = [];
 let audioBase64 = null;
 let recordingTimer = null;
 let recSeconds = 0;
-let isSyncing = false; // CANDADO ANTI-SPAM
+let isSyncing = false; 
 
 function autocompletarFaltante() {
     const el = document.getElementById('pagoEstado');
@@ -165,21 +180,93 @@ function showToast(msg, type = 'info') {
 
 function updateLoader(title, sub) { document.getElementById('txtLoading').textContent = title; document.getElementById('txtSubLoading').textContent = sub; }
 
+function mostrarLoaderGuardando(titulo, subtitulo) {
+    const overlay = document.getElementById('loadingOverlay');
+    const form = document.getElementById('formContainer');
+    
+    overlay.className = 'loading-overlay glass-yellow';
+    overlay.style.visibility = 'visible';
+    overlay.style.display = 'flex';
+    overlay.style.opacity = '1';
+    form.classList.add('is-loading');
+    
+    document.getElementById('spinnerAnim').style.display = 'block';
+    document.getElementById('statusIcon').style.display = 'none';
+    document.getElementById('btnCerrarError').style.display = 'none';
+    
+    updateLoader(titulo, subtitulo);
+}
+
+function mostrarExito(mensaje) {
+    const overlay = document.getElementById('loadingOverlay');
+    
+    overlay.className = 'loading-overlay glass-green'; 
+    
+    document.getElementById('spinnerAnim').style.display = 'none';
+    const icon = document.getElementById('statusIcon');
+    icon.innerHTML = '✅';
+    icon.style.display = 'block';
+    
+    updateLoader("¡REGISTRO EXITOSO!", mensaje);
+}
+
+function mostrarError(mensaje) {
+    const overlay = document.getElementById('loadingOverlay');
+    
+    overlay.className = 'loading-overlay glass-red'; 
+    
+    document.getElementById('spinnerAnim').style.display = 'none';
+    const icon = document.getElementById('statusIcon');
+    icon.innerHTML = '❌';
+    icon.style.display = 'block';
+    
+    document.getElementById('btnCerrarError').style.display = 'block';
+    
+    updateLoader("ERROR AL GUARDAR", mensaje);
+}
+
+window.cerrarLoaderError = function() {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.style.opacity = '0';
+    setTimeout(() => { 
+        overlay.style.visibility = 'hidden'; 
+        overlay.style.display = 'none'; 
+        overlay.className = 'loading-overlay'; 
+        document.getElementById('formContainer').classList.remove('is-loading');
+    }, 300);
+    
+    const btn = document.getElementById('btnGuardar');
+    btn.disabled = false;
+};
+
 async function init() {
     try {
         updateLoader("VERIFICANDO SESIÓN", "Comprobando credenciales...");
         document.body.style.opacity = 1;
 
-        const fd = new FormData(); fd.append('action', 'verificarsesion'); fd.append('k', k);
-        let d;
         if (navigator.onLine) {
-            try {
-                const r = await fetch(SCRIPT_URL, { method: 'POST', body: fd });
-                d = await r.json(); if (d.status !== 'success') throw new Error();
-            } catch (e) { d = { nombre: 'MODO OFFLINE' }; }
-        } else { d = { nombre: 'MODO OFFLINE' }; }
+            const tokenSnap = await getDoc(doc(db, "tokens", k));
+            if (!tokenSnap.exists() || (tokenSnap.data().expira && Date.now() > tokenSnap.data().expira)) {
+                showToast("Token inválido o expirado", "error");
+                setTimeout(() => window.location.replace('index.html'), 1500);
+                return;
+            }
+            const tokenData = tokenSnap.data();
+            window.idUsuarioFirebase = tokenData.usuario; 
+            window.nombreUsuarioMostrar = tokenData.nombre_mostrar || window.idUsuarioFirebase;
+            localStorage.setItem('vm_usuario_id', window.idUsuarioFirebase);
+            localStorage.setItem('vm_usuario_nombre', window.nombreUsuarioMostrar);
 
-        document.getElementById('welcomeMessage').textContent = `Usuario: ${d.nombre ? d.nombre.toUpperCase() : 'USUARIO'}`;
+            const segSnap = await getDoc(doc(db, "seguridad", "pin"));
+            if (segSnap.exists()) {
+                window.pinDinamicoFirebase = segSnap.data().dinamico?.toString();
+            }
+        } else {
+            window.idUsuarioFirebase = localStorage.getItem('vm_usuario_id') || 'OFFLINE';
+            window.nombreUsuarioMostrar = localStorage.getItem('vm_usuario_nombre') || 'MODO OFFLINE';
+        }
+
+        document.getElementById('welcomeMessage').textContent = `Usuario: ${window.nombreUsuarioMostrar.toUpperCase()}`;
         startTimer();
         actualizarIndicadorOffline();
 
@@ -190,64 +277,70 @@ async function init() {
 
         sugerirClientesCercanos();
 
-        // Disparo automático al iniciar
         if (navigator.onLine) {
             setTimeout(sincronizarCola, 1500);
         }
-    } catch (e) { window.location.replace('index.html'); }
+    } catch (e) { 
+        console.error("Init Error", e);
+        window.location.replace('index.html'); 
+    }
 }
 
 async function cargarDatos() {
     try {
         let descargoOk = false;
 
-        // Intento 1: Si el navegador jura que hay internet, tratamos de descargar
         if (navigator.onLine) {
             try {
-                updateLoader("MAPEO DE ZONAS", "Descargando rutas activas...");
-                const rZonas = await fetch(`${SCRIPT_URL}?action=getactivezones`);
-                const dataZ = await rZonas.json();
-                zonasActivas = dataZ.zonas ? dataZ.zonas : (Array.isArray(dataZ) ? dataZ : []);
+                updateLoader("SINCRONIZANDO DB", "Descargando de Firebase...");
+                
+                const snapCli = await getDocs(collection(db, "clientes"));
+                clientesData = snapCli.docs.map(d => ({ id_cliente: d.id, ...d.data() }));
 
-                updateLoader("SINCRONIZANDO DB", "Descargando clientes y cuadro tarifario...");
-                const rDatos = await fetch(`${SCRIPT_URL}?action=getDatos&k=${k}`);
-                const datos = await rDatos.json();
+                const snapPrecios = await getDocs(collection(db, "precios"));
+                preciosData = snapPrecios.docs.map(d => d.data());
+
+                const snapParam = await getDoc(doc(db, "configuracion", "parametros"));
+                if (snapParam.exists() && snapParam.data().comisiones) {
+                    comisionesData = snapParam.data().comisiones;
+                }
+
+                deudasData = {};
+                clientesData.forEach(c => {
+                    deudasData[c.id_cliente] = {
+                        env10: c.env10 || 0, env15: c.env15 || 0, env45: c.env45 || 0,
+                        plata: c.plata || 0,
+                        flotante10: c.flotante10 || 0, flotante15: c.flotante15 || 0, flotante45: c.flotante45 || 0
+                    };
+                });
+
+                zonasActivas = [...new Set(clientesData.map(c => c.zona).filter(Boolean))];
 
                 const paqueteOffline = {
                     zonas: zonasActivas,
-                    clientes: datos.clientes || [],
-                    precios: datos.precios || [],
-                    deudas: datos.deudas || {},
-                    comisiones: datos.comisiones || []
+                    clientes: clientesData,
+                    precios: preciosData,
+                    deudas: deudasData,
+                    comisiones: comisionesData
                 };
 
                 localStorage.setItem('vm_paquete_offline', JSON.stringify(paqueteOffline));
-
-                clientesData = paqueteOffline.clientes;
-                preciosData = paqueteOffline.precios;
-                deudasData = paqueteOffline.deudas;
-                comisionesData = paqueteOffline.comisiones;
-
-                descargoOk = true; // Todo salió perfecto
+                descargoOk = true;
             } catch (fetchError) {
-                console.warn("⚠️ Falló la red o bloqueado por CORS. Pasando a modo offline forzado.");
-                descargoOk = false; // Falló en el medio del proceso
+                console.warn("⚠️ Falló descarga de Firebase. Pasando a offline.", fetchError);
+                descargoOk = false; 
             }
         }
 
-        // Intento 2: Si no hay internet real, o el Intento 1 rebotó, leemos la memoria local
         if (!navigator.onLine || !descargoOk) {
             const cache = localStorage.getItem('vm_paquete_offline');
-
             if (cache) {
                 const paquete = JSON.parse(cache);
-
                 zonasActivas = paquete.zonas || [];
                 clientesData = paquete.clientes || [];
                 preciosData = paquete.precios || [];
                 deudasData = paquete.deudas || {};
                 comisionesData = paquete.comisiones || [];
-
                 showToast('Modo Offline: Usando datos en memoria', 'warning');
             } else {
                 throw new Error("El paquete offline no existe o está corrupto");
@@ -418,10 +511,6 @@ function verificarSiNecesitaPin() {
     else { container.style.display = 'none'; pinInput.value = ''; pinInput.removeAttribute('required'); }
 }
 
-// ----------------------------------------------------
-// LÓGICA FUZZY SEARCH Y HAVERSINE (CHIPS CERCANOS)
-// ----------------------------------------------------
-
 function normalizarTexto(texto) {
     return texto ? texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim() : '';
 }
@@ -448,9 +537,9 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
 
 async function sugerirClientesCercanos() {
     let contChips = document.getElementById('sugerenciasGPSContainer');
-    if (!contChips) return; // Si por alguna razón no cargó el HTML nuevo, aborta limpio.
+    if (!contChips) return; 
 
-    contChips.innerHTML = ''; // Limpiamos lecturas previas
+    contChips.innerHTML = ''; 
 
     const ubiActual = await obtenerUbicacionFantasma();
     if (ubiActual.includes("SIN_GPS")) {
@@ -478,7 +567,7 @@ async function sugerirClientesCercanos() {
         top3.forEach(c => {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'gps-chip'; // Usamos la clase inyectada en el CSS
+            btn.className = 'gps-chip';
             btn.innerHTML = `📍 ${c.nombre.slice(0, 18)}${c.nombre.length > 18 ? '...' : ''} (${(c.distancia * 1000).toFixed(0)}m)`;
             btn.onclick = () => seleccionarClienteDesdeBusqueda(c);
             contChips.appendChild(btn);
@@ -672,7 +761,6 @@ function actualizarTotales() {
     } else { rowEnv.style.display = 'none'; }
 
     let objetivoCaja = v_gas;
-    // CORRECCIÓN: Si es venta o consignación, el envase DEBE sumar a la caja a cobrar
     if (!isModoFlotante && operandoEnvase && (modo === 'venta' || modo === 'consignacion')) {
         objetivoCaja += v_env;
     }
@@ -767,7 +855,6 @@ function validarPagos(objetivo, esConsignacion) {
 
     const dif = objetivo - pagado;
 
-    // CIRUGÍA DE SALDOS: Consignación permite dif positiva (Faltante = Deuda). PagoDeuda permite dif negativa (Sobrante = Saldo a favor).
     const operacionValida = (hayVenta && Math.abs(dif) < 1) ||
         (!hayVenta && hayGasto) ||
         (esConsignacion && dif >= 0) ||
@@ -784,7 +871,7 @@ function validarPagos(objetivo, esConsignacion) {
         } else if ((esPagoDeuda || esConsignacion) && dif < 0) {
             el.textContent = `✓ SALDO A FAVOR CREADO: $${Math.abs(dif).toLocaleString('es-AR')}`;
             el.className = "payment-counter complete";
-            el.style.color = "var(--success)"; // Lo pintamos de verde éxito
+            el.style.color = "var(--success)"; 
         } else {
             el.textContent = "✓ LISTO PARA GUARDAR";
             el.className = "payment-counter complete";
@@ -864,7 +951,6 @@ document.getElementById('cliente').onchange = function () {
     let tieneConsignacion = (dPlata > 0);
     let tieneFlotante = (fEnv10 > 0 || fEnv15 > 0 || fEnv45 > 0);
 
-    // --- EFECTO NEÓN Y STICKY PARA DEUDAS (SIN MODAL) ---
     if (tieneComodato) {
         let detalleComodato = [];
         if (dEnv10 > 0) detalleComodato.push(`${dEnv10}x10kg`);
@@ -926,8 +1012,6 @@ document.getElementById('cliente').onchange = function () {
     }
 
     checkVisibilidadCascada(); actualizarPreciosAutomaticos();
-
-    // LÍNEA ELIMINADA: Ya no llamamos a mostrarModalDeudas() acá.
 };
 
 document.getElementById('nuevoCliente').onchange = function () {
@@ -979,7 +1063,6 @@ function toggleMutuallyExclusive(clickedId) {
     });
 }
 
-// Conectamos el nuevo checkbox modificador
 if (document.getElementById('esRetiroEnPlanta')) {
     document.getElementById('esRetiroEnPlanta').onchange = () => {
         actualizarPreciosAutomaticos();
@@ -1000,7 +1083,6 @@ document.getElementById('ventaPlanta').onclick = () => {
         document.getElementById('efectivoInput').style.display = 'none';
         document.getElementById('montoEfectivo').value = '';
 
-        // Bloqueo de cruces: Desactiva el cobro de deudas si toca Flotantes
         const chkDeuda = document.getElementById('pagoDeuda');
         if (chkDeuda) {
             chkDeuda.checked = false;
@@ -1034,7 +1116,7 @@ function actualizarIndicadorOffline() { let cola = JSON.parse(localStorage.getIt
 
 async function sincronizarCola() {
     if (!navigator.onLine) { showToast("Todavía no tienes internet.", "error"); return; }
-    if (isSyncing) return; // Evita que se dispare 20 veces a la vez
+    if (isSyncing) return; 
 
     let cola = JSON.parse(localStorage.getItem('cola_ventas') || '[]');
     if (cola.length === 0) return;
@@ -1051,33 +1133,11 @@ async function sincronizarCola() {
 
     for (let item of cola) {
         try {
-            const paramsEncoded = new URLSearchParams();
-
-            for (const key in item) {
-                if (key !== '_offline_ts') {
-                    if (key === 'k') {
-                        paramsEncoded.append('k', k);
-                    } else {
-                        paramsEncoded.append(key, item[key]);
-                    }
-                }
-            }
-
-            const response = await fetch(SCRIPT_URL, {
-                method: "POST",
-                body: paramsEncoded,
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-            });
-
-            const json = await response.json();
-
-            if (json.status === 'success') {
-                procesados++;
-            } else {
-                showToast("⛔ RECHAZADO: " + (json.message || "Error desconocido en servidor"), "error");
-                nuevaCola.push(item);
-                errores++;
-            }
+            const batch = writeBatch(db);
+            const movRef = doc(collection(db, "movimientos"), item.N);
+            batch.set(movRef, item);
+            await batch.commit();
+            procesados++;
         } catch (e) {
             showToast("🔌 FALLO DE RED: " + e.message, "error");
             nuevaCola.push(item);
@@ -1116,7 +1176,7 @@ async function guardar() {
     }
 
     btn.disabled = true;
-    btn.textContent = "OBTENIENDO GPS...";
+    mostrarLoaderGuardando("OBTENIENDO GPS...", "Buscando satélites");
 
     const ubicacionActual = await obtenerUbicacionFantasma();
 
@@ -1124,7 +1184,6 @@ async function guardar() {
         showToast("⚠️ Sin señal GPS. Guardando registro sin ubicación.", "warning");
     }
 
-    // --- RADAR DE PRECISIÓN (MÁX 60 METROS = 0.060 KM) CON TIJERA ---
     let validacionGPS = "SIN_DATOS";
     if (!ubicacionActual.includes("SIN_GPS") && clienteSeleccionado && (clienteSeleccionado.ubicacion || clienteSeleccionado.UBICACION)) {
         let ubiCli = clienteSeleccionado.ubicacion || clienteSeleccionado.UBICACION;
@@ -1144,7 +1203,7 @@ async function guardar() {
         }
     }
 
-    btn.textContent = "PROCESANDO OPERACIÓN...";
+    updateLoader("PROCESANDO OPERACIÓN...", "Armando paquete de datos");
 
     const cat = obtenerCat();
     const esNuevo = document.getElementById('nuevoCliente').checked;
@@ -1182,8 +1241,6 @@ async function guardar() {
         q45 += parseInt(document.getElementById('comodato45').value) || 0;
     }
 
-    const hayVenta = (q10 + q15 + q45 > 0) || operandoEnvase || document.getElementById('pagoDeuda').checked || isModoFlotante;
-
     let tipoOp = 'VENTA';
     if (operandoEnvase) {
         if (modoEnv === 'venta') tipoOp = 'VENTA_ENVASE';
@@ -1203,7 +1260,7 @@ async function guardar() {
     const hora24 = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
     let ce10 = 0, ce15 = 0, ce45 = 0;
-    let ce10$ = 0, ce15$ = 0, ce45$ = 0;
+    let ce10$ = 0, ce15$= 0, ce45$ = 0;
 
     if (!isModoFlotante && operandoEnvase) {
         if (modoEnv === 'venta') {
@@ -1226,7 +1283,7 @@ async function guardar() {
 
     let pagado = parseM('montoEfectivo') + parseM('montoTransferencia');
     let objetivoGas = (q10 * parseM('precioGarrafa1')) + (q15 * parseM('precioGarrafa2')) + (q45 * parseM('precioGarrafa3'));
-    let totalOperacion = objetivoGas + ce10$ + ce15$ + ce45$;
+    let totalOperacion = objetivoGas + ce10$ + ce15$+ ce45$;
 
     let deudaGeneradaPlanta = (isModoFlotante && objetivoGas > pagado) ? (objetivoGas - pagado) : 0;
 
@@ -1260,8 +1317,8 @@ async function guardar() {
     }
 
     const payload = {
-        action: 'guardarregistro', k: k, USUARIO: document.getElementById('welcomeMessage').textContent.replace('Usuario: ', '').toLowerCase().trim(),
-        TIPO: tipoOp, FECHA: now.toLocaleDateString('es-AR'), HORA: hora24, C: nombreC, N: generarID(),
+        USUARIO: document.getElementById('welcomeMessage').textContent.replace('Usuario: ', '').toLowerCase().trim(),
+        TIPO: tipoOp, FECHA: now.toLocaleDateString('es-AR'), HORA: hora24, C: nombreC, N: `V-${generarID()}`,
         'E$': parseM('montoEfectivo'), 'T$': parseM('montoTransferencia'), TOTAL: pagado,
         G: esGasto ? document.getElementById('descripcionGastos').value : '', GASTO_TOTAL: esGasto ? parseM('montoGastos') : 0,
         declaracionGastos: esGasto, garrafas: JSON.stringify(garrafasArray), pin: pinParaEnviar, esClienteNuevo: esNuevo, clienteNombre: esNuevo ? document.getElementById('nombreCliente').value : '',
@@ -1270,10 +1327,7 @@ async function guardar() {
         ventaDesdePlanta: isRetiroPlanta,
         esFlotante: isModoFlotante,
         deudaGeneradaPlanta: deudaGeneradaPlanta,
-        // --- CIRUGÍA: Evitamos el cobro/descuento doble sumando CE solo si es VENTA pura
-        ALL10: q10 + (modoEnv === 'venta' ? ce10 : 0),
-        ALL15: q15 + (modoEnv === 'venta' ? ce15 : 0),
-        ALL45: q45 + (modoEnv === 'venta' ? ce45 : 0),
+        ALL10: q10 + (modoEnv === 'venta' ? ce10 : 0), ALL15: q15 + (modoEnv === 'venta' ? ce15 : 0), ALL45: q45 + (modoEnv === 'venta' ? ce45 : 0),
         AV10: ret10, AV15: ret15, AV45: ret45,
         [`${pfx}10`]: q10, [`${pfx}10$`]: parseM('precioGarrafa1') * q10,
         [`${pfx}15`]: q15, [`${pfx}15$`]: parseM('precioGarrafa2') * q15,
@@ -1300,8 +1354,8 @@ async function guardar() {
         if (!navigator.onLine) {
             showToast("⚠️ Estás sin conexión. No se subirá el audio, pero se guardará el registro.", "warning");
         } else {
-            btn.textContent = "SUBIENDO AUDIO (ESPERE)...";
-            const audioName = `${generarID()}-${idClienteSeleccionado || 'SC'}`;
+            updateLoader("SUBIENDO AUDIO...", "Procesando nota de voz");
+            const audioName = `${payload.N}-${idClienteSeleccionado || 'SC'}`;
             const fdAudio = new FormData();
             fdAudio.append('action', 'upload_audio');
             fdAudio.append('k', k);
@@ -1326,34 +1380,52 @@ async function guardar() {
 
     if (!navigator.onLine) { guardarEnCola(payload); return; }
 
-    btn.textContent = "GUARDANDO REGISTRO...";
-    const fd = new FormData();
-    for (let key in payload) {
-        fd.append(key, payload[key]);
-    }
+    updateLoader("GUARDANDO REGISTRO...", "Impactando en Firebase");
 
     try {
-        const r = await fetch(SCRIPT_URL, { method: 'POST', body: fd });
-        const j = await r.json();
+        const batch = writeBatch(db);
+        const movRef = doc(collection(db, "movimientos"), payload.N);
+        batch.set(movRef, payload);
 
-        if (j.status === 'success') {
-            showToast("✓ REGISTRO EXITOSO", "success");
-            setTimeout(() => window.location.replace(`inicio.html?k=${k}`), 1500);
-        } else {
-            const msg = (j.message || "").toUpperCase();
-            if (msg.includes("PIN")) {
-                showToast("⛔ ERROR DE AUTORIZACIÓN: El PIN es incorrecto.", "error");
-                btn.disabled = false;
-                btn.textContent = "GUARDAR REGISTRO";
-                document.getElementById('globalPinInput').value = '';
-                document.getElementById('globalPinInput').focus();
-            } else {
-                throw new Error(j.message || "Error del servidor");
+        if (payload.esClienteNuevo) {
+            const newCliRef = doc(collection(db, "clientes"));
+            payload.ID_CLIENTE = newCliRef.id; 
+            batch.set(movRef, payload); 
+            batch.set(newCliRef, {
+                nombre: payload.clienteNombre, zona: payload.clienteZona, categoria: payload.clienteCategoria,
+                direccion: payload.clienteDireccion, telefono: payload.clienteTelefono, cuit_dni: payload.cuit_dni,
+                plata: 0, env10: 0, env15: 0, env45: 0
+            });
+            batch.update(doc(db, "seguridad", "pin"), { version_datos: increment(1) });
+        } else if (payload.ID_CLIENTE) {
+            const cliRef = doc(db, "clientes", payload.ID_CLIENTE);
+            let updates = {};
+            if (payload.esPagoDeuda) {
+                if (payload.pagoDeudaDinero) updates.plata = increment(-payload.pagoDeudaDinero);
+                if (payload.dev10) updates.env10 = increment(-payload.dev10);
+                if (payload.dev15) updates.env15 = increment(-payload.dev15);
+                if (payload.dev45) updates.env45 = increment(-payload.dev45);
             }
+            if (payload.operacionEnvase === 'consignacion') {
+                const deudEnv = payload.CE10$ + payload.CE15$ + payload.CE45$;
+                if (deudEnv > 0) updates.plata = increment(deudEnv);
+            }
+            if (payload.operacionEnvase === 'comodato') {
+                if (payload.CE10) updates.env10 = increment(payload.CE10);
+                if (payload.CE15) updates.env15 = increment(payload.CE15);
+                if (payload.CE45) updates.env45 = increment(payload.CE45);
+            }
+            if (Object.keys(updates).length > 0) batch.update(cliRef, updates);
         }
+
+        await batch.commit();
+
+        mostrarExito("La operación se registró correctamente.");
+        setTimeout(() => window.location.replace(`inicio.html?k=${k}`), 1500);
+
     } catch (e) {
-        if (e.message && (e.message.includes("PIN") || e.message.includes("Autorización"))) return;
         console.warn("Fallo de red o servidor:", e);
+        mostrarError("Fallo de red. Guardado en cola offline.");
         guardarEnCola(payload);
     }
 }
@@ -1392,8 +1464,9 @@ function cerrarModalDeudas() {
     setTimeout(() => { overlay.style.display = 'none'; }, 300);
 }
 
-document.getElementById('btnGuardar').onclick = guardar; document.getElementById('btnVolver').onclick = () => window.location.replace(`inicio.html?k=${k}`); init();
-
+document.getElementById('btnGuardar').onclick = guardar; 
+document.getElementById('btnVolver').onclick = () => window.location.replace(`inicio.html?k=${k}`); 
+init();
 
 function toggleTema() {
     var btn = document.getElementById('btnTema');
@@ -1425,3 +1498,10 @@ function controlPatovica() {
 
 controlPatovica();
 setInterval(controlPatovica, 30000);
+
+window.toggleTema = toggleTema;
+window.sincronizarCola = sincronizarCola;
+window.pedirPinSiCorresponde = pedirPinSiCorresponde;
+window.togglePreciosEnvasesManuales = togglePreciosEnvasesManuales;
+window.autocompletarFaltante = autocompletarFaltante;
+window.cerrarModalDeudas = cerrarModalDeudas;

@@ -197,7 +197,6 @@ body {
     transition: all 0.3s ease;
 }
 
-/* --- ESTILOS ORIGINALES DEL LOADER --- */
 .loading-overlay {
     position: absolute;
     top: 0;
@@ -254,7 +253,6 @@ body {
     padding: 0 20px;
 }
 
-/* --- NUEVAS ANIMACIONES DE GUARDADO (GLASS) --- */
 .loading-overlay.glass-yellow {
     background: rgba(184, 134, 11, 0.85) !important;
     backdrop-filter: blur(12px);
@@ -281,7 +279,6 @@ body.tema-claro .loading-overlay.glass-red {
     background: rgba(255, 68, 68, 0.9) !important;
 }
 
-/* Forzar que el texto sea blanco y legible sobre los colores intensos del glass */
 .loading-overlay.glass-yellow .loading-text,
 .loading-overlay.glass-green .loading-text,
 .loading-overlay.glass-red .loading-text,
