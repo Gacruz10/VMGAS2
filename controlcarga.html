@@ -365,8 +365,15 @@ async function cargarTodoFirebase() {
         listaChoferes = [];
         qsUsuarios.forEach(d => {
             const u = d.data();
-            // Asumimos que los choferes tienen rol 'CHOFER' o los traemos todos
-            if (u.rol === 'CHOFER' || u.tipo === 'CHOFER') listaChoferes.push({ usuario: u.usuario || d.id, nombreMostrar: u.nombre || d.id });
+            // Tomamos d.id como el usuario ("agonza").
+            // Mostramos 'nombre_mostrar', si no 'nombre_completo', y como último recurso el ID del doc.
+            // Sacamos el filtro "u.rol === CHOFER" porque en la BD actual ese campo no existe y cortaba la carga.
+            const nombreVisible = u.nombre_mostrar || u.nombre_completo || d.id;
+            
+            listaChoferes.push({ 
+                usuario: d.id, 
+                nombreMostrar: nombreVisible 
+            });
         });
 
         // 2. Cargar viajes pendientes (en ruta)
