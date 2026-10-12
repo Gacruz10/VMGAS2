@@ -1,288 +1,3 @@
-<!DOCTYPE html>
-<html lang="es">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Entrega - Firebase Directo</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <style>
-        /* Estilos para la nueva tarjeta de guardado minimalista */
-        .save-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(13, 3, 26, 0.95); z-index: 1000; flex-direction: column;
-            align-items: center; justify-content: center; backdrop-filter: blur(10px);
-        }
-        .save-card {
-            background: #1a1a1a; border: 2px solid #2dd4bf; border-radius: 16px; padding: 30px;
-            text-align: center; max-width: 90%; width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            transition: all 0.3s;
-        }
-        .save-card.success { border-color: #4caf50; box-shadow: 0 0 20px rgba(76, 175, 80, 0.3); }
-        .save-card.error { border-color: #f44336; box-shadow: 0 0 20px rgba(244, 67, 54, 0.3); }
-        
-        .save-icon { font-size: 50px; margin-bottom: 15px; display: none; }
-        .save-title { font-size: 18px; font-weight: 900; color: #fff; margin-bottom: 5px; }
-        .save-subtitle { font-size: 13px; color: #aaa; margin-bottom: 20px; }
-        
-        .btn-reintentar {
-            display: none; background: #f44336; color: white; border: none; padding: 12px 20px;
-            border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 10px;
-        }
-        .spinner-save {
-            width: 40px; height: 40px; border: 4px solid rgba(45, 212, 191, 0.2);
-            border-top: 4px solid #2dd4bf; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px auto;
-        }
-    </style>
-</head>
-
-<body>
-
-    <button id="btnTema" onclick="toggleTema()" title="Cambiar tema">☀️ Claro</button>
-    
-    <div class="modal-gps-overlay" id="modalGPS">
-        <div class="modal-gps-box" id="modalGPSBox">
-            <div class="gps-icon">📍</div>
-            <h2>ACTIVAR GPS</h2>
-            <p>Para trabajar, necesitamos acceso a tu ubicación. Por favor, tocá <b>"Permitir"</b> en el cartel que aparece en tu pantalla.</p>
-            <div class="spinner" style="margin: 0 auto; width: 30px; height: 30px;"></div>
-        </div>
-    </div>
-
-    <div id="toast-container"></div>
-
-    <div class="header">
-        <button class="btn-volver" id="btnVolver">⬅ VOLVER</button>
-        <div id="timerDisplay" class="timer-display">05:00</div>
-        <div class="welcome-message" id="welcomeMessage">Cargando...</div>
-        <h1>REGISTRO DE VENTA</h1>
-        <button id="btn-sync" onclick="sincronizarCola()">🔄 SINCRONIZAR PENDIENTES</button>
-    </div>
-
-    <!-- TARJETA DE GUARDADO MINIMALISTA -->
-    <div id="saveOverlay" class="save-overlay">
-        <div id="saveCard" class="save-card">
-            <div id="saveSpinner" class="spinner-save"></div>
-            <div id="saveIcon" class="save-icon"></div>
-            <div id="saveTitle" class="save-title">GUARDANDO...</div>
-            <div id="saveSubtitle" class="save-subtitle">Procesando operación</div>
-            <button id="btnVolverError" class="btn-reintentar" onclick="restaurarFormulario()">VOLVER AL FORMULARIO</button>
-        </div>
-    </div>
-
-    <!-- CARGA INICIAL INVISIBLE HASTA QUE FALLE -->
-    <div class="loading-overlay" id="loadingOverlay">
-        <div id="spinnerAnim" class="spinner"></div>
-        <div class="loading-text" id="txtLoading">INICIANDO SISTEMA</div>
-        <div class="loading-subtext" id="txtSubLoading">Conectando a Firebase...</div>
-    </div>
-
-    <div class="form-container" id="formContainer">
-        
-        <div class="search-container">
-            <div id="sugerenciasGPSContainer" style="display:none; margin-bottom: 15px; gap: 8px; flex-wrap: wrap; justify-content: center;"></div>
-            <span class="search-icon">🔍</span>
-            <input type="text" id="buscadorGlobal" class="search-input" placeholder="Buscar cliente por nombre..." autocomplete="off">
-            <div id="resultadosBusqueda" class="search-results"></div>
-        </div>
-
-        <div class="flex-row" id="selectoresPrincipales">
-            <div class="form-group small-col"><label>Zona</label><select id="zona">
-                    <option value="">Cargando...</option>
-                </select></div>
-            <div class="form-group large-col"><label>Cliente</label><select id="cliente">
-                    <option value="">Elija Zona</option>
-                </select></div>
-        </div>
-
-        <div id="clientInfoBox" class="client-info-box"></div>
-
-        <div id="tipoClienteDisplay" class="tipo-cliente-display"
-            style="display:none; text-align:center; color:var(--accent); font-weight:800; margin-bottom:15px; border:1px solid var(--accent); padding:5px; border-radius:10px;">
-            CATEGORÍA: <span id="tipoClienteSpan"></span>
-        </div>
-
-        <div id="acuerdoDisplay"
-            style="display:none; text-align:center; color:var(--success); font-weight:800; margin-bottom:15px; border:1px dashed var(--success); padding:8px; border-radius:10px; background: rgba(76, 175, 80, 0.1);">
-            ⭐ PRECIO ESPECIAL APLICADO
-        </div>
-
-        <div class="checkbox-item"><input type="checkbox" id="nuevoCliente"><label for="nuevoCliente"
-                class="red-label">ALTA NUEVO CLIENTE</label></div>
-
-        <div id="nuevoClienteSection" class="hidden-section">
-            <input type="text" id="nombreCliente" placeholder="Nombre Local / Cliente" style="margin-bottom:10px">
-            <input type="text" inputmode="numeric" pattern="[0-9]*" id="nuevoCuit" placeholder="CUIT / DNI (Ej: 20123456789)" style="margin-bottom:10px">
-
-            <select id="nuevaZona" style="margin-bottom:10px">
-                <option value="">Seleccione Zona (Obligatorio)...</option>
-            </select>
-
-            <select id="categoria" style="margin-bottom:10px">
-                <option value="">Seleccione Categoría (Obligatorio)...</option>
-            </select>
-
-            <input type="text" id="nuevaDireccion" placeholder="Dirección" style="margin-bottom:10px">
-            <input type="text" inputmode="numeric" pattern="[0-9]*" id="nuevoTelefono" placeholder="Teléfono" style="margin-bottom:10px">
-            <input type="email" id="nuevoMail" placeholder="Email (Opcional)">
-        </div>
-
-        <div id="seccionesOperativas" style="display:none;">
-
-            <div class="checkbox-item" id="chkRetiraPlanta" style="background: rgba(76, 175, 80, 0.15); padding: 12px; border-radius: 10px; border: 2px solid var(--success); margin-bottom: 20px;">
-                <input type="checkbox" id="esRetiroEnPlanta">
-                <label for="esRetiroEnPlanta" style="color: var(--success) !important; font-weight: 800; font-size: 14px;">🏪 RETIRA EN PLANTA (Sin Envío / Sin Comisión)</label>
-            </div>
-
-            <div class="checkbox-item" id="chkVentaPlanta"
-                style="background: rgba(0, 188, 212, 0.1); padding: 10px; border-radius: 10px; border: 1px dashed var(--info); margin-bottom: 15px;">
-                <input type="checkbox" id="ventaPlanta">
-                <label for="ventaPlanta" style="color: var(--info) !important; font-weight: 800; font-size: 14px;">🏢 CLIENTES ESPECIALES - FLOTANTES</label>
-            </div>
-
-            <div id="sectionPlanta" class="hidden-section" style="border-color: var(--info); background: rgba(0, 188, 212, 0.05);">
-
-                <div style="background: rgba(0,0,0,0.5); padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: center; border: 1px dashed var(--info);">
-                    <span style="color: var(--info); font-size: 12px; display: block; margin-bottom: 5px; font-weight:bold;">SALDO FLOTANTE A FAVOR (VACÍOS DEL CLIENTE)</span>
-                    <div style="display: flex; justify-content: space-around; font-weight: bold; color: white;">
-                        <span>10kg: <span id="flotanteCliente10" style="color:var(--accent);">0</span></span>
-                        <span>15kg: <span id="flotanteCliente15" style="color:var(--accent);">0</span></span>
-                        <span>45kg: <span id="flotanteCliente45" style="color:var(--accent);">0</span></span>
-                    </div>
-                </div>
-
-                <div style="display: flex; gap: 15px; justify-content: space-between;">
-                    <div style="flex: 1;">
-                        <label style="color: var(--accent); text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">LLEVA HOY (LLENOS)</label>
-                        <div class="garrafa-row" style="justify-content:center;"><label style="width:40px;">10kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="plantaLlenos10" class="garrafa-cantidad" value="0"></div>
-                        <div class="garrafa-row" style="justify-content:center;"><label style="width:40px;">15kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="plantaLlenos15" class="garrafa-cantidad" value="0"></div>
-                        <div class="garrafa-row" style="justify-content:center;"><label style="width:40px;">45kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="plantaLlenos45" class="garrafa-cantidad" value="0"></div>
-                    </div>
-                    <div style="flex: 1;">
-                        <label style="color: var(--info); text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">DEJA HOY (VACÍOS)</label>
-                        <div class="garrafa-row" style="justify-content:center;"><label style="width:40px;">10kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="plantaVacios10" class="garrafa-cantidad" value="0"></div>
-                        <div class="garrafa-row" style="justify-content:center;"><label style="width:40px;">15kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="plantaVacios15" class="garrafa-cantidad" value="0"></div>
-                        <div class="garrafa-row" style="justify-content:center;"><label style="width:40px;">45kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="plantaVacios45" class="garrafa-cantidad" value="0"></div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="checkbox-item" id="chkGastos"><input type="checkbox" id="declaracionGastos"><label for="declaracionGastos" class="red-label">DECLARAR GASTO</label></div>
-            <div id="sectionGastos" class="hidden-section">
-                <input type="text" inputmode="numeric" pattern="[0-9]*" id="montoGastos" placeholder="Monto $" class="money-input">
-                <input type="text" id="descripcionGastos" placeholder="Motivo del gasto (OBLIGATORIO)..." style="margin-top:10px">
-            </div>
-
-            <div class="checkbox-item" id="chkEntregaGas"><input type="checkbox" id="entregaGas"><label for="entregaGas" class="yellow-label">GAS LLENO</label></div>
-            <div id="sectionGas" class="hidden-section">
-                <div class="garrafa-row">
-                    <label style="flex:1">10kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="precioGarrafa1" class="money-input" style="width:100px" readonly><input type="text" inputmode="numeric" pattern="[0-9]*" id="cantidadGarrafa1" class="garrafa-cantidad" value="0">
-                </div>
-                <div class="manual-check-container"><input type="checkbox" id="manualPriceCheck1" onchange="pedirPinSiCorresponde(this, 'precioGarrafa1')"><label for="manualPriceCheck1">PRECIO MANUAL</label></div>
-                <div class="garrafa-row">
-                    <label style="flex:1">15kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="precioGarrafa2" class="money-input" style="width:100px" readonly><input type="text" inputmode="numeric" pattern="[0-9]*" id="cantidadGarrafa2" class="garrafa-cantidad" value="0">
-                </div>
-                <div class="manual-check-container"><input type="checkbox" id="manualPriceCheck2" onchange="pedirPinSiCorresponde(this, 'precioGarrafa2')"><label for="manualPriceCheck2">PRECIO MANUAL</label></div>
-                <div class="garrafa-row">
-                    <label style="flex:1">45kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="precioGarrafa3" class="money-input" style="width:100px" readonly><input type="text" inputmode="numeric" pattern="[0-9]*" id="cantidadGarrafa3" class="garrafa-cantidad" value="0">
-                </div>
-                <div class="manual-check-container"><input type="checkbox" id="manualPriceCheck3" onchange="pedirPinSiCorresponde(this, 'precioGarrafa3')"><label for="manualPriceCheck3">PRECIO MANUAL</label></div>
-            </div>
-
-            <div class="checkbox-item" id="chkVentaEnvases"><input type="checkbox" id="ventaEnvases"><label for="ventaEnvases" class="yellow-label">OPERACIÓN CON ENVASES</label></div>
-            <div id="sectionEnvases" class="hidden-section">
-                <select id="modoEnvase" style="margin-bottom:15px; border-color:var(--accent);">
-                    <option value="venta">Venta de Envase y Carga</option>
-                    <option value="consignacion">Consignación (Envases a Cobrar)</option>
-                    <option value="comodato">Comodato (Préstamo de Envases)</option>
-                </select>
-
-                <div id="uiVentaEnvase">
-                    <div class="garrafa-row"><label style="flex:1">10kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="precioVentaEnv10" class="money-input" style="width:100px" readonly><input type="text" inputmode="numeric" pattern="[0-9]*" id="cantVentaEnv10" class="garrafa-cantidad" value="0"></div>
-                    <div class="garrafa-row"><label style="flex:1">15kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="precioVentaEnv15" class="money-input" style="width:100px" readonly><input type="text" inputmode="numeric" pattern="[0-9]*" id="cantVentaEnv15" class="garrafa-cantidad" value="0"></div>
-                    <div class="garrafa-row"><label style="flex:1">45kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="precioVentaEnv45" class="money-input" style="width:100px" readonly><input type="text" inputmode="numeric" pattern="[0-9]*" id="cantVentaEnv45" class="garrafa-cantidad" value="0"></div>
-                    <div class="manual-check-container" style="justify-content: flex-end; margin-top:5px;">
-                        <input type="checkbox" id="precioAutorizadoCheck" onchange="togglePreciosEnvasesManuales(this)">
-                        <label for="precioAutorizadoCheck">PRECIO MANUAL</label>
-                    </div>
-                </div>
-
-                <div id="uiComodatoEnvase" style="display:none; background: rgba(255,255,255,0.05); padding:15px; border-radius:10px; border: 1px dashed var(--accent);">
-                    <label id="lblAlertaEnvase" style="color:var(--accent); font-size:12px; text-align:center; margin-bottom:10px; display:block;">⚠️ Registrando Envases Prestados.</label>
-                    <div class="garrafa-row"><label style="flex:1">10kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="comodato10" value="0" class="garrafa-cantidad"></div>
-                    <div class="garrafa-row"><label style="flex:1">15kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="comodato15" value="0" class="garrafa-cantidad"></div>
-                    <div class="garrafa-row"><label style="flex:1">45kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="comodato45" value="0" class="garrafa-cantidad"></div>
-                </div>
-            </div>
-
-            <div class="checkbox-item" id="pagoDeudaContainer" style="display:none;">
-                <input type="checkbox" id="pagoDeuda">
-                <label for="pagoDeuda" class="success-label">REGISTRAR PAGO O DEVOLUCIÓN</label>
-            </div>
-            <div id="sectionPagoDeuda" class="hidden-section" style="border-color: var(--success); background: rgba(76, 175, 80, 0.05);">
-                <label style="color:var(--success); font-size:12px; margin-bottom:10px; text-align:center; display:block;">Edite los montos. Puede ingresar un pago mayor a la deuda para generar Saldo a Favor.</label>
-                <input type="text" inputmode="numeric" pattern="[0-9]*" id="pagoDeudaDinero" placeholder="Dinero que abona a cuenta $" class="money-input" style="margin-bottom:15px; border-color: var(--success); display:none;">
-                <div class="garrafa-row" id="rowDev10" style="display:none;"><label style="flex:1">Devuelve 10kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="dev10" class="garrafa-cantidad" value="0"></div>
-                <div class="garrafa-row" id="rowDev15" style="display:none;"><label style="flex:1">Devuelve 15kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="dev15" class="garrafa-cantidad" value="0"></div>
-                <div class="garrafa-row" id="rowDev45" style="display:none;"><label style="flex:1">Devuelve 45kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="dev45" class="garrafa-cantidad" value="0"></div>
-            </div>
-
-            <div class="total-display">
-                <div class="total-row"><span>Subtotal Gas:</span><span id="txtSubVenta">$0</span></div>
-                <div class="total-row" id="rowSubEnvase"><span>Subtotal Envases:</span><span id="txtSubEnvase">$0</span></div>
-                <div class="total-row" id="rowCobroDeuda" style="color:var(--success); display:none;"><span>Cobro de Deuda:</span><span id="txtCobroDeuda">$0</span></div>
-                <div class="total-final"><span>A COBRAR:</span><span id="totalFinal">$0</span></div>
-            </div>
-
-            <div class="checkbox-item"><input type="checkbox" id="pagoEfectivo"><label for="pagoEfectivo">EFECTIVO</label></div>
-            <div id="efectivoInput" class="payment-input"><input type="text" inputmode="numeric" pattern="[0-9]*" id="montoEfectivo" class="money-input" placeholder="Monto Efec."></div>
-
-            <div class="checkbox-item"><input type="checkbox" id="pagoTransferencia"><label for="pagoTransferencia">TRANSFERENCIA</label></div>
-            <div id="transferenciaInput" class="payment-input"><input type="text" inputmode="numeric" pattern="[0-9]*" id="montoTransferencia" class="money-input" placeholder="Monto Transf."></div>
-
-            <div class="payment-counter pending" id="pagoEstado" onclick="autocompletarFaltante()">INGRESE DATOS</div>
-
-            <div id="globalPinContainer" style="display:none; margin-top: 15px; background: rgba(255, 215, 0, 0.1); padding: 10px; border-radius: 12px; border: 1px solid var(--accent);">
-                <label style="color: var(--accent); font-size: 12px; margin-bottom: 5px;">🔐 AUTORIZACIÓN REQUERIDA (PIN)</label>
-                <input type="password" inputmode="numeric" pattern="[0-9]*" id="globalPinInput" placeholder="PIN de 4 dígitos" maxlength="4" style="text-align:center; letter-spacing: 5px; font-weight: bold; font-size: 18px;">
-            </div>
-
-            <!-- AUDIO DORMIDO (Oculto con display:none por si vuelve) -->
-            <div class="audio-recorder-box" style="display: none;">
-                <label style="color: var(--accent); font-size: 12px; margin-bottom: 10px; display: block;">🎤 NOTA DE VOZ (Opcional)</label>
-                <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
-                    <button type="button" id="btnMic" style="background: var(--input-bg); border: 2px solid var(--accent); border-radius: 50%; width: 50px; height: 50px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; color: white;">🎙️</button>
-                    <div id="audioStatus" style="font-size: 12px; color: var(--text-muted); text-align: left;">Listo para grabar<br><small>(Máx 2 minutos)</small></div>
-                </div>
-                <div id="audioPlaybackContainer" style="display: none; margin-top: 15px; flex-direction: column; align-items: center; gap: 10px;">
-                    <audio id="audioPlayback" controls></audio>
-                    <button type="button" id="btnDeleteAudio" style="background: var(--error); color: white; border: none; padding: 6px 15px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer;">🗑️ BORRAR AUDIO</button>
-                </div>
-            </div>
-
-            <button type="button" id="btnGuardar" class="submit-btn" disabled>GUARDAR REGISTRO</button>
-        </div>
-    </div>
-
-    <div class="modal-deudas-overlay" id="modalDeudas">
-        <div class="modal-deudas-box" id="modalDeudasBox">
-            <div class="modal-deudas-title">⚠️ ALERTA: DEUDA PENDIENTE</div>
-            <div class="modal-deudas-content" id="modalDeudasContent"></div>
-            <button class="btn-entendido" onclick="cerrarModalDeudas()">ENTENDIDO</button>
-        </div>
-    </div>
-
-    <div id="capaMantenimiento" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,10,16,0.98); z-index:99999; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#fff; font-family:'Syne', sans-serif;">
-        <div style="font-size:40px; margin-bottom:20px;">🛠️</div>
-        <h2 style="color:var(--accent); letter-spacing:2px;">VENTANA DE MANTENIMIENTO</h2>
-        <p style="max-width:400px; color:var(--dim); font-family:'Inter', sans-serif; margin-top:10px;">
-            Estamos procesando los closures y auditorías del día. <br>
-            El sistema volverá a estar operativo a las <b>00:06 AM</b>.
-        </p>
-        <div style="margin-top:30px; padding:10px 20px; border:1px solid var(--border); border-radius:4px; font-size:12px; color:var(--warn);">AGUARDE UN MOMENTO...</div>
-    </div>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getFirestore, doc, getDoc, collection, getDocs, writeBatch, increment } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -317,7 +32,7 @@ let isSyncing = false;
 
 // --- FUNCIONES DE UI MINIMALISTA DE GUARDADO ---
 function mostrarSaveUI(titulo, subtitulo) {
-    document.getElementById('formContainer').style.display = 'none'; // Contrae el formulario
+    document.getElementById('formContainer').style.display = 'none';
     const overlay = document.getElementById('saveOverlay');
     const card = document.getElementById('saveCard');
     
@@ -340,7 +55,7 @@ function saveExito(mensaje) {
     icon.textContent = '✅'; icon.style.display = 'block';
     document.getElementById('saveTitle').textContent = "¡EXITO!";
     document.getElementById('saveSubtitle').textContent = mensaje;
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // Feedback vibración
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
 }
 
 function saveError(mensaje) {
@@ -357,12 +72,14 @@ function saveError(mensaje) {
 
 window.restaurarFormulario = function() {
     document.getElementById('saveOverlay').style.display = 'none';
-    document.getElementById('formContainer').style.display = 'block'; // Vuelve intacto
+    document.getElementById('formContainer').style.display = 'block';
     document.getElementById('btnGuardar').disabled = false;
 };
 
+// --- UTILIDADES ---
 const pad = (n) => n.toString().padStart(2, '0');
 function generarID() { const d = new Date(); return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()) + Math.floor(100 + Math.random() * 900); }
+
 function parseM(idOrValue) {
     let v;
     if (typeof idOrValue === 'string' && document.getElementById(idOrValue)) {
@@ -374,108 +91,155 @@ function parseM(idOrValue) {
     return parseFloat(clean) || 0;
 }
 
-// Reescritura de Comisiones apuntando al array interno de configuracion > parametros
-function getComisionPorRango(precioUnitario, tipoStr) {
-    if (!comisionesData || !comisionesData[`comisiones_${tipoStr}`]) return 0;
-    const p = Number(precioUnitario) || 0;
-    const rangos = comisionesData[`comisiones_${tipoStr}`];
-    const rango = rangos.find(r => p >= Number(r.min) && p <= Number(r.max));
-    return rango ? Number(rango.com) : 0;
+function normalizarCategoriaUI(c) {
+    if (!c) return 'USUARIO (PUBLICO)';
+    const u = c.trim().toUpperCase();
+    if (u === 'PLANTA SIN COMISION') return 'PLANTA SIN COMISION';
+    if (u.includes('ROT') || u.includes('PAN')) return 'ROT. Y PAN.';
+    if (u.includes('SUB')) return 'SUBDISTRIBUIDOR';
+    if (u.includes('COMERCIO') || u === 'COM') return 'COMERCIO';
+    return 'USUARIO (PUBLICO)';
 }
 
-// INICIALIZACIÓN FIREBASE DIRECTO
-async function init() {
+function obtenerCat() { return normalizarCategoriaUI(document.getElementById('nuevoCliente').checked ? document.getElementById('categoria').value : (clienteSeleccionado ? clienteSeleccionado.categoria : '')); }
+function obtenerPrecioEnvase(cat, tipo) { const p = preciosData.find(x => normalizarCategoriaUI(x.categoria) === cat && x.tipo === tipo); return p ? p.precio : 0; }
+
+function esAcuerdoVigente(fechaStr) {
+    if (!fechaStr) return false;
     try {
-        if (!navigator.onLine) {
-            window.idUsuarioFirebase = localStorage.getItem('vm_usuario_id') || 'OFFLINE';
-            window.nombreUsuarioMostrar = localStorage.getItem('vm_usuario_nombre') || 'MODO OFFLINE';
-            await cargarDatosLocales();
-        } else {
-            const tokenSnap = await getDoc(doc(db, "tokens", k));
-            if (!tokenSnap.exists() || (tokenSnap.data().expira && Date.now() > tokenSnap.data().expira)) {
-                window.location.replace('index.html'); return;
-            }
-            window.idUsuarioFirebase = tokenSnap.data().usuario; 
-            window.nombreUsuarioMostrar = tokenSnap.data().nombre_mostrar || window.idUsuarioFirebase;
-            localStorage.setItem('vm_usuario_id', window.idUsuarioFirebase);
-            localStorage.setItem('vm_usuario_nombre', window.nombreUsuarioMostrar);
+        let d;
+        if (fechaStr.includes('-')) { let p = fechaStr.split('-'); d = new Date(p[0], p[1] - 1, p[2]); } 
+        else if (fechaStr.includes('/')) { let p = fechaStr.split('/'); d = new Date(p[2], p[1] - 1, p[0]); } 
+        else { return false; }
+        let hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+        return d >= hoy;
+    } catch (e) { return false; }
+}
 
-            const segSnap = await getDoc(doc(db, "seguridad", "pin"));
-            if (segSnap.exists()) {
-                window.pinDinamicoFirebase = segSnap.data().dinamico?.toString();
-                window.versionDatosFirebase = segSnap.data().version_datos?.toString();
-            }
+// --- LOGICA DE PRECIOS Y TOTALES ---
+window.actualizarPreciosAutomaticos = function() {
+    const cat = obtenerCat();
+    const tieneAcuerdo = clienteSeleccionado && esAcuerdoVigente(clienteSeleccionado.vencimiento);
+    const isRetiroPlanta = document.getElementById('esRetiroEnPlanta') ? document.getElementById('esRetiroEnPlanta').checked : false;
 
-            await descargarBaseFirebase();
+    let recargoFlotante = 0;
+    if (isRetiroPlanta) {
+        const pRecargo = preciosData.find(x => x.categoria === 'SISTEMA' && x.tipo === 'RECARGO_FLOTANTE');
+        recargoFlotante = pRecargo ? pRecargo.precio : 0;
+    }
+
+    [10, 15, 45].forEach((t, i) => {
+        if (!document.getElementById(`manualPriceCheck${i + 1}`).checked) {
+            let precioFinal = 0;
+            if (tieneAcuerdo && clienteSeleccionado[`p_esp_${t}`]) precioFinal = parseM(clienteSeleccionado[`p_esp_${t}`].toString());
+            if (precioFinal === 0) {
+                const p = preciosData.find(x => normalizarCategoriaUI(x.categoria) === cat && x.tipo === t.toString());
+                precioFinal = p ? p.precio : 0;
+            }
+            if (precioFinal > 0 && isRetiroPlanta) precioFinal = Math.max(0, precioFinal - recargoFlotante);
+            document.getElementById(`precioGarrafa${i + 1}`).value = precioFinal.toLocaleString('es-AR');
         }
-
-        document.getElementById('welcomeMessage').textContent = `Usuario: ${window.nombreUsuarioMostrar.toUpperCase()}`;
-        document.getElementById('loadingOverlay').style.display = 'none';
-        
-        setInterval(() => {
-            const tl = Math.floor((expireTime - Date.now()) / 1000);
-            if (tl <= 0) window.location.replace('index.html');
-            else document.getElementById('timerDisplay').textContent = `${pad(Math.floor(tl/60))}:${pad(tl%60)}`;
-        }, 1000);
-        ['click', 'touchstart'].forEach(evt => document.addEventListener(evt, () => expireTime = Date.now() + 300000));
-
-        if (navigator.onLine) setTimeout(sincronizarCola, 1500);
-
-    } catch (e) {
-        window.location.replace('index.html');
-    }
-}
-
-async function descargarBaseFirebase() {
-    try {
-        // 1. Clientes (Extraemos zona y armamos array, deudas viven acá adentro)
-        const snapCli = await getDocs(collection(db, "clientes"));
-        clientesData = snapCli.docs.map(d => ({ id_cliente: d.id, ...d.data() }));
-        
-        // 2. Precios
-        const snapPrecios = await getDocs(collection(db, "precios"));
-        preciosData = snapPrecios.docs.map(d => d.data());
-
-        // 3. Comisiones (Parámetros)
-        const snapParam = await getDoc(doc(db, "configuracion", "parametros"));
-        if (snapParam.exists()) comisionesData = snapParam.data();
-
-        // 4. Zonas (Únicas desde clientes)
-        zonasActivas = [...new Set(clientesData.map(c => c.zona).filter(Boolean))];
-
-        localStorage.setItem('cache_clientes', JSON.stringify(clientesData));
-        localStorage.setItem('cache_precios', JSON.stringify(preciosData));
-        localStorage.setItem('cache_parametros', JSON.stringify(comisionesData));
-        if (window.versionDatosFirebase) localStorage.setItem('version_datos_local', window.versionDatosFirebase);
-
-        poblarSelectores();
-    } catch (e) {
-        console.error("Fallo descargando Firebase", e);
-        await cargarDatosLocales();
-    }
-}
-
-async function cargarDatosLocales() {
-    clientesData = JSON.parse(localStorage.getItem('cache_clientes') || '[]');
-    preciosData = JSON.parse(localStorage.getItem('cache_precios') || '[]');
-    comisionesData = JSON.parse(localStorage.getItem('cache_parametros') || '{}');
-    zonasActivas = [...new Set(clientesData.map(c => c.zona).filter(Boolean))];
-    poblarSelectores();
-}
-
-function poblarSelectores() {
-    const selZona = document.getElementById('zona'); const selNuevaZona = document.getElementById('nuevaZona');
-    selZona.innerHTML = '<option value="">Zona...</option>'; selNuevaZona.innerHTML = '<option value="">Seleccione Zona...</option>';
-    zonasActivas.forEach(z => {
-        selZona.add(new Option(z, z)); selNuevaZona.add(new Option(z, z));
     });
 
-    const selCat = document.getElementById('categoria'); selCat.innerHTML = '<option value="">Categoría...</option>';
-    const catUnicas = [...new Set(preciosData.map(p => p.categoria?.trim().toUpperCase()))].filter(Boolean);
-    catUnicas.forEach(c => selCat.add(new Option(c, c)));
+    if (!document.getElementById('precioAutorizadoCheck').checked) {
+        [10, 15, 45].forEach(t => {
+            let precioEnv = 0;
+            if (tieneAcuerdo && clienteSeleccionado[`p_esp_env_${t}`]) precioEnv = parseM(clienteSeleccionado[`p_esp_env_${t}`].toString());
+            if (precioEnv === 0) precioEnv = obtenerPrecioEnvase(cat, `ENV${t}`);
+            document.getElementById(`precioVentaEnv${t}`).value = precioEnv.toLocaleString('es-AR');
+        });
+    }
+    actualizarTotales();
+};
+
+window.actualizarTotales = function() {
+    let c10 = 0, c15 = 0, c45 = 0;
+    const isModoFlotante = document.getElementById('ventaPlanta').checked;
+
+    if (isModoFlotante) {
+        c10 += Math.max(0, parseInt(document.getElementById('plantaLlenos10').value) || 0);
+        c15 += Math.max(0, parseInt(document.getElementById('plantaLlenos15').value) || 0);
+        c45 += Math.max(0, parseInt(document.getElementById('plantaLlenos45').value) || 0);
+    } else if (document.getElementById('entregaGas').checked) {
+        c10 += Math.max(0, parseInt(document.getElementById('cantidadGarrafa1').value) || 0);
+        c15 += Math.max(0, parseInt(document.getElementById('cantidadGarrafa2').value) || 0);
+        c45 += Math.max(0, parseInt(document.getElementById('cantidadGarrafa3').value) || 0);
+    }
+
+    const operandoEnvase = document.getElementById('ventaEnvases').checked;
+    const modo = document.getElementById('modoEnvase').value;
+
+    let v_gas = (c10 * parseM('precioGarrafa1')) + (c15 * parseM('precioGarrafa2')) + (c45 * parseM('precioGarrafa3'));
+    let v_env = 0;
+    const rowEnv = document.getElementById('rowSubEnvase');
+
+    if (!isModoFlotante && operandoEnvase) {
+        if (modo === 'venta') {
+            v_env = (parseM('precioVentaEnv10') * (parseInt(document.getElementById('cantVentaEnv10').value) || 0)) +
+                (parseM('precioVentaEnv15') * (parseInt(document.getElementById('cantVentaEnv15').value) || 0)) +
+                (parseM('precioVentaEnv45') * (parseInt(document.getElementById('cantVentaEnv45').value) || 0));
+            rowEnv.style.display = 'flex'; rowEnv.querySelector('span:first-child').textContent = "Subtotal Envases:";
+        } else if (modo === 'consignacion') {
+            const cat = obtenerCat();
+            v_env = ((parseInt(document.getElementById('comodato10').value) || 0) * obtenerPrecioEnvase(cat, 'ENV10')) +
+                ((parseInt(document.getElementById('comodato15').value) || 0) * obtenerPrecioEnvase(cat, 'ENV15')) +
+                ((parseInt(document.getElementById('comodato45').value) || 0) * obtenerPrecioEnvase(cat, 'ENV45'));
+            rowEnv.style.display = 'flex'; rowEnv.querySelector('span:first-child').textContent = "Total Consignación:";
+        } else { v_env = 0; rowEnv.style.display = 'none'; }
+    } else { rowEnv.style.display = 'none'; }
+
+    let objetivoCaja = v_gas;
+    if (!isModoFlotante && operandoEnvase && (modo === 'venta' || modo === 'consignacion')) objetivoCaja += v_env;
+
+    let cobroDeuda = 0;
+    const rowCobro = document.getElementById('rowCobroDeuda');
+    if (!isModoFlotante && document.getElementById('pagoDeuda').checked) {
+        cobroDeuda = parseM('pagoDeudaDinero');
+        objetivoCaja += cobroDeuda;
+        rowCobro.style.display = cobroDeuda > 0 ? 'flex' : 'none';
+        document.getElementById('txtCobroDeuda').textContent = `$${cobroDeuda.toLocaleString('es-AR')}`;
+    } else { rowCobro.style.display = 'none'; }
+
+    document.getElementById('txtSubVenta').textContent = `$${v_gas.toLocaleString('es-AR')}`;
+    document.getElementById('txtSubEnvase').textContent = `$${v_env.toLocaleString('es-AR')}`;
+    document.getElementById('totalFinal').textContent = `$${objetivoCaja.toLocaleString('es-AR')}`;
+
+    validarPagos(objetivoCaja, (!isModoFlotante && operandoEnvase && modo === 'consignacion'));
+};
+
+function validarPagos(objetivo, esConsignacion) {
+    const btn = document.getElementById('btnGuardar');
+    const el = document.getElementById('pagoEstado');
+    const isModoFlotante = document.getElementById('ventaPlanta').checked;
+    
+    let pagado = 0;
+    if (document.getElementById('pagoEfectivo').checked) pagado += parseM('montoEfectivo');
+    if (document.getElementById('pagoTransferencia').checked) pagado += parseM('montoTransferencia');
+
+    const dif = objetivo - pagado;
+    
+    // Simplificación de validación para permitir activar el botón
+    if (objetivo > 0 || pagado > 0 || document.getElementById('declaracionGastos').checked || isModoFlotante) {
+        if (dif > 0 && !isModoFlotante && !esConsignacion) {
+            el.textContent = `FALTAN: $${dif.toLocaleString('es-AR')}`;
+            el.className = "payment-counter pending clickable";
+            el.dataset.faltante = dif;
+            btn.disabled = true;
+        } else {
+            el.textContent = "✓ LISTO PARA GUARDAR";
+            el.className = "payment-counter complete";
+            el.style.color = "";
+            el.classList.remove('clickable');
+            btn.disabled = false;
+        }
+    } else {
+        el.textContent = "INGRESE DATOS";
+        el.className = "payment-counter pending";
+        btn.disabled = true;
+    }
 }
 
-// FORMATO NUMÉRICO LIMPIO AL SALIR DEL FOCO
+// FORMATO NUMÉRICO AL SALIR DEL FOCO
 document.querySelectorAll('input.money-input, input.garrafa-cantidad').forEach(el => {
     el.addEventListener('blur', function () {
         let v = this.value.replace(/\D/g, "");
@@ -489,31 +253,123 @@ document.querySelectorAll('input.money-input, input.garrafa-cantidad').forEach(e
     });
 });
 
-async function guardar() {
-    const btn = document.getElementById('btnGuardar');
-    const pinContainer = document.getElementById('globalPinContainer');
-    let pinParaEnviar = "";
-
-    if (pinContainer.style.display !== 'none') {
-        pinParaEnviar = document.getElementById('globalPinInput').value.trim();
-        if (pinParaEnviar.length < 4 || (window.pinDinamicoFirebase && pinParaEnviar !== window.pinDinamicoFirebase)) {
-            alert("PIN Inválido o faltante"); return;
-        }
+window.pedirPinSiCorresponde = function(checkbox, inputId) {
+    const input = document.getElementById(inputId);
+    document.getElementById('globalPinContainer').style.display = 'block';
+    if (checkbox.checked) {
+        input.removeAttribute('readonly');
+        setTimeout(() => { input.focus(); input.select(); }, 150);
+    } else {
+        input.setAttribute('readonly', true);
+        actualizarPreciosAutomaticos();
     }
+};
 
+window.autocompletarFaltante = function() {
+    const el = document.getElementById('pagoEstado');
+    if (!el.classList.contains('clickable')) return;
+    const faltante = Number(el.dataset.faltante);
+    if (!faltante || faltante <= 0) return;
+
+    if (document.getElementById('pagoEfectivo').checked && parseM('montoEfectivo') === 0) {
+        document.getElementById('montoEfectivo').value = faltante.toLocaleString('es-AR');
+    } else if (document.getElementById('pagoTransferencia').checked && parseM('montoTransferencia') === 0) {
+        document.getElementById('montoTransferencia').value = faltante.toLocaleString('es-AR');
+    }
+    actualizarTotales();
+};
+
+// --- INICIALIZACIÓN FIREBASE ---
+async function init() {
+    try {
+        if (!navigator.onLine) {
+            window.idUsuarioFirebase = localStorage.getItem('vm_usuario_id') || 'OFFLINE';
+            window.nombreUsuarioMostrar = localStorage.getItem('vm_usuario_nombre') || 'MODO OFFLINE';
+            await cargarDatosLocales();
+        } else {
+            const tokenSnap = await getDoc(doc(db, "tokens", k));
+            if (!tokenSnap.exists() || (tokenSnap.data().expira && Date.now() > tokenSnap.data().expira)) {
+                window.location.replace('index.html'); return;
+            }
+            window.idUsuarioFirebase = tokenSnap.data().usuario; 
+            window.nombreUsuarioMostrar = tokenSnap.data().nombre_mostrar || window.idUsuarioFirebase;
+            
+            const segSnap = await getDoc(doc(db, "seguridad", "pin"));
+            if (segSnap.exists()) {
+                window.pinDinamicoFirebase = segSnap.data().dinamico?.toString();
+                window.versionDatosFirebase = segSnap.data().version_datos?.toString();
+            }
+
+            await descargarBaseFirebase();
+        }
+
+        document.getElementById('welcomeMessage').textContent = `Usuario: ${window.nombreUsuarioMostrar.toUpperCase()}`;
+        document.getElementById('loadingOverlay').style.display = 'none';
+        
+    } catch (e) {
+        console.error(e);
+        window.location.replace('index.html');
+    }
+}
+
+async function descargarBaseFirebase() {
+    try {
+        const snapCli = await getDocs(collection(db, "clientes"));
+        clientesData = snapCli.docs.map(d => ({ id_cliente: d.id, ...d.data() }));
+        
+        const snapPrecios = await getDocs(collection(db, "precios"));
+        preciosData = snapPrecios.docs.map(d => d.data());
+
+        const snapParam = await getDoc(doc(db, "configuracion", "parametros"));
+        if (snapParam.exists()) comisionesData = snapParam.data();
+
+        zonasActivas = [...new Set(clientesData.map(c => c.zona).filter(Boolean))];
+
+        localStorage.setItem('cache_clientes', JSON.stringify(clientesData));
+        localStorage.setItem('cache_precios', JSON.stringify(preciosData));
+        poblarSelectores();
+    } catch (e) {
+        await cargarDatosLocales();
+    }
+}
+
+async function cargarDatosLocales() {
+    clientesData = JSON.parse(localStorage.getItem('cache_clientes') || '[]');
+    preciosData = JSON.parse(localStorage.getItem('cache_precios') || '[]');
+    zonasActivas = [...new Set(clientesData.map(c => c.zona).filter(Boolean))];
+    poblarSelectores();
+}
+
+function poblarSelectores() {
+    const selZona = document.getElementById('zona'); const selNuevaZona = document.getElementById('nuevaZona');
+    selZona.innerHTML = '<option value="">Zona...</option>'; selNuevaZona.innerHTML = '<option value="">Seleccione Zona...</option>';
+    zonasActivas.forEach(z => { selZona.add(new Option(z, z)); selNuevaZona.add(new Option(z, z)); });
+
+    const selCat = document.getElementById('categoria'); selCat.innerHTML = '<option value="">Categoría...</option>';
+    const catUnicas = [...new Set(preciosData.map(p => p.categoria?.trim().toUpperCase()))].filter(Boolean);
+    catUnicas.forEach(c => selCat.add(new Option(c, c)));
+}
+
+// BINDEOS DE UI
+document.getElementById('zona').onchange = function () {
+    const z = this.value; const sel = document.getElementById('cliente'); sel.innerHTML = '<option value="">Seleccione...</option>';
+    clientesData.filter(c => c.zona === z).forEach(c => { sel.add(new Option(c.nombre, JSON.stringify(c))); });
+    actualizarTotales();
+};
+
+document.getElementById('cliente').onchange = function () {
+    if (!this.value) return;
+    clienteSeleccionado = JSON.parse(this.value);
+    idClienteSeleccionado = clienteSeleccionado.id_cliente || '';
+    actualizarPreciosAutomaticos();
+};
+
+document.getElementById('btnGuardar').onclick = async () => {
     mostrarSaveUI("PROCESANDO...", "Preparando lote de datos...");
-
-    const esNuevo = document.getElementById('nuevoCliente').checked;
     const isGasto = document.getElementById('declaracionGastos').checked;
-    const cat = esNuevo ? document.getElementById('categoria').value : (clienteSeleccionado?.categoria || 'USUARIO (PUBLICO)');
-    const pfx = { 'SUBDISTRIBUIDOR': 'VS', 'COMERCIO': 'VC', 'ROT. Y PAN.': 'VRP', 'USUARIO (PUBLICO)': 'VU' }[cat] || 'VU';
-
-    let q10 = parseInt(document.getElementById('cantidadGarrafa1').value) || 0;
-    let q15 = parseInt(document.getElementById('cantidadGarrafa2').value) || 0;
-    let q45 = parseInt(document.getElementById('cantidadGarrafa3').value) || 0;
-    let pagado = parseM('montoEfectivo') + parseM('montoTransferencia');
-
-    const idVenta = `V-${generarID()}`; // ID UNICO PARA EVITAR DUPLICADOS
+    const esNuevo = document.getElementById('nuevoCliente').checked;
+    
+    const idVenta = `V-${generarID()}`;
     const now = new Date();
 
     const payload = {
@@ -521,50 +377,23 @@ async function guardar() {
         USUARIO: window.idUsuarioFirebase,
         FECHA: now.toLocaleDateString('es-AR'), HORA: `${pad(now.getHours())}:${pad(now.getMinutes())}`,
         TIPO: isGasto ? 'GASTO' : 'VENTA',
-        C: esNuevo ? document.getElementById('nombreCliente').value : (clienteSeleccionado?.nombre || 'GASTO'),
-        TOTAL: pagado, 'E$': parseM('montoEfectivo'), 'T$': parseM('montoTransferencia'),
-        ALL10: q10, ALL15: q15, ALL45: q45,
-        ID_CLIENTE: idClienteSeleccionado || '',
-        _offline_ts: Date.now()
+        TOTAL: parseM('montoEfectivo') + parseM('montoTransferencia'),
+        ID_CLIENTE: idClienteSeleccionado || ''
     };
-
-    // EL BATCH ATÓMICO
-    if (!navigator.onLine) {
-        guardarEnColaLocal(payload, esNuevo); // Lógica offline
-        saveExito("Guardado offline. Se enviará cuando regrese la red.");
-        setTimeout(() => window.location.reload(), 2000);
-        return;
-    }
 
     try {
         const batch = writeBatch(db);
-        const movRef = doc(collection(db, "movimientos"), idVenta);
-        batch.set(movRef, payload);
+        batch.set(doc(collection(db, "movimientos"), idVenta), payload);
 
-        // Actualizamos deudas o creamos cliente al mismo tiempo
         if (esNuevo) {
             const newCliRef = doc(collection(db, "clientes"));
-            payload.ID_CLIENTE = newCliRef.id;
             batch.set(newCliRef, {
                 nombre: document.getElementById('nombreCliente').value,
                 zona: document.getElementById('nuevaZona').value,
                 categoria: document.getElementById('categoria').value,
-                telefono: document.getElementById('nuevoTelefono').value,
-                cuit_dni: document.getElementById('nuevoCuit').value,
                 plata: 0, env10: 0, env15: 0, env45: 0
             });
             batch.update(doc(db, "seguridad", "pin"), { version_datos: increment(1) });
-        } else if (payload.ID_CLIENTE && document.getElementById('pagoDeuda').checked) {
-            // Ejemplo de reducción de deuda atómica usando increment (negativo baja deuda)
-            const cliRef = doc(db, "clientes", payload.ID_CLIENTE);
-            let pagoPlata = parseM('pagoDeudaDinero');
-            let dev10 = parseInt(document.getElementById('dev10').value) || 0;
-            if (pagoPlata > 0 || dev10 > 0) {
-                let updates = {};
-                if (pagoPlata > 0) updates.plata = increment(-pagoPlata);
-                if (dev10 > 0) updates.env10 = increment(-dev10);
-                batch.update(cliRef, updates);
-            }
         }
 
         document.getElementById('saveTitle').textContent = "ENVIANDO A FIREBASE...";
@@ -574,56 +403,11 @@ async function guardar() {
         setTimeout(() => window.location.replace(`inicio.html?k=${k}`), 1800);
 
     } catch (e) {
-        console.error(e);
         saveError("Fallo de red durante la transmisión. Podés reintentarlo.");
     }
-}
+};
 
-function guardarEnColaLocal(payload, esNuevo) {
-    let cola = JSON.parse(localStorage.getItem('cola_ventas_fb') || '[]');
-    cola.push({ payload, esNuevo, estadoForm: 'PENDIENTE' });
-    localStorage.setItem('cola_ventas_fb', JSON.stringify(cola));
-    actualizarBtnSync();
-}
-
-function actualizarBtnSync() {
-    let cola = JSON.parse(localStorage.getItem('cola_ventas_fb') || '[]');
-    const btnSync = document.getElementById('btn-sync');
-    if (cola.length > 0) { btnSync.style.display = 'block'; btnSync.innerText = `🔄 SINCRONIZAR (${cola.length})`; } 
-    else btnSync.style.display = 'none';
-}
-
-async function sincronizarCola() {
-    if (!navigator.onLine || isSyncing) return;
-    let cola = JSON.parse(localStorage.getItem('cola_ventas_fb') || '[]');
-    if (cola.length === 0) return;
-    isSyncing = true;
-    
-    let pendientes = [];
-    for (let item of cola) {
-        try {
-            const batch = writeBatch(db);
-            const movRef = doc(collection(db, "movimientos"), item.payload.N);
-            batch.set(movRef, item.payload);
-            // Acá replicamos el batch del cliente si correspondía...
-            await batch.commit();
-        } catch(e) { pendientes.push(item); }
-    }
-    localStorage.setItem('cola_ventas_fb', JSON.stringify(pendientes));
-    isSyncing = false; actualizarBtnSync();
-}
-
-// Bindeos
-document.getElementById('btnGuardar').onclick = guardar;
 document.getElementById('btnVolver').onclick = () => window.location.replace(`inicio.html?k=${k}`);
-
-// Dejo los de UI de la versión anterior mockeados para que no tire error al tipear
-window.toggleTema = () => { document.body.classList.toggle('tema-claro'); };
-window.cerrarModalDeudas = () => document.getElementById('modalDeudas').style.display='none';
-window.sincronizarCola = sincronizarCola;
-window.actualizarTotales = () => { /* Logica intacta del calculo */ };
 
 init();
 </script>
-</body>
-</html>
