@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Módulo Administrativo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --glass: rgba(0, 0, 0, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --accent: #FFD700; 
+      --ok: #2dd4bf; 
+      --error: #ff4444; 
+      --compra: #a855f7;
+      --comision: #3b82f6; 
+      --text-primary: #ffffff;
+      --text-muted: rgba(255, 255, 255, 0.5);
+    }
+    
+    body.light-mode {
+      --glass: rgba(255, 255, 255, 0.65);
+      --glass-border: rgba(0, 0, 0, 0.15);
+      --accent: #d97706;
+      --text-primary: #1a1a1a;
+      --text-muted: rgba(0, 0, 0, 0.6);
+      background: #f8fafc !important; 
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: 'Inter', sans-serif; color: var(--text-primary);
+      background: radial-gradient(at 0% 0%, #0f172a 0%, transparent 50%),
+                  radial-gradient(at 100% 100%, #1e1b4b 0%, transparent 50%), #020617;
+      background-attachment: fixed; min-height: 100vh; padding: 20px;
+      opacity: 0; transition: opacity 0.5s ease, color 0.3s ease, background 0.3s ease;
+    }
+
+    .theme-toggle {
+      position: absolute; top: 20px; right: 20px; width: 45px; height: 45px; border-radius: 50%;
+      background: var(--glass); border: 1px solid var(--glass-border); color: var(--text-primary);
+      display: flex; justify-content: center; align-items: center; font-size: 22px; cursor: pointer;
+      backdrop-filter: blur(10px); transition: all 0.3s ease; z-index: 1000;
+    }
+    .theme-toggle:hover { transform: scale(1.1); border-color: var(--accent); }
+    
+    .header { text-align: center; margin-bottom: 30px; position: relative; margin-top: 10px; }
+    .header h3 { color: var(--accent); font-weight: 800; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
+    
+    .btn-volver {
+        background: var(--glass); border: 1px solid var(--glass-border); color: var(--text-primary);
+        padding: 8px 12px; border-radius: 8px; cursor: pointer; position: absolute; left: 0; top: 0;
+        font-weight: bold; transition: all 0.3s ease; text-decoration: none; font-size: 14px;
+    }
+    .btn-volver:hover { border-color: var(--accent); color: var(--accent); }
+
+    .container { max-width: 800px; margin: 0 auto; display: block; }
+    
+    .menu-grid {
+        display: grid; gap: 20px; grid-template-columns: 1fr; margin-top: 40px;
+    }
+    @media (min-width: 600px) {
+        .menu-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    .menu-btn {
+        background: var(--glass); backdrop-filter: blur(10px); border: 1px solid var(--glass-border);
+        padding: 30px 20px; border-radius: 16px; cursor: pointer;
+        transition: all 0.3s ease; text-align: center; color: var(--text-primary);
+        text-decoration: none; display: flex; flex-direction: column; align-items: center; gap: 15px;
+    }
+    .menu-btn:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+    
+    .menu-btn.arqueo:hover { border-color: var(--accent); }
+    .menu-btn.remitos:hover { border-color: var(--compra); }
+    .menu-btn.comisiones:hover { border-color: var(--comision); }
+    .menu-btn.transferencias:hover { border-color: var(--ok); }
+    
+    .menu-icon { font-size: 40px; }
+    .menu-title { font-weight: 800; font-size: 1.2rem; letter-spacing: 1px; text-transform: uppercase; }
+    .menu-desc { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; }
+
+    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--glass); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: 0.3s; backdrop-filter: blur(5px); }
+    .loading-overlay.active { opacity: 1; visibility: visible; }
+    .spinner { width: 45px; height: 45px; border: 4px solid rgba(128,128,128,0.2); border-left-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .loading-text { color: var(--accent); font-size: 1rem; font-weight: 800; letter-spacing: 2px;}
+  </style>
+</head>
+<body>
+
+  <script>
+    if(localStorage.getItem('vm_theme') === 'light') { document.body.classList.add('light-mode'); }
+  </script>
+  <button class="theme-toggle" onclick="window.toggleTheme()" id="btnTheme">🌙</button>
+
+  <div class="loading-overlay active" id="loadingOverlay">
+    <div class="spinner" id="loaderSpinner"></div>
+    <div class="loading-text" id="loaderText">VALIDANDO...</div>
+  </div>
+
+  <div class="header">
+    <a href="#" class="btn-volver" id="btnBack">⬅ VOLVER</a>
+    <h3>ADMINISTRACIÓN</h3>
+  </div>
+
+  <div class="container">
+    <div class="menu-grid" id="menuGrid" style="display:none;">
+        <a href="#" id="linkArqueo" class="menu-btn arqueo">
+            <span class="menu-icon">💵</span>
+            <span class="menu-title">Arqueo de Caja</span>
+            <span class="menu-desc">Control y cierre de efectivo</span>
+        </a>
+        <a href="#" id="linkRemitos" class="menu-btn remitos">
+            <span class="menu-icon">🏭</span>
+            <span class="menu-title">Control Remitos</span>
+            <span class="menu-desc">Compras a planta y envases</span>
+        </a>
+        <a href="#" id="linkComisiones" class="menu-btn comisiones">
+            <span class="menu-icon">🤝</span>
+            <span class="menu-title">Comisiones</span>
+            <span class="menu-desc">Liquidación a choferes</span>
+        </a>
+        <a href="#" id="linkTransferencias" class="menu-btn transferencias">
+            <span class="menu-icon">🏦</span>
+            <span class="menu-title">Transferencias</span>
+            <span class="menu-desc">Auditoría bancaria</span>
+        </a>
+    </div>
+  </div>
+
+<div id="capaMantenimiento" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,10,16,0.98); z-index:99999; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#fff; font-family:'Syne', sans-serif;">
+  <div style="font-size:40px; margin-bottom:20px;">🛠️</div>
+  <h2 style="color:var(--accent); letter-spacing:2px;">VENTANA DE MANTENIMIENTO</h2>
+  <p style="max-width:400px; color:var(--text-muted); font-family:'Inter', sans-serif; margin-top:10px;">
+    Estamos procesando los cierres y auditorías del día. <br>
+    El sistema volverá a estar operativo a las <b>00:06 AM</b>.
+  </p>
+  <div style="margin-top:30px; padding:10px 20px; border:1px solid var(--glass-border); border-radius:4px; font-size:12px; color:var(--accent);">
+    AGUARDE UN MOMENTO...
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
+    authDomain: "vmgaslr.firebaseapp.com",
+    projectId: "vmgaslr",
+    storageBucket: "vmgaslr.firebasestorage.app",
+    messagingSenderId: "75859850089",
+    appId: "1:75859850089:web:fc551c770bbf4ae25803f8"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+window.toggleTheme = function() {
+    const isLight = document.body.classList.toggle('light-mode');
+    const btn = document.getElementById('btnTheme');
+    if (isLight) {
+        localStorage.setItem('vm_theme', 'light');
+        btn.textContent = '☀️';
+    } else {
+        localStorage.setItem('vm_theme', 'dark');
+        btn.textContent = '🌙';
+    }
+};
+document.getElementById('btnTheme').textContent = document.body.classList.contains('light-mode') ? '☀️' : '🌙';
+
+const params = new URLSearchParams(window.location.search);
+let k = params.get('k') || params.get('token');
+if (!k) k = sessionStorage.getItem('k');
+
+function expulsar() { sessionStorage.clear(); window.location.replace('index.html'); }
+
+if (!k) { 
+    expulsar(); 
+} else {
+    sessionStorage.setItem('k', k);
+    if (window.history.replaceState) window.history.replaceState({}, document.title, window.location.pathname);
+    validarSesion();
+}
+
+async function validarSesion() {
+    try {
+        document.body.style.opacity = 1;
+        
+        const docRef = doc(db, "tokens", k);
+        const docSnap = await getDoc(docRef);
+        
+        if (!docSnap.exists()) throw new Error("Sesión inválida.");
+        
+        const tokenData = docSnap.data();
+        if (tokenData.expira && Date.now() > tokenData.expira) throw new Error("Sesión expirada.");
+        
+        sessionStorage.setItem('usuarioActivo', tokenData.usuario || 'SISTEMA');
+        
+        // Habilitar la UI y armar links
+        document.getElementById('loadingOverlay').classList.remove('active');
+        document.getElementById('menuGrid').style.display = 'grid';
+        
+        document.getElementById('btnBack').href = `inicio.html?k=${k}`;
+        document.getElementById('linkArqueo').href = `arqueo.html?k=${k}`;
+        document.getElementById('linkRemitos').href = `controlremitos.html?k=${k}`;
+        document.getElementById('linkComisiones').href = `controlcomisiones.html?k=${k}`;
+        document.getElementById('linkTransferencias').href = `controltransferencias.html?k=${k}`;
+
+    } catch (e) { 
+        console.error(e);
+        alert("Acceso denegado: " + e.message);
+        expulsar(); 
+    }
+}
+
+// Patovica
+function controlPatovica() {
+    const ahora = new Date();
+    const hora = ahora.getHours();
+    const min = ahora.getMinutes();
+    const capa = document.getElementById('capaMantenimiento');
+    const estaEnBloqueo = (hora === 23 && min >= 45) || (hora === 0 && min <= 5);
+    if (estaEnBloqueo) {
+      capa.style.display = 'flex';
+      document.onkeydown = function (e) { return false; };
+    } else {
+      capa.style.display = 'none';
+      document.onkeydown = null;
+    }
+}
+controlPatovica();
+setInterval(controlPatovica, 300000);
+</script>
+</body>
+</html>
