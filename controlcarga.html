@@ -65,6 +65,7 @@
 
     .header { text-align: center; margin-bottom: 25px; position: relative; margin-top: 10px; }
     .header h3 { color: var(--accent); font-weight: 800; margin: 0; font-size: 22px; text-transform: uppercase; transition: color 0.3s; }
+    .header p { font-size: 11px; color: var(--text-muted); margin: 5px 0 0 0; font-family: monospace; letter-spacing: 1px;}
     
     .btn-volver {
         background: var(--glass); border: 1px solid var(--glass-border); color: var(--text-primary);
@@ -152,6 +153,9 @@
     @keyframes pulseGlow { 0% { box-shadow: 0 0 10px rgba(0,0,0,0.1); } 50% { box-shadow: 0 0 25px rgba(0,0,0,0.2); } 100% { box-shadow: 0 0 10px rgba(0,0,0,0.1); } }
     .loading-text { color: var(--accent); font-size: 15px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; transition: color 0.3s; }
     .loading-text.success-mode { color: var(--ok); }
+
+    /* CANDADO OVERLAY */
+    #bloqueoTurnoOverlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(13,3,26,0.95); z-index: 99999; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; backdrop-filter: blur(10px); }
   </style>
 </head>
 <body>
@@ -170,9 +174,18 @@
     <div class="loading-text" id="loaderText">CARGANDO...</div>
   </div>
 
+  <!-- CANDADO DE TURNO -->
+  <div id="bloqueoTurnoOverlay">
+      <div style="font-size:50px; margin-bottom:20px;">🔒</div>
+      <h2 style="color:var(--error); font-weight:900; margin-bottom:10px; font-size:24px;">OPERACIÓN BLOQUEADA</h2>
+      <p style="color:#fff; font-size:14px; max-width:400px; line-height:1.5;">No se encontró un Turno abierto en el sistema.<br>Por favor, inicie el día en el módulo <b>CSTOCK</b> antes de despachar o recibir camiones.</p>
+      <button onclick="window.location.href='inicio.html'" style="margin-top:20px; padding:12px 24px; background:var(--glass); border:1px solid var(--glass-border); color:#fff; border-radius:8px; font-weight:bold; cursor:pointer;">Volver al Inicio</button>
+  </div>
+
   <div class="header">
     <button class="btn-volver" id="btnBack">⬅ VOLVER</button>
     <h3 id="mainTitle">CONTROL DE CARGA</h3>
+    <p id="lblTurnoActivo">Buscando Turno...</p>
   </div>
 
   <div class="mode-switch-container">
@@ -255,7 +268,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getFirestore, doc, getDoc, collection, getDocs, writeBatch, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, getDocs, writeBatch, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
@@ -284,8 +297,15 @@ document.getElementById('btnTheme').textContent = document.body.classList.contai
 document.getElementById('btnBack').addEventListener('click', () => { window.location.href = `inicio.html?k=${k}`; });
 
 function normalizarStr(str) { return str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim() : ""; }
-const getFechaStr = () => { const d = new Date(); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; };
-const getHoraStr = () => { const d = new Date(); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`; };
+const pad2 = (n) => String(n).padStart(2, '0');
+const getFechaStr = () => { const d = new Date(); return `${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`; };
+const getHoraStr = () => { const d = new Date(); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`; };
+function generarIdViaje(isRetro = false) {
+    const d = new Date();
+    const fecha = `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}`;
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `CC${fecha}${random}${isRetro ? '-R' : ''}`; 
+}
 
 function aplicarFocoAuto() {
     document.querySelectorAll('input[type="number"]').forEach(input => {
@@ -308,16 +328,8 @@ function toggleLoader(show, text = 'CARGANDO...', isSuccess = false) {
     if (show) ov.classList.add('active'); else ov.classList.remove('active');
 }
 
-function logout() { sessionStorage.removeItem('k'); window.location.replace('inicio.html'); }
+function logout() { sessionStorage.removeItem('k'); window.location.replace('index.html'); }
 if (!k) { alert("⚠️ Falta token de sesión."); logout(); } else { sessionStorage.setItem('k', k); window.history.replaceState({}, document.title, window.location.pathname); }
-
-// Inactividad
-let timerInterval = null;
-function refreshSession() {
-    if(timerInterval) clearTimeout(timerInterval);
-    timerInterval = setTimeout(() => { showToast('⏱️ Inactividad detectada. Cerrando.', 'error'); setTimeout(logout, 1500); }, 180000);
-}
-['click','mousemove','keydown','touchstart'].forEach(ev => document.addEventListener(ev, refreshSession));
 
 // --- ESTADO GLOBAL ---
 let modoActual = 'REPARTO';
@@ -327,19 +339,33 @@ let enRutaSet = new Set();
 let viajeSeleccionado = null;
 let hayDiferenciaLlegada = false;
 let usuarioActivo = 'SISTEMA';
+let idTurnoActivo = null;
 
 // --- INICIALIZACIÓN ---
 async function init() {
     document.body.style.opacity = 1;
-    toggleLoader(true, "VALIDANDO SESIÓN...");
+    toggleLoader(true, "VALIDANDO SESIÓN Y TURNO...");
     try {
         const tokenSnap = await getDoc(doc(db, "tokens", k));
         if (!tokenSnap.exists() || (tokenSnap.data().expira && Date.now() > tokenSnap.data().expira)) return logout();
         usuarioActivo = tokenSnap.data().usuario || 'SISTEMA';
+
+        // VERIFICAR CANDADO DE TURNO
+        const qTurnos = query(collection(db, "turnos"), orderBy("timestampAperturaMs", "desc"), limit(1));
+        const qsTurnos = await getDocs(qTurnos);
+        
+        if (!qsTurnos.empty && qsTurnos.docs[0].data().estado === 'ABIERTO') {
+            idTurnoActivo = qsTurnos.docs[0].data().idTurno;
+            document.getElementById('lblTurnoActivo').textContent = `TURNO: ${idTurnoActivo}`;
+        } else {
+            document.getElementById('bloqueoTurnoOverlay').style.display = 'flex';
+            toggleLoader(false);
+            return; 
+        }
+
     } catch(e) { return logout(); }
 
     toggleLoader(true, "DESCARGANDO DATOS...");
-    refreshSession();
     renderGrid('gridSalida', 'S'); renderGrid('gridLlegada', 'L'); document.getElementById('gridRetro').innerHTML = renderRetroInputs();
     aplicarFocoAuto(); setupCalc('S', updateSalidaTotal); setupCalc('L', calcLlegadaDiff); setupCalc('R', calcRetroDiff);
 
@@ -357,26 +383,16 @@ async function init() {
     document.getElementById('viewMain').classList.add('active');
 }
 
-// --- CONSULTAS FIREBASE PARA REEMPLAZAR GOOGLE SHEETS ---
+// --- CONSULTAS FIREBASE ---
 async function cargarTodoFirebase() {
     try {
-        // 1. Cargar choferes
         const qsUsuarios = await getDocs(collection(db, "usuarios"));
         listaChoferes = [];
         qsUsuarios.forEach(d => {
             const u = d.data();
-            // Tomamos d.id como el usuario ("agonza").
-            // Mostramos 'nombre_mostrar', si no 'nombre_completo', y como último recurso el ID del doc.
-            // Sacamos el filtro "u.rol === CHOFER" porque en la BD actual ese campo no existe y cortaba la carga.
-            const nombreVisible = u.nombre_mostrar || u.nombre_completo || d.id;
-            
-            listaChoferes.push({ 
-                usuario: d.id, 
-                nombreMostrar: nombreVisible 
-            });
+            listaChoferes.push({ usuario: d.id, nombreMostrar: u.nombre_mostrar || u.nombre_completo || d.id });
         });
 
-        // 2. Cargar viajes pendientes (en ruta)
         const qViajes = query(collection(db, "ccarga"), where("estado", "in", ["EN_RUTA", "COMPRA_EN_RUTA"]));
         const qsViajes = await getDocs(qViajes);
         viajesPendientes = [];
@@ -395,8 +411,7 @@ async function cargarTodoFirebase() {
                 const totalVacios = (row.sV10||0) + (row.sV15||0) + (row.sV45||0);
                 cargaLabel = `Llevó: ${totalVacios} Vacíos a Planta`;
             } else {
-                // AQUÍ OCURRE LA MAGIA: Calculamos sugerencias al instante cruzando con BD1
-                const qVentas = query(collection(db, "bd1"), where("ID_VIAJE", "==", vDoc.id));
+                const qVentas = query(collection(db, "movimientos"), where("ID_VIAJE", "==", vDoc.id));
                 const qsVentas = await getDocs(qVentas);
                 
                 let b10=0, s10=0, b15=0, s15=0, b45=0, s45=0;
@@ -408,7 +423,7 @@ async function cargarTodoFirebase() {
                         b10 += Number(v.ALL10||0); s10 += Number(v.AV10||0);
                         b15 += Number(v.ALL15||0); s15 += Number(v.AV15||0);
                         b45 += Number(v.ALL45||0); s45 += Number(v.AV45||0);
-                    } else if (['CONSIGNACION', 'VENTA_ENVASE', 'COMODATO'].includes(tipo)) {
+                    } else if (['PRESTAMO', 'COMODATO'].includes(tipo)) {
                         b10 += Number(v.ALL10||0); b15 += Number(v.ALL15||0); b45 += Number(v.ALL45||0);
                     } else if (tipo === 'RECUPERO') {
                         s10 += Number(v.AV10||0); s15 += Number(v.AV15||0); s45 += Number(v.AV45||0);
@@ -423,11 +438,9 @@ async function cargarTodoFirebase() {
                 cargaLabel = `Ideal -> 10kg: ${sug[10].L}L|${sug[10].V}V - 15kg: ${sug[15].L}L|${sug[15].V}V`;
             }
 
-            // Mapeamos al formato que ya maneja la UI
             viajesPendientes.unshift({
                 idViaje: vDoc.id, chofer: row.chofer, tipoViaje: row.tipoViaje || 'REPARTO',
                 fechaSalida: row.fechaSalida, horaSalida: row.horaSalida, cargaLabel: cargaLabel,
-                isLate: false, // Puedes agregar lógica de isLate comparando timestamps si quieres
                 sDetails: { l10: row.sL10||0, v10: row.sV10||0, l15: row.sL15||0, v15: row.sV15||0, l45: row.sL45||0, v45: row.sV45||0 },
                 sugerencia: sug, totalEntregas: totalEntregas
             });
@@ -436,7 +449,7 @@ async function cargarTodoFirebase() {
         procesarChoferes();
         syncDropdownConViajesActivos();
     } catch(e) {
-        console.error(e); showToast("Error al obtener datos de Firebase", "error");
+        console.error(e); showToast("Error al obtener datos", "error");
     }
 }
 
@@ -508,8 +521,8 @@ function renderTripList() {
 
     filtrados.forEach(v => {
         const isC = v.tipoViaje === 'COMPRA';
-        const card = document.createElement('div'); card.className = `trip-card ${v.isLate ? 'alert' : ''} ${isC ? 'compra-mode' : ''}`; card.onclick = () => selectTrip(v);
-        card.innerHTML = `<div class="trip-info"><h4>${v.chofer} ${isC ? '🏭' : '🚚'}</h4><span>${v.fechaSalida} - ${v.horaSalida}</span><div class="trip-detail">${v.cargaLabel}</div></div><div style="font-size:20px;">${v.isLate ? '⚠️' : '⬅️'}</div>`;
+        const card = document.createElement('div'); card.className = `trip-card ${isC ? 'compra-mode' : ''}`; card.onclick = () => selectTrip(v);
+        card.innerHTML = `<div class="trip-info"><h4>${v.chofer} ${isC ? '🏭' : '🚚'}</h4><span>${v.fechaSalida} - ${v.horaSalida}</span><div class="trip-detail">${v.cargaLabel}</div></div><div style="font-size:20px;">⬅️</div>`;
         list.appendChild(card);
     });
 }
@@ -609,7 +622,7 @@ function calcRetroDiff() {
     else { txtRetro.className = "tx-novedad"; txtRetro.style.display = 'none'; }
 }
 
-// --- ESCRITURA BATCH EN FIREBASE (EL MOTOR PRINCIPAL) ---
+// --- ESCRITURA BATCH EN FIREBASE ---
 async function enviarBatch(payload) {
     if(!confirm(`¿Confirmar operación de ${payload.modo}?`)) return;
     document.querySelectorAll('button').forEach(b => {b.disabled=true;});
@@ -620,9 +633,10 @@ async function enviarBatch(payload) {
         const refCcarga = collection(db, "ccarga");
         
         if (payload.modo === 'SALIDA') {
-            const nuevoId = "V-" + Date.now().toString(36).toUpperCase();
+            const nuevoId = generarIdViaje(false); 
             batch.set(doc(refCcarga, nuevoId), {
                 idViaje: nuevoId,
+                idTurno: idTurnoActivo, 
                 estado: payload.tipoViaje === 'COMPRA' ? 'COMPRA_EN_RUTA' : 'EN_RUTA',
                 chofer: payload.chofer,
                 fechaSalida: getFechaStr(),
@@ -644,32 +658,17 @@ async function enviarBatch(payload) {
                 lL10: payload.L10, lV10: payload.V10,
                 lL15: payload.L15, lV15: payload.V15,
                 lL45: payload.L45, lV45: payload.V45,
-                diferencia: hayDiferenciaLlegada ? "SI" : "NO", // Puedes afinar el número exacto si quieres
+                diferencia: hayDiferenciaLlegada ? "SI" : "NO",
                 motivo: payload.motivo || "",
                 remito: payload.remitoPlanta || "",
                 timestampLlegadaMs: Date.now()
             });
-
-            // Registrar salida de efectivo en bd1 si declararon compra
-            if (esC && payload.montoCompraEnv > 0) {
-                const idTransaccion = "CE-" + Date.now().toString(36).toUpperCase();
-                batch.set(doc(collection(db, "bd1"), idTransaccion), {
-                    USUARIO: usuarioActivo,
-                    TIPO: 'COMPRA_ENVASE',
-                    FECHA: getFechaStr(),
-                    HORA: getHoraStr(),
-                    ID_VIAJE: payload.idViaje,
-                    "E$": -payload.montoCompraEnv,
-                    TOTAL: -payload.montoCompraEnv,
-                    G: `COMPRA ENVASES: 10kg(${payload.compraEnv10}) 15kg(${payload.compraEnv15}) 45kg(${payload.compraEnv45}) | Remito: ${payload.remitoPlanta}`,
-                    timestampMs: Date.now()
-                });
-            }
         } 
         else if (payload.modo === 'RETROACTIVO') {
-            const nuevoId = "V-" + Date.now().toString(36).toUpperCase() + "-R";
+            const nuevoId = generarIdViaje(true); 
             batch.set(doc(refCcarga, nuevoId), {
                 idViaje: nuevoId,
+                idTurno: idTurnoActivo, 
                 estado: payload.diferencia !== 0 ? 'CON_DIFERENCIA' : 'FINALIZADO',
                 chofer: payload.chofer,
                 fechaSalida: getFechaStr(), horaSalida: getHoraStr(),
@@ -682,6 +681,30 @@ async function enviarBatch(payload) {
                 tipoViaje: "REPARTO",
                 auditor: usuarioActivo,
                 timestampMs: Date.now()
+            });
+
+            // OPCIÓN A: Reparador de Huérfanos. Busca las ventas sin camión de este chofer y las enlaza al nuevo ID.
+            const qHuerfanas = query(collection(db, "movimientos"), 
+                where("ID_VIAJE", "==", "SIN_CAMION"), 
+                where("idTurno", "==", idTurnoActivo)
+            );
+            
+            const huerfanasSnap = await getDocs(qHuerfanas);
+            
+            // Usamos un loop porque no podemos filtrar por 'USUARIO' (nombre del chofer) directamente en la query 
+            // si el valor no coincide exactamente o tiene diferencias de mayúsculas. 
+            // Filtrar en cliente asegura precisión.
+            huerfanasSnap.forEach(docH => {
+                const movData = docH.data();
+                const choferEnMovimiento = normalizarStr(movData.USUARIO);
+                const choferSeleccionado = normalizarStr(payload.chofer);
+                
+                // Si la venta huérfana la hizo el chofer al que le estamos haciendo el retroactivo
+                if(choferEnMovimiento === choferSeleccionado) {
+                    batch.update(doc(collection(db, "movimientos"), docH.id), {
+                        ID_VIAJE: nuevoId
+                    });
+                }
             });
         }
 
@@ -723,24 +746,26 @@ document.getElementById('btnFinalizar').onclick = () => {
     enviarBatch({ 
         modo: 'LLEGADA', idViaje: viajeSeleccionado.idViaje, tipoViaje: viajeSeleccionado.tipoViaje, 
         motivo: motivo, remitoPlanta: remito, 
-        L10: val('LL10'), V10: val('LV10'), L15: val('LL15'), V15: val('LV15'), L45: val('LL45'), V45: val('LV45'),
-        compraEnv10: val('compraEnv10'), compraEnv15: val('compraEnv15'), compraEnv45: val('compraEnv45'),
-        montoCompraEnv: Number(document.getElementById('montoCompraEnvases').value) || 0
+        L10: val('LL10'), V10: val('LV10'), L15: val('LL15'), V15: val('LV15'), L45: val('LL45'), V45: val('LV45')
     });
 };
 
 document.getElementById('btnRegistrarRetro').onclick = () => {
     const c = document.getElementById('selChofer').value;
-    const motivo = document.getElementById('retroMotivoTxt').value.trim();
     const chk = document.getElementById('chkRetroAudit').checked;
+    const motivo = document.getElementById('retroMotivoTxt').value.trim();
     
     if(!c) return showToast('Selecciona chofer arriba', 'error');
     if(!chk) return showToast('⚠️ Debes aceptar la Declaración Jurada.', 'error');
-    if(!motivo) return showToast('⚠️ El motivo es obligatorio.', 'error');
     
     const totS = val('R_SL10')+val('R_SV10')+val('R_SL15')+val('R_SV15')+val('R_SL45')+val('R_SV45');
     const totL = val('R_RL10')+val('R_RV10')+val('R_RL15')+val('R_RV15')+val('R_RL45')+val('R_RV45');
     if(totS === 0) return showToast('Salida vacía', 'error');
+    
+    // Validar motivo solo si hay diferencia
+    if ((totS - totL) !== 0 && !motivo) {
+        return showToast('⚠️ El motivo es obligatorio porque hay diferencia de envases.', 'error');
+    }
 
     enviarBatch({
         modo: 'RETROACTIVO', chofer: c, motivo: motivo, alertaAuditoria: true,
