@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Control de Stock - Torre de Control</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
   <style>
@@ -25,9 +25,9 @@
     }
 
     body.light-mode {
-      --glass: rgba(255, 255, 255, 0.7);
+      --glass: rgba(255, 255, 255, 0.85);
       --glass-border: rgba(0, 0, 0, 0.15);
-      --input-bg: rgba(255, 255, 255, 0.5);
+      --input-bg: rgba(255, 255, 255, 0.8);
       --accent: #d97706;
       --text-primary: #1a1a1a;
       --text-muted: rgba(0, 0, 0, 0.6);
@@ -46,53 +46,81 @@
                   radial-gradient(at 100% 100%, var(--bg-grad-3) 0%, transparent 50%),
                   radial-gradient(at 0% 100%, var(--bg-grad-4) 0%, transparent 50%);
       background-color: var(--bg-color); background-attachment: fixed;
-      min-height: 100vh; padding: 20px;
+      min-height: 100vh; padding-bottom: 30px;
+    }
+
+    /* HEADER STICKY */
+    .header { 
+      position: sticky; top: 0; z-index: 1000; 
+      background: rgba(13, 3, 26, 0.9); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      text-align: center; padding: 15px 20px; border-bottom: 1px solid var(--glass-border);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    body.light-mode .header { background: rgba(248, 250, 252, 0.9); }
+    .header h3 { color: var(--accent); font-weight: 900; margin: 0; font-size: 20px; letter-spacing: -1px; }
+    .btn-volver { 
+      position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
+      background: var(--glass); border: 1px solid var(--glass-border); color: var(--text-primary); 
+      padding: 8px 12px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 12px;
     }
 
     .theme-toggle {
-      position: absolute; top: 20px; right: 20px; width: 45px; height: 45px; border-radius: 50%;
+      position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px; border-radius: 50%;
       background: var(--glass); border: 1px solid var(--glass-border); color: var(--text-primary);
-      display: flex; justify-content: center; align-items: center; font-size: 22px; cursor: pointer;
-      backdrop-filter: blur(10px); transition: all 0.3s ease; z-index: 1000;
+      display: flex; justify-content: center; align-items: center; font-size: 24px; cursor: pointer;
+      backdrop-filter: blur(10px); z-index: 999; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
 
-    .header { text-align: center; margin-bottom: 25px; margin-top: 10px; position: relative; }
-    .header h3 { color: var(--accent); font-weight: 900; margin: 0; font-size: 24px; letter-spacing: -1px; }
-    .btn-volver { position: absolute; left: 0; top: 0; background: var(--glass); border: 1px solid var(--glass-border); color: var(--text-primary); padding: 8px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .container { padding: 20px; max-width: 1000px; margin: 0 auto; }
 
-    .dashboard {
-      max-width: 1000px; margin: 0 auto; display: grid; gap: 20px;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    }
+    .dashboard { display: grid; gap: 15px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 
     .card {
-      background: var(--glass); backdrop-filter: blur(15px); border: 1px solid var(--glass-border);
-      border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-      display: flex; flex-direction: column; position: relative;
+      background: var(--glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+      border: 1px solid var(--glass-border); border-radius: 16px; padding: 15px; 
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2); display: flex; flex-direction: column;
     }
-    .card-title { font-size: 14px; font-weight: 900; color: var(--text-muted); margin-bottom: 15px; letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;}
+    .card-title { 
+      font-size: 13px; font-weight: 900; color: var(--text-muted); margin-bottom: 12px; 
+      letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid var(--glass-border); 
+      padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
+    }
     
-    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center; }
-    .kilo-box { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; text-align: center; }
+    .kilo-box { background: rgba(0,0,0,0.2); padding: 10px 5px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); }
     body.light-mode .kilo-box { background: rgba(0,0,0,0.05); border-color: rgba(0,0,0,0.1); }
-    .k-label { font-size: 11px; font-weight: 800; color: var(--accent); margin-bottom: 5px; }
+    .k-label { font-size: 11px; font-weight: 800; color: var(--accent); margin-bottom: 2px; }
     .k-val { font-size: 20px; font-weight: 900; }
-    .k-sub { font-size: 10px; color: var(--text-muted); margin-top: 5px; display: flex; justify-content: space-around; }
+    .k-sub { font-size: 10px; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-around; font-weight:bold; }
     
-    .btn-ajuste { background: transparent; border: 1px dashed var(--info); color: var(--info); padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: bold; cursor: pointer; }
+    .btn-ajuste { background: transparent; border: 1px dashed var(--info); color: var(--info); padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 900; cursor: pointer; }
     .btn-ajuste:hover { background: var(--info); color: #fff; }
 
-    .main-control { max-width: 1000px; margin: 20px auto 0; }
-    .stock-row { display: grid; grid-template-columns: 60px 1fr 1fr; gap: 15px; align-items: center; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 15px; margin-bottom: 15px; border: 1px solid var(--glass-border); }
+    /* CONTROL DE STOCK FÍSICO REDISEÑADO PARA MOBILE */
+    .stock-row { 
+      background: rgba(255,255,255,0.05); border-radius: 16px; padding: 15px; 
+      margin-bottom: 15px; border: 1px solid var(--glass-border); 
+    }
     body.light-mode .stock-row { background: rgba(0,0,0,0.03); }
+    .stock-header { display: flex; justify-content: center; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--glass-border); padding-bottom: 8px; }
+    .lbl-kg { font-size: 18px; font-weight: 900; color: var(--accent); }
     
-    .lbl-kg { font-size: 18px; font-weight: 900; color: var(--accent); text-align: center; }
-    .input-group { display: flex; flex-direction: column; gap: 5px; }
-    .input-group label { font-size: 11px; font-weight: 800; color: var(--text-muted); text-align: center; }
-    .input-wrapper { display: flex; gap: 5px; }
-    .inp-sys { flex: 1; background: rgba(128,128,128,0.1); border: 1px dashed rgba(128,128,128,0.3); color: var(--text-muted); padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; pointer-events: none; }
-    .inp-real { flex: 1; background: var(--input-bg); border: 1px solid var(--glass-border); color: var(--text-primary); padding: 10px; border-radius: 8px; text-align: center; font-weight: 900; font-size: 16px; outline: none; transition: 0.3s; }
-    .inp-real:focus { border-color: var(--accent); }
+    .inputs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .input-group { display: flex; flex-direction: column; gap: 6px; text-align: center; }
+    .input-group label { font-size: 12px; font-weight: 900; }
+    
+    .inp-sys { 
+      width: 100%; background: rgba(128,128,128,0.15); border: 1px dashed rgba(128,128,128,0.4); 
+      color: var(--text-muted); padding: 8px; border-radius: 8px; text-align: center; 
+      font-weight: bold; pointer-events: none; font-size: 12px; 
+    }
+    .inp-real { 
+      width: 100%; background: var(--input-bg); border: 2px solid var(--glass-border); 
+      color: var(--text-primary); padding: 14px; border-radius: 10px; text-align: center; 
+      font-weight: 900; font-size: 18px; outline: none; transition: 0.2s; 
+    }
+    .inp-real:focus { border-color: var(--accent); background: var(--glass); }
+    
     .match { border-color: var(--start) !important; color: var(--start); background: rgba(76, 175, 80, 0.1); }
     .diff { border-color: var(--error) !important; color: var(--error); background: rgba(255, 68, 68, 0.1); }
 
@@ -102,15 +130,15 @@
     .btn-disabled { background: #444 !important; color: #888 !important; cursor: not-allowed; }
     
     #diffSection { display: none; margin-top: 15px; background: rgba(255,68,68,0.1); padding: 15px; border-radius: 12px; border: 1px solid var(--error); }
-    textarea { width: 100%; height: 80px; background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text-primary); padding: 10px; margin-top: 10px; resize: none; font-family: 'Inter'; }
+    textarea { width: 100%; height: 80px; background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text-primary); padding: 12px; margin-top: 10px; resize: none; font-family: 'Inter'; font-size: 14px; }
 
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center; padding: 20px; backdrop-filter: blur(5px); }
     .modal-content { background: var(--bg-color); border: 1px solid var(--glass-border); padding: 25px; border-radius: 20px; width: 100%; max-width: 400px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
     .modal-content h3 { margin-top: 0; color: var(--accent); }
-    .modal-content input { width: 100%; padding: 12px; margin-bottom: 15px; background: var(--input-bg); border: 1px solid var(--glass-border); color: var(--text-primary); border-radius: 8px; text-align: center; font-weight: bold; font-size: 16px;}
-    .btn-modal { width: 100%; padding: 12px; background: var(--info); color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    .modal-content input { width: 100%; padding: 15px; margin-bottom: 15px; background: var(--input-bg); border: 1px solid var(--glass-border); color: var(--text-primary); border-radius: 10px; text-align: center; font-weight: 900; font-size: 18px;}
+    .btn-modal { width: 100%; padding: 14px; background: var(--info); color: #fff; border: none; border-radius: 10px; font-weight: 900; cursor: pointer; }
 
-    #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
+    #toast-container { position: fixed; bottom: 80px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px; }
     .toast { padding: 15px 20px; border-radius: 12px; color: #fff; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transform: translateY(20px); transition: 0.3s; font-size: 14px; }
     .toast.show { opacity: 1; transform: translateY(0); }
     .toast.error { background: #ff4444; } .toast.success { background: #4CAF50; } .toast.info { background: #00bfff; }
@@ -127,70 +155,72 @@
   <button class="theme-toggle" onclick="window.toggleTheme()" id="btnTheme">🌙</button>
 
   <div id="toast-container"></div>
-  <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><div id="loaderText" style="color:var(--accent); font-weight:800; letter-spacing:1px;">SINCRONIZANDO FIREBASE...</div></div>
+  <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><div id="loaderText" style="color:var(--accent); font-weight:800; letter-spacing:1px;">SINCRONIZANDO...</div></div>
 
   <div class="header">
     <button class="btn-volver" onclick="window.location.href='inicio.html'">⬅ VOLVER</button>
     <h3>ESTADO DE STOCK</h3>
-    <div id="lblTurno" style="font-size:12px; color:var(--text-muted); margin-top:5px; font-weight:bold;">Buscando turno...</div>
+    <div id="lblTurno" style="font-size:11px; color:var(--text-muted); margin-top:2px; font-weight:bold; text-transform:uppercase;">Buscando turno...</div>
   </div>
 
-  <div class="dashboard">
-    <!-- TARJETA 1: PATRIMONIO -->
-    <div class="card" style="border-color: rgba(255, 215, 0, 0.3);">
-      <div class="card-title">
-        <span ondblclick="window.revelarPin()" style="cursor:pointer;" title="Doble click para ver PIN actual">🏛️ PATRIMONIO FIJO (TOTAL)</span>
-        <button class="btn-ajuste" onclick="window.abrirModalPatrimonio()">⚙️ MODIFICAR</button>
-      </div>
-      <div class="grid-3">
-        <div class="kilo-box"><div class="k-label">10 KG</div><div class="k-val" id="pat10">-</div></div>
-        <div class="kilo-box"><div class="k-label">15 KG</div><div class="k-val" id="pat15">-</div></div>
-        <div class="kilo-box"><div class="k-label">45 KG</div><div class="k-val" id="pat45">-</div></div>
-      </div>
-      <div style="font-size:10px; color:var(--text-muted); margin-top:10px; text-align:center;">Fierros totales propiedad de la empresa.</div>
-    </div>
-
-    <!-- TARJETA 2: EN RUTA -->
-    <div class="card" style="border-color: rgba(0, 191, 255, 0.3);">
-      <div class="card-title">🚚 EN LA CALLE</div>
-      <div class="grid-3">
-        <div class="kilo-box"><div class="k-label">10 KG</div><div class="k-val" id="calle10">-</div></div>
-        <div class="kilo-box"><div class="k-label">15 KG</div><div class="k-val" id="calle15">-</div></div>
-        <div class="kilo-box"><div class="k-label">45 KG</div><div class="k-val" id="calle45">-</div></div>
-      </div>
-      <div style="font-size:10px; color:var(--text-muted); margin-top:10px; text-align:center;">Suma de camiones en ruta + cauciones activas.</div>
-    </div>
-
-    <!-- TARJETA 3: PLATAFORMA ESPERADA -->
-    <div class="card" style="border-color: rgba(76, 175, 80, 0.3); background: rgba(76,175,80,0.05);">
-      <div class="card-title" style="color: var(--start);">📍 PLATAFORMA (ESPERADO)</div>
-      <div class="grid-3">
-        <div class="kilo-box"><div class="k-label">10 KG</div><div class="k-val" id="plat10">-</div>
-          <div class="k-sub"><span id="platL10" style="color:var(--start);">0L</span><span id="platV10" style="color:var(--accent);">0V</span></div>
+  <div class="container">
+    <div class="dashboard">
+      <!-- TARJETA 1: PATRIMONIO -->
+      <div class="card" style="border-color: rgba(255, 215, 0, 0.3);">
+        <div class="card-title">
+          <span>🏛️ PATRIMONIO FIJO (TOTAL)</span>
+          <button class="btn-ajuste" onclick="window.abrirModalPatrimonio()">⚙️ MODIFICAR</button>
         </div>
-        <div class="kilo-box"><div class="k-label">15 KG</div><div class="k-val" id="plat15">-</div>
-          <div class="k-sub"><span id="platL15" style="color:var(--start);">0L</span><span id="platV15" style="color:var(--accent);">0V</span></div>
+        <div class="grid-3">
+          <div class="kilo-box"><div class="k-label">10 KG</div><div class="k-val" id="pat10">-</div></div>
+          <div class="kilo-box"><div class="k-label">15 KG</div><div class="k-val" id="pat15">-</div></div>
+          <div class="kilo-box"><div class="k-label">45 KG</div><div class="k-val" id="pat45">-</div></div>
         </div>
-        <div class="kilo-box"><div class="k-label">45 KG</div><div class="k-val" id="plat45">-</div>
-          <div class="k-sub"><span id="platL45" style="color:var(--start);">0L</span><span id="platV45" style="color:var(--accent);">0V</span></div>
-        </div>
+        <div style="font-size:10px; color:var(--text-muted); margin-top:10px; text-align:center;">Fierros totales propiedad de la empresa.</div>
       </div>
-      <div style="font-size:10px; color:var(--text-muted); margin-top:10px; text-align:center;">Lo que debería haber físicamente HOY en la planta.</div>
-    </div>
-  </div>
 
-  <div class="main-control card" style="margin-top:20px;">
-    <div class="card-title" style="justify-content:center; font-size:18px; color:var(--accent);">📋 CONTROL DE STOCK FÍSICO</div>
-    
-    <div id="gridAuditoria"></div>
-    
-    <div id="diffSection">
-        <div style="color:var(--error); font-weight:900; font-size:14px;">⚠️ HAY DIFERENCIAS CON EL SISTEMA</div>
-        <div style="font-size:11px; color:var(--text-primary); margin-top:5px;">Justifique el motivo para habilitar el guardado.</div>
-        <textarea id="txtMotivo" placeholder="Ej: Faltan 2 envases de 10kg porque..."></textarea>
+      <!-- TARJETA 2: EN RUTA -->
+      <div class="card" style="border-color: rgba(0, 191, 255, 0.3);">
+        <div class="card-title">🚚 EN LA CALLE</div>
+        <div class="grid-3">
+          <div class="kilo-box"><div class="k-label">10 KG</div><div class="k-val" id="calle10">-</div></div>
+          <div class="kilo-box"><div class="k-label">15 KG</div><div class="k-val" id="calle15">-</div></div>
+          <div class="kilo-box"><div class="k-label">45 KG</div><div class="k-val" id="calle45">-</div></div>
+        </div>
+        <div style="font-size:10px; color:var(--text-muted); margin-top:10px; text-align:center;">Camiones en ruta + cauciones activas.</div>
+      </div>
+
+      <!-- TARJETA 3: PLATAFORMA ESPERADA -->
+      <div class="card" style="border-color: rgba(76, 175, 80, 0.5); background: rgba(76,175,80,0.05);">
+        <div class="card-title" style="color: var(--start);">📍 PLATAFORMA (ESPERADO)</div>
+        <div class="grid-3">
+          <div class="kilo-box"><div class="k-label">10 KG</div><div class="k-val" id="plat10">-</div>
+            <div class="k-sub"><span id="platL10" style="color:var(--start);">0L</span><span id="platV10" style="color:var(--accent);">0V</span></div>
+          </div>
+          <div class="kilo-box"><div class="k-label">15 KG</div><div class="k-val" id="plat15">-</div>
+            <div class="k-sub"><span id="platL15" style="color:var(--start);">0L</span><span id="platV15" style="color:var(--accent);">0V</span></div>
+          </div>
+          <div class="kilo-box"><div class="k-label">45 KG</div><div class="k-val" id="plat45">-</div>
+            <div class="k-sub"><span id="platL45" style="color:var(--start);">0L</span><span id="platV45" style="color:var(--accent);">0V</span></div>
+          </div>
+        </div>
+        <div style="font-size:10px; color:var(--text-muted); margin-top:10px; text-align:center;">Lo que debería haber físicamente HOY en la planta.</div>
+      </div>
     </div>
 
-    <button id="btnGuardarTurno" class="btn-main btn-disabled" disabled>CARGANDO...</button>
+    <div class="card" style="margin-top:20px; border-color:var(--accent);">
+      <div class="card-title" style="justify-content:center; font-size:16px; color:var(--accent);">📋 CONTROL DE STOCK FÍSICO</div>
+      
+      <div id="gridAuditoria"></div>
+      
+      <div id="diffSection">
+          <div style="color:var(--error); font-weight:900; font-size:14px;">⚠️ HAY DIFERENCIAS CON EL SISTEMA</div>
+          <div style="font-size:11px; color:var(--text-primary); margin-top:5px;">Justifique el motivo para habilitar el guardado.</div>
+          <textarea id="txtMotivo" placeholder="Ej: Faltan 2 envases de 10kg porque..."></textarea>
+      </div>
+
+      <button id="btnGuardarTurno" class="btn-main btn-disabled" disabled>CARGANDO...</button>
+    </div>
   </div>
 
   <!-- MODALES -->
@@ -198,7 +228,7 @@
     <div class="modal-content">
       <h3>🔒 Autorización Requerida</h3>
       <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Ingrese el PIN Dinámico para modificar el Patrimonio Fijo.</p>
-      <input type="password" id="inpPin" placeholder="PIN de 4 dígitos" maxlength="4" inputmode="numeric">
+      <input type="password" id="inpPin" placeholder="PIN de 4 dígitos" maxlength="4" inputmode="numeric" pattern="[0-9]*">
       <div style="display:flex; gap:10px;">
         <button class="btn-modal" onclick="window.validarPin()" style="flex:2;">VALIDAR</button>
         <button class="btn-modal" onclick="document.getElementById('modalPin').style.display='none'" style="flex:1; background:var(--error);">CANCELAR</button>
@@ -209,12 +239,12 @@
   <div id="modalEditPatrimonio" class="modal">
     <div class="modal-content">
       <h3>⚙️ Ajuste de Patrimonio Fijo</h3>
-      <div style="display:grid; grid-template-columns: 60px 1fr; gap:10px; align-items:center; margin-bottom:10px;">
-        <label style="color:var(--accent); font-weight:bold;">10 KG</label><input type="number" id="editPat10">
-        <label style="color:var(--accent); font-weight:bold;">15 KG</label><input type="number" id="editPat15">
-        <label style="color:var(--accent); font-weight:bold;">45 KG</label><input type="number" id="editPat45">
+      <div style="display:grid; grid-template-columns: 60px 1fr; gap:10px; align-items:center; margin-bottom:15px;">
+        <label style="color:var(--accent); font-weight:900; text-align:right;">10 KG</label><input type="number" id="editPat10" inputmode="numeric" pattern="[0-9]*" style="margin:0;">
+        <label style="color:var(--accent); font-weight:900; text-align:right;">15 KG</label><input type="number" id="editPat15" inputmode="numeric" pattern="[0-9]*" style="margin:0;">
+        <label style="color:var(--accent); font-weight:900; text-align:right;">45 KG</label><input type="number" id="editPat45" inputmode="numeric" pattern="[0-9]*" style="margin:0;">
       </div>
-      <button class="btn-modal" onclick="window.guardarPatrimonio()" style="background:var(--start); color:#000;">GUARDAR Y GENERAR NUEVO PIN</button>
+      <button class="btn-modal" onclick="window.guardarPatrimonio()" style="background:var(--start); color:#000;">GUARDAR PATRIMONIO</button>
     </div>
   </div>
 
@@ -236,7 +266,6 @@
 
   let k = new URLSearchParams(window.location.search).get('k') || sessionStorage.getItem('k');
   
-  // Variables Globales de Estado
   let state = {
       patrimonio: { t10: 0, t15: 0, t45: 0 },
       calle: { t10: 0, t15: 0, t45: 0 },
@@ -263,13 +292,12 @@
     document.getElementById('loadingOverlay').classList.toggle('active', show);
   };
 
-  // Timer 15 min
   let timer;
   const resetTimer = () => {
       clearTimeout(timer);
       timer = setTimeout(() => { showToast('⏱️ Sesión expirada.', 'error'); setTimeout(()=>window.location.href='inicio.html',1500); }, 900000);
   };
-  ['click','mousemove','keypress'].forEach(e => document.addEventListener(e, resetTimer));
+  ['click','mousemove','keypress','touchstart'].forEach(e => document.addEventListener(e, resetTimer));
 
   async function init() {
       if(!k) return window.location.href='inicio.html';
@@ -282,7 +310,7 @@
 
   async function cargarDataFirebase() {
       try {
-          // 1. Patrimonio Fijo
+          // Patrimonio
           let docPat = await getDoc(doc(db, "patrimonio", "totales"));
           if(!docPat.exists()) {
               await setDoc(doc(db, "patrimonio", "totales"), { env10: 0, env15: 0, env45: 0 });
@@ -291,7 +319,7 @@
           const dPat = docPat.data();
           state.patrimonio = { t10: dPat.env10||0, t15: dPat.env15||0, t45: dPat.env45||0 };
 
-          // 2. Turno Activo (Stock Diario)
+          // Turno Activo
           const qTurnos = query(collection(db, "turnos"), orderBy("timestampAperturaMs", "desc"), limit(1));
           const qsTurnos = await getDocs(qTurnos);
           
@@ -299,11 +327,11 @@
               state.turnoActivo = { id: qsTurnos.docs[0].id, ...qsTurnos.docs[0].data() };
               document.getElementById('lblTurno').innerHTML = `TURNO ABIERTO: <span style="color:var(--start);">${state.turnoActivo.idTurno}</span>`;
           } else {
-              state.turnoActivo = null; // Turno cerrado
+              state.turnoActivo = null;
               document.getElementById('lblTurno').innerHTML = `<span style="color:var(--error);">TURNO CERRADO (Requiere Apertura)</span>`;
           }
 
-          // 3. En Calle (Camiones en Ruta + Cauciones Activas)
+          // En Calle
           const qCam = query(collection(db, "ccarga"), where("estado", "in", ["EN_RUTA", "COMPRA_EN_RUTA"]));
           const qsCam = await getDocs(qCam);
           state.hayCamionesEnRuta = !qsCam.empty;
@@ -315,20 +343,15 @@
               c15 += (Number(r.sL15)||0) + (Number(r.sV15)||0);
               c45 += (Number(r.sL45)||0) + (Number(r.sV45)||0);
           });
-
-          // Acá sumaríamos cauciones si tuvieras la colección ya armada. Asumimos 0 por ahora para el ejemplo.
           state.calle = { t10: c10, t15: c15, t45: c45 };
 
-          // 4. Calcular Plataforma (Esperado)
+          // Plataforma
           const plat10 = state.patrimonio.t10 - state.calle.t10;
           const plat15 = state.patrimonio.t15 - state.calle.t15;
           const plat45 = state.patrimonio.t45 - state.calle.t45;
 
-          // Matemática de Llenos y Vacíos (Simulada si no hay histórico de movimientos)
-          // Si el turno está abierto, tomamos el stock base + compras - ventas. 
-          // Por simplicidad visual, asignamos todo a Vacíos temporalmente si no hay data dura.
           if(state.turnoActivo && state.turnoActivo.stockActual) {
-              state.esperado = state.turnoActivo.stockActual; // El backend iría actualizando este objeto
+              state.esperado = state.turnoActivo.stockActual; 
           } else {
               state.esperado = { l10:0, v10:plat10, l15:0, v15:plat15, l45:0, v45:plat45 };
           }
@@ -343,7 +366,6 @@
   }
 
   function actualizarUI() {
-      // Pintar Cards
       document.getElementById('pat10').textContent = state.patrimonio.t10;
       document.getElementById('pat15').textContent = state.patrimonio.t15;
       document.getElementById('pat45').textContent = state.patrimonio.t45;
@@ -364,23 +386,23 @@
       document.getElementById('platL45').textContent = state.esperado.l45 + 'L';
       document.getElementById('platV45').textContent = state.esperado.v45 + 'V';
 
-      // Pintar Formulario Control
       const isApertura = !state.turnoActivo;
+      
       const html = [10, 15, 45].map(kg => `
         <div class="stock-row">
-            <div class="lbl-kg">${kg}kg</div>
-            <div class="input-group">
-                <label style="color:var(--start);">LLENOS</label>
-                <div class="input-wrapper">
-                    ${!isApertura ? `<input class="inp-sys" value="${state.esperado[`l${kg}`]}" readonly tabindex="-1">` : ''}
-                    <input type="number" id="R_L${kg}" class="inp-real" placeholder="0" oninput="window.validarControl()">
-                </div>
+            <div class="stock-header">
+                <span class="lbl-kg">${kg}kg</span>
             </div>
-            <div class="input-group">
-                <label style="color:var(--accent);">VACÍOS</label>
-                <div class="input-wrapper">
-                    ${!isApertura ? `<input class="inp-sys" value="${state.esperado[`v${kg}`]}" readonly tabindex="-1">` : ''}
-                    <input type="number" id="R_V${kg}" class="inp-real" placeholder="0" oninput="window.validarControl()">
+            <div class="inputs-grid">
+                <div class="input-group">
+                    <label style="color:var(--start);">LLENOS</label>
+                    ${!isApertura ? `<input class="inp-sys" value="Sist: ${state.esperado[`l${kg}`]}" readonly tabindex="-1">` : ''}
+                    <input type="number" id="R_L${kg}" class="inp-real" placeholder="0" inputmode="numeric" pattern="[0-9]*" oninput="window.validarControl()">
+                </div>
+                <div class="input-group">
+                    <label style="color:var(--accent);">VACÍOS</label>
+                    ${!isApertura ? `<input class="inp-sys" value="Sist: ${state.esperado[`v${kg}`]}" readonly tabindex="-1">` : ''}
+                    <input type="number" id="R_V${kg}" class="inp-real" placeholder="0" inputmode="numeric" pattern="[0-9]*" oninput="window.validarControl()">
                 </div>
             </div>
         </div>
@@ -394,20 +416,20 @@
       } else {
           btn.className = "btn-main btn-end"; btn.textContent = "CERRAR TURNO 🔴"; btn.disabled = false;
           if(state.hayCamionesEnRuta) {
-              btn.className = "btn-main btn-disabled"; btn.textContent = "🔒 CIERRE BLOQUEADO (HAY CAMIONES EN RUTA)"; btn.disabled = true;
+              btn.className = "btn-main btn-disabled"; btn.textContent = "🔒 BLOQUEADO (CAMIONES EN RUTA)"; btn.disabled = true;
           }
       }
   }
 
   window.validarControl = function() {
-      if(!state.turnoActivo) return; // En apertura no validamos diferencias
+      if(!state.turnoActivo) return; 
 
       let diff = false;
       document.querySelectorAll('.inp-real').forEach(inp => {
           const sys = inp.previousElementSibling;
-          if(sys) {
+          if(sys && sys.classList.contains('inp-sys')) {
               const vReal = Number(inp.value)||0;
-              const vSys = Number(sys.value)||0;
+              const vSys = Number(sys.value.replace(/\D/g,''))||0;
               if(vReal !== vSys && inp.value !== '') {
                   inp.classList.add('diff'); inp.classList.remove('match'); diff = true;
               } else if (inp.value !== '') {
@@ -422,7 +444,7 @@
       const box = document.getElementById('diffSection');
       const txt = document.getElementById('txtMotivo').value.trim();
 
-      if(state.hayCamionesEnRuta) return; // Si hay camiones, el botón ya está bloqueado y no hacemos nada más acá.
+      if(state.hayCamionesEnRuta) return; 
 
       if(diff) {
           box.style.display = 'block';
@@ -435,28 +457,22 @@
   };
   document.getElementById('txtMotivo').addEventListener('input', window.validarControl);
 
-  // LÓGICA DE PIN DINÁMICO Y PATRIMONIO
   window.abrirModalPatrimonio = () => {
       document.getElementById('inpPin').value = '';
       document.getElementById('modalPin').style.display = 'flex';
-  };
-
-  window.revelarPin = async () => {
-      const docConf = await getDoc(doc(db, "config", "seguridad"));
-      if(docConf.exists()) alert(`🤫 El PIN actual de la base de datos es: ${docConf.data().pinPatrimonio}`);
   };
 
   window.validarPin = async () => {
       const pinIngresado = document.getElementById('inpPin').value;
       toggleLoader(true, "Verificando...");
       try {
-          let docConf = await getDoc(doc(db, "config", "seguridad"));
+          let docConf = await getDoc(doc(db, "seguridad", "pin"));
           if(!docConf.exists()) {
-              await setDoc(doc(db, "config", "seguridad"), { pinPatrimonio: "1234" });
-              docConf = await getDoc(doc(db, "config", "seguridad"));
+              await setDoc(doc(db, "seguridad", "pin"), { dinamico: "1234", maestro: "0000" });
+              docConf = await getDoc(doc(db, "seguridad", "pin"));
           }
           
-          if(pinIngresado === String(docConf.data().pinPatrimonio)) {
+          if(pinIngresado === String(docConf.data().dinamico)) {
               document.getElementById('modalPin').style.display = 'none';
               document.getElementById('editPat10').value = state.patrimonio.t10;
               document.getElementById('editPat15').value = state.patrimonio.t15;
@@ -465,7 +481,7 @@
           } else {
               showToast("PIN Incorrecto", "error");
           }
-      } catch(e) { showToast("Error de validación", "error"); }
+      } catch(e) { showToast("Error de validación", "error"); console.log(e); }
       toggleLoader(false);
   };
 
@@ -478,22 +494,19 @@
 
       try {
           await updateDoc(doc(db, "patrimonio", "totales"), { env10: n10, env15: n15, env45: n45 });
-          await updateDoc(doc(db, "config", "seguridad"), { pinPatrimonio: nuevoPin });
+          await updateDoc(doc(db, "seguridad", "pin"), { dinamico: nuevoPin });
           
           document.getElementById('modalEditPatrimonio').style.display = 'none';
-          await cargarDataFirebase(); // Recarga visual
+          await cargarDataFirebase(); 
           
-          alert(`✅ Patrimonio Actualizado con éxito.\n\n⚠️ ATENCIÓN: Tu NUEVO PIN es ${nuevoPin}\nAnotalo, el anterior ya no sirve.`);
+          showToast("Patrimonio actualizado correctamente", "success");
       } catch(e) { showToast("Error al guardar", "error"); }
       toggleLoader(false);
   };
 
-  // Botón Guardar Principal
   document.getElementById('btnGuardarTurno').onclick = async () => {
       if(!confirm(`¿Confirma registrar la operación de ${state.turnoActivo ? 'CIERRE' : 'APERTURA'}?`)) return;
       toggleLoader(true, "Registrando en Base de Datos...");
-      // Acá iría la lógica de setDoc/updateDoc en la colección turnos.
-      // ... (La estructura base ya está lista, esto depende de cómo quieras guardar el log)
       setTimeout(() => {
           showToast("Operación exitosa", "success");
           window.location.reload();
