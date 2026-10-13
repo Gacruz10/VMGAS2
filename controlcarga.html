@@ -150,8 +150,6 @@
     .spinner { width: 60px; height: 60px; border: 4px solid rgba(128, 128, 128, 0.2); border-left-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .loading-text { color: var(--accent); font-size: 15px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
-
-    #bloqueoTurnoOverlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(13,3,26,0.95); z-index: 99999; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; backdrop-filter: blur(10px); }
   </style>
 </head>
 <body>
@@ -161,14 +159,6 @@
 
   <div id="toast-container"></div>
   <div class="loading-overlay" id="loadingOverlay"><div class="spinner" id="loaderSpinner"></div><div class="loading-text" id="loaderText">CARGANDO...</div></div>
-
-  <!-- CANDADO DE TURNO -->
-  <div id="bloqueoTurnoOverlay">
-      <div style="font-size:50px; margin-bottom:20px;">🔒</div>
-      <h2 style="color:var(--error); font-weight:900; margin-bottom:10px; font-size:24px;">OPERACIÓN BLOQUEADA</h2>
-      <p style="color:#fff; font-size:14px; max-width:400px; line-height:1.5;">No se encontró un Turno abierto en el sistema.<br>Por favor, inicie el día en el módulo <b>CSTOCK</b> antes de despachar o recibir camiones.</p>
-      <button onclick="window.location.href='inicio.html'" style="margin-top:20px; padding:12px 24px; background:var(--glass); border:1px solid var(--glass-border); color:#fff; border-radius:8px; font-weight:bold; cursor:pointer;">Volver al Inicio</button>
-  </div>
 
   <div class="header">
     <button class="btn-volver" id="btnBack">⬅ VOLVER</button>
@@ -284,8 +274,22 @@ const toggleLoader = (show, text='CARGANDO...') => {
     document.getElementById('loaderText').textContent = text;
     document.getElementById('loadingOverlay').classList.toggle('active', show);
 };
-function logout() { sessionStorage.removeItem('k'); window.location.replace('index.html'); }
+
+function logout() { sessionStorage.removeItem('k'); window.location.replace('inicio.html'); }
 document.getElementById('btnBack').addEventListener('click', () => { window.location.href = `inicio.html?k=${k}`; });
+
+// --- TIMER INACTIVIDAD (15 MIN) ---
+let timerInterval = null;
+function refreshSession() {
+    if(timerInterval) clearTimeout(timerInterval);
+    timerInterval = setTimeout(() => { 
+        showToast('⏱️ Sesión expirada por 15 min de inactividad.', 'error'); 
+        setTimeout(logout, 1500); 
+    }, 900000); // 15 minutos en ms
+}
+['click','mousemove','keydown','touchstart'].forEach(ev => document.addEventListener(ev, refreshSession));
+refreshSession(); // Inicia el timer apenas carga
+// -----------------------------------
 
 function normalizarStr(str) { return str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim() : ""; }
 const pad2 = (n) => String(n).padStart(2, '0');
@@ -319,7 +323,7 @@ async function init() {
         if (!tokenSnap.exists() || (tokenSnap.data().expira && Date.now() > tokenSnap.data().expira)) return logout();
         usuarioActivo = tokenSnap.data().usuario || 'SISTEMA';
 
-        // VERIFICAR CANDADO DE TURNO
+        // BUSCAR TURNO (AHORA SIN BLOQUEO)
         const qTurnos = query(collection(db, "turnos"), orderBy("timestampAperturaMs", "desc"), limit(1));
         const qsTurnos = await getDocs(qTurnos);
         
@@ -327,9 +331,9 @@ async function init() {
             idTurnoActivo = qsTurnos.docs[0].data().idTurno;
             document.getElementById('lblTurnoActivo').textContent = `TURNO: ${idTurnoActivo}`;
         } else {
-            document.getElementById('bloqueoTurnoOverlay').style.display = 'flex';
-            toggleLoader(false);
-            return; // Detiene la carga de la app acá.
+            // OPERACIÓN PERMITIDA SIN TURNO ABIERTO (EMERGENCIA)
+            idTurnoActivo = "SIN_TURNO_ABIERTO";
+            document.getElementById('lblTurnoActivo').textContent = `⚠️ SIN TURNO ABIERTO`;
         }
     } catch(e) { return logout(); }
 
@@ -359,7 +363,7 @@ async function cargarTodoFirebase() {
             listaChoferes.push({ usuario: d.id, nombreMostrar: u.nombre_mostrar || u.nombre_completo || d.id });
         });
 
-        // Solo trae camiones en ruta (no importa la fecha, si está en ruta hay que cerrarlo)
+        // Solo trae camiones en ruta
         const qViajes = query(collection(db, "ccarga"), where("estado", "in", ["EN_RUTA", "COMPRA_EN_RUTA"]));
         const qsViajes = await getDocs(qViajes);
         viajesPendientes = [];
