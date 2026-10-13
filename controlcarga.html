@@ -139,40 +139,28 @@
     .hidden { display: none; }
 
     #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
-    .toast { padding: 15px 20px; border-radius: 12px; color: #fff; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--glass-border); opacity: 0; transform: translateY(20px); transition: all 0.3s ease; font-size: 14px; letter-spacing: 0.5px;}
+    .toast { padding: 15px 20px; border-radius: 12px; color: #fff; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid var(--glass-border); opacity: 0; transform: translateY(20px); transition: all 0.3s ease; font-size: 14px;}
     .toast.show { opacity: 1; transform: translateY(0); }
-    .toast.error { background: rgba(255, 68, 68, 0.9); backdrop-filter: blur(10px); }
-    .toast.success { background: rgba(45, 212, 191, 0.9); backdrop-filter: blur(10px); }
-    .toast.info { background: rgba(217, 119, 6, 0.9); color: #fff; backdrop-filter: blur(10px); }
+    .toast.error { background: rgba(255, 68, 68, 0.9); }
+    .toast.success { background: rgba(45, 212, 191, 0.9); }
+    .toast.info { background: rgba(217, 119, 6, 0.9); color: #fff; }
 
-    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: opacity 0.3s ease; backdrop-filter: blur(10px); }
     .loading-overlay.active { opacity: 1; visibility: visible; }
-    .spinner { width: 60px; height: 60px; border: 4px solid rgba(128, 128, 128, 0.2); border-left-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite, pulseGlow 2s ease-in-out infinite; margin-bottom: 20px; transition: all 0.3s ease; }
-    .spinner.success-mode { border-left-color: var(--ok); }
+    .spinner { width: 60px; height: 60px; border: 4px solid rgba(128, 128, 128, 0.2); border-left-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    @keyframes pulseGlow { 0% { box-shadow: 0 0 10px rgba(0,0,0,0.1); } 50% { box-shadow: 0 0 25px rgba(0,0,0,0.2); } 100% { box-shadow: 0 0 10px rgba(0,0,0,0.1); } }
-    .loading-text { color: var(--accent); font-size: 15px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; transition: color 0.3s; }
-    .loading-text.success-mode { color: var(--ok); }
+    .loading-text { color: var(--accent); font-size: 15px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
 
-    /* CANDADO OVERLAY */
     #bloqueoTurnoOverlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(13,3,26,0.95); z-index: 99999; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; backdrop-filter: blur(10px); }
   </style>
 </head>
 <body>
 
-  <script>
-    if(localStorage.getItem('vm_theme') === 'light') {
-      document.body.classList.add('light-mode');
-    }
-  </script>
+  <script>if(localStorage.getItem('vm_theme') === 'light') document.body.classList.add('light-mode');</script>
   <button class="theme-toggle" onclick="window.toggleTheme()" id="btnTheme">🌙</button>
 
   <div id="toast-container"></div>
-
-  <div class="loading-overlay" id="loadingOverlay">
-    <div class="spinner" id="loaderSpinner"></div>
-    <div class="loading-text" id="loaderText">CARGANDO...</div>
-  </div>
+  <div class="loading-overlay" id="loadingOverlay"><div class="spinner" id="loaderSpinner"></div><div class="loading-text" id="loaderText">CARGANDO...</div></div>
 
   <!-- CANDADO DE TURNO -->
   <div id="bloqueoTurnoOverlay">
@@ -196,9 +184,7 @@
   </div>
 
   <div class="container">
-    
     <div id="viewMain" class="section active">
-        
         <label style="font-size:11px; color:var(--text-muted); font-weight:800; letter-spacing:1px; margin-bottom:5px; display:block;">CHOFER</label>
         <select id="selChofer"><option value="">Cargando...</option></select>
         
@@ -248,22 +234,20 @@
             <div style="color:var(--compra); font-weight:900; font-size:12px; text-align:center; margin-bottom:12px; letter-spacing:1px;">🛒 DECLARAR COMPRA DE ENVASES (EFECTIVO)</div>
             <div class="row-input" style="background: var(--input-bg); grid-template-columns: 45px 1fr 1fr 1fr;">
                 <div class="label-kilo" style="color:var(--compra)">CANT.</div>
-                <div class="input-wrapper"><label style="background:var(--compra); color:#000;">+10KG</label><input type="number" id="compraEnv10" class="calc-L" placeholder="0" inputmode="numeric" pattern="[0-9]*" style="border-color:var(--compra);"></div>
-                <div class="input-wrapper"><label style="background:var(--compra); color:#000;">+15KG</label><input type="number" id="compraEnv15" class="calc-L" placeholder="0" inputmode="numeric" pattern="[0-9]*" style="border-color:var(--compra);"></div>
-                <div class="input-wrapper"><label style="background:var(--compra); color:#000;">+45KG</label><input type="number" id="compraEnv45" class="calc-L" placeholder="0" inputmode="numeric" pattern="[0-9]*" style="border-color:var(--compra);"></div>
+                <div class="input-wrapper"><label style="background:var(--compra); color:#000;">+10KG</label><input type="number" id="compraEnv10" class="calc-L" placeholder="0"></div>
+                <div class="input-wrapper"><label style="background:var(--compra); color:#000;">+15KG</label><input type="number" id="compraEnv15" class="calc-L" placeholder="0"></div>
+                <div class="input-wrapper"><label style="background:var(--compra); color:#000;">+45KG</label><input type="number" id="compraEnv45" class="calc-L" placeholder="0"></div>
             </div>
             <div style="margin-top: 10px;">
-                <input type="number" id="montoCompraEnvases" placeholder="$ MONTO TOTAL PAGADO EN EFECTIVO" inputmode="numeric" pattern="[0-9]*" style="width: 100%; padding: 12px; background: var(--input-bg); border: 1px solid var(--compra); border-radius: 8px; color: var(--text-primary); text-align: center; font-weight: bold; font-size: 14px;">
+                <input type="number" id="montoCompraEnvases" placeholder="$ MONTO TOTAL PAGADO EN EFECTIVO" style="width: 100%; padding: 12px; background: var(--input-bg); border: 1px solid var(--compra); border-radius: 8px; color: var(--text-primary); text-align: center; font-weight: bold; font-size: 14px;">
             </div>
         </div>
 
-        <input type="text" id="txtRemitoCompra" class="tx-obligatorio hidden" placeholder="Nº DE REMITO (OBLIGATORIO)..." inputmode="text" style="margin-top: 10px; font-family: 'Inter', sans-serif;">
-        
-        <textarea id="txtMotivo" class="tx-novedad" placeholder="Novedades... (Opcional)" inputmode="text"></textarea>
+        <input type="text" id="txtRemitoCompra" class="tx-obligatorio hidden" placeholder="Nº DE REMITO (OBLIGATORIO)..." style="margin-top: 10px;">
+        <textarea id="txtMotivo" class="tx-novedad" placeholder="Novedades... (Opcional)"></textarea>
         
         <button class="btn-main btn-llegada" id="btnFinalizar">FINALIZAR VIAJE ✅</button>
     </div>
-
   </div>
 
 <script type="module">
@@ -285,15 +269,22 @@ const db = getFirestore(app);
 const params = new URLSearchParams(window.location.search);
 let k = params.get('k') || sessionStorage.getItem('k');
 
-// --- UI & TEMA ---
+// UI Globals
 window.toggleTheme = function() {
     const isLight = document.body.classList.toggle('light-mode');
-    const btn = document.getElementById('btnTheme');
-    localStorage.setItem('vm_theme', isLight ? 'light' : 'dark');
-    btn.textContent = isLight ? '☀️' : '🌙';
+    document.getElementById('btnTheme').textContent = isLight ? '☀️' : '🌙';
 };
-document.getElementById('btnTheme').textContent = document.body.classList.contains('light-mode') ? '☀️' : '🌙';
-
+const showToast = (msg, type='info') => {
+    const c = document.getElementById('toast-container'); const t = document.createElement('div');
+    t.className = `toast ${type}`; t.textContent = msg; c.appendChild(t);
+    setTimeout(() => t.classList.add('show'), 10);
+    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3500);
+};
+const toggleLoader = (show, text='CARGANDO...') => {
+    document.getElementById('loaderText').textContent = text;
+    document.getElementById('loadingOverlay').classList.toggle('active', show);
+};
+function logout() { sessionStorage.removeItem('k'); window.location.replace('index.html'); }
 document.getElementById('btnBack').addEventListener('click', () => { window.location.href = `inicio.html?k=${k}`; });
 
 function normalizarStr(str) { return str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim() : ""; }
@@ -307,31 +298,6 @@ function generarIdViaje(isRetro = false) {
     return `CC${fecha}${random}${isRetro ? '-R' : ''}`; 
 }
 
-function aplicarFocoAuto() {
-    document.querySelectorAll('input[type="number"]').forEach(input => {
-        input.addEventListener('focus', function() { setTimeout(() => { try { this.select(); } catch(e){} }, 50); });
-    });
-}
-
-function showToast(msg, type = 'info') {
-    const c = document.getElementById('toast-container'); const t = document.createElement('div');
-    t.className = `toast ${type}`; t.textContent = msg; c.appendChild(t);
-    setTimeout(() => t.classList.add('show'), 10);
-    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3500);
-}
-
-function toggleLoader(show, text = 'CARGANDO...', isSuccess = false) {
-    const ov = document.getElementById('loadingOverlay'), txt = document.getElementById('loaderText'), sp = document.getElementById('loaderSpinner');
-    txt.textContent = text;
-    if (isSuccess) { sp.classList.add('success-mode'); txt.classList.add('success-mode'); } 
-    else { sp.classList.remove('success-mode'); txt.classList.remove('success-mode'); }
-    if (show) ov.classList.add('active'); else ov.classList.remove('active');
-}
-
-function logout() { sessionStorage.removeItem('k'); window.location.replace('index.html'); }
-if (!k) { alert("⚠️ Falta token de sesión."); logout(); } else { sessionStorage.setItem('k', k); window.history.replaceState({}, document.title, window.location.pathname); }
-
-// --- ESTADO GLOBAL ---
 let modoActual = 'REPARTO';
 let viajesPendientes = [];
 let listaChoferes = [];
@@ -339,12 +305,15 @@ let enRutaSet = new Set();
 let viajeSeleccionado = null;
 let hayDiferenciaLlegada = false;
 let usuarioActivo = 'SISTEMA';
-let idTurnoActivo = null;
+let idTurnoActivo = null; // El Parentesco
 
-// --- INICIALIZACIÓN ---
 async function init() {
     document.body.style.opacity = 1;
     toggleLoader(true, "VALIDANDO SESIÓN Y TURNO...");
+
+    if (!k) return logout();
+    sessionStorage.setItem('k', k); window.history.replaceState({}, document.title, window.location.pathname);
+
     try {
         const tokenSnap = await getDoc(doc(db, "tokens", k));
         if (!tokenSnap.exists() || (tokenSnap.data().expira && Date.now() > tokenSnap.data().expira)) return logout();
@@ -360,15 +329,13 @@ async function init() {
         } else {
             document.getElementById('bloqueoTurnoOverlay').style.display = 'flex';
             toggleLoader(false);
-            return; 
+            return; // Detiene la carga de la app acá.
         }
-
     } catch(e) { return logout(); }
 
-    toggleLoader(true, "DESCARGANDO DATOS...");
     renderGrid('gridSalida', 'S'); renderGrid('gridLlegada', 'L'); document.getElementById('gridRetro').innerHTML = renderRetroInputs();
-    aplicarFocoAuto(); setupCalc('S', updateSalidaTotal); setupCalc('L', calcLlegadaDiff); setupCalc('R', calcRetroDiff);
-
+    setupCalc('S', updateSalidaTotal); setupCalc('L', calcLlegadaDiff); setupCalc('R', calcRetroDiff);
+    
     await cargarTodoFirebase();
     
     document.getElementById('selChofer').addEventListener('change', function() {
@@ -383,7 +350,6 @@ async function init() {
     document.getElementById('viewMain').classList.add('active');
 }
 
-// --- CONSULTAS FIREBASE ---
 async function cargarTodoFirebase() {
     try {
         const qsUsuarios = await getDocs(collection(db, "usuarios"));
@@ -393,6 +359,7 @@ async function cargarTodoFirebase() {
             listaChoferes.push({ usuario: d.id, nombreMostrar: u.nombre_mostrar || u.nombre_completo || d.id });
         });
 
+        // Solo trae camiones en ruta (no importa la fecha, si está en ruta hay que cerrarlo)
         const qViajes = query(collection(db, "ccarga"), where("estado", "in", ["EN_RUTA", "COMPRA_EN_RUTA"]));
         const qsViajes = await getDocs(qViajes);
         viajesPendientes = [];
@@ -411,22 +378,28 @@ async function cargarTodoFirebase() {
                 const totalVacios = (row.sV10||0) + (row.sV15||0) + (row.sV45||0);
                 cargaLabel = `Llevó: ${totalVacios} Vacíos a Planta`;
             } else {
+                // Cálculo Matemático Avanzado con Préstamos y Recuperos
                 const qVentas = query(collection(db, "movimientos"), where("ID_VIAJE", "==", vDoc.id));
                 const qsVentas = await getDocs(qVentas);
                 
-                let b10=0, s10=0, b15=0, s15=0, b45=0, s45=0;
+                let b10=0, s10=0, b15=0, s15=0, b45=0, s45=0; // b=baja(lleno), s=sube(vacio)
                 
                 qsVentas.forEach(vtaDoc => {
                     const v = vtaDoc.data();
                     const tipo = String(v.TIPO || '').toUpperCase();
+                    
                     if (['VENTA', 'FLOTANTE'].includes(tipo)) {
                         b10 += Number(v.ALL10||0); s10 += Number(v.AV10||0);
                         b15 += Number(v.ALL15||0); s15 += Number(v.AV15||0);
                         b45 += Number(v.ALL45||0); s45 += Number(v.AV45||0);
                     } else if (['PRESTAMO', 'COMODATO'].includes(tipo)) {
-                        b10 += Number(v.ALL10||0); b15 += Number(v.ALL15||0); b45 += Number(v.ALL45||0);
+                        b10 += Number(v.ALL10||0); // Baja lleno, NO suma vacío
+                        b15 += Number(v.ALL15||0); 
+                        b45 += Number(v.ALL45||0);
                     } else if (tipo === 'RECUPERO') {
-                        s10 += Number(v.AV10||0); s15 += Number(v.AV15||0); s45 += Number(v.AV45||0);
+                        s10 += Number(v.AV10||0); // NO baja lleno, suma vacío
+                        s15 += Number(v.AV15||0); 
+                        s45 += Number(v.AV45||0);
                     }
                 });
 
@@ -449,11 +422,10 @@ async function cargarTodoFirebase() {
         procesarChoferes();
         syncDropdownConViajesActivos();
     } catch(e) {
-        console.error(e); showToast("Error al obtener datos", "error");
+        console.error(e); showToast("Error al obtener datos de Firebase", "error");
     }
 }
 
-// --- RENDERIZADOS Y DOM ---
 function procesarChoferes() {
     const sel = document.getElementById('selChofer');
     sel.innerHTML = '<option value="">-- Seleccionar --</option>';
@@ -493,7 +465,6 @@ window.setMode = function(modo) {
     if(document.getElementById('viewLlegadaForm').classList.contains('active')) window.cancelLlegada();
 
     document.querySelectorAll('input[type="number"]').forEach(i => { i.value = ''; i.classList.remove('highlight-envase', 'highlight-lleno', 'input-disabled'); });
-    document.querySelectorAll('.input-wrapper').forEach(w => w.classList.remove('input-disabled'));
     updateSalidaTotal();
 
     if (modo === 'REPARTO') {
@@ -531,8 +502,8 @@ function renderGrid(id, pre) {
     document.getElementById(id).innerHTML = [10, 15, 45].map(kg => `
         <div class="row-input">
             <div class="label-kilo">${kg}</div>
-            <div class="input-wrapper" id="${pre}_wrap_L${kg}"><label>LLENOS</label><input type="number" id="${pre}L${kg}" class="calc-${pre}" placeholder="0" inputmode="numeric" pattern="[0-9]*"></div>
-            <div class="input-wrapper" id="${pre}_wrap_V${kg}"><label>VACÍOS</label><input type="number" id="${pre}V${kg}" class="calc-${pre}" placeholder="0" inputmode="numeric" pattern="[0-9]*"></div>
+            <div class="input-wrapper"><label>LLENOS</label><input type="number" id="${pre}L${kg}" class="calc-${pre}" placeholder="0"></div>
+            <div class="input-wrapper"><label>VACÍOS</label><input type="number" id="${pre}V${kg}" class="calc-${pre}" placeholder="0"></div>
         </div>
     `).join('');
 }
@@ -542,13 +513,13 @@ function renderRetroInputs() {
             <div style="text-align:center; font-size:10px; color:var(--accent); font-weight:bold; margin-bottom:5px;">${kg} KG</div>
             <div class="row-input" style="background:rgba(255,215,0,0.05)">
                 <div style="font-size:9px; color:var(--text-muted);">SALIO</div>
-                <input type="number" id="R_SL${kg}" class="calc-R" placeholder="Llenos" inputmode="numeric" pattern="[0-9]*">
-                <input type="number" id="R_SV${kg}" class="calc-R" placeholder="Vacíos" inputmode="numeric" pattern="[0-9]*">
+                <input type="number" id="R_SL${kg}" class="calc-R" placeholder="Llenos">
+                <input type="number" id="R_SV${kg}" class="calc-R" placeholder="Vacíos">
             </div>
             <div class="row-input" style="background:rgba(45,212,191,0.05)">
                 <div style="font-size:9px; color:var(--text-muted);">VOLVIO</div>
-                <input type="number" id="R_RL${kg}" class="calc-R" placeholder="Llenos" inputmode="numeric" pattern="[0-9]*">
-                <input type="number" id="R_RV${kg}" class="calc-R" placeholder="Vacíos" inputmode="numeric" pattern="[0-9]*">
+                <input type="number" id="R_RL${kg}" class="calc-R" placeholder="Llenos">
+                <input type="number" id="R_RV${kg}" class="calc-R" placeholder="Vacíos">
             </div>
         </div>
     `).join('');
@@ -556,7 +527,7 @@ function renderRetroInputs() {
 
 async function selectTrip(trip) {
     viajeSeleccionado = trip; const isC = trip.tipoViaje === 'COMPRA';
-    document.querySelectorAll('#viewLlegadaForm input[type="number"]').forEach(i => { i.value = ''; i.classList.remove('highlight-envase', 'highlight-lleno', 'input-disabled'); });
+    document.querySelectorAll('#viewLlegadaForm input[type="number"]').forEach(i => { i.value = ''; i.classList.remove('highlight-envase', 'highlight-lleno'); });
 
     document.getElementById('viewMain').classList.remove('active'); document.getElementById('viewLlegadaForm').classList.add('active');
     
@@ -581,7 +552,6 @@ async function selectTrip(trip) {
 }
 window.cancelLlegada = function() { viajeSeleccionado = null; document.getElementById('viewLlegadaForm').classList.remove('active'); document.getElementById('viewMain').classList.add('active'); }
 
-// --- CALCULADORAS ---
 const val = (id) => Number(document.getElementById(id).value) || 0;
 const updateSalidaTotal = () => { document.getElementById('totalSalidaDisplay').textContent = val('SL10')+val('SV10')+val('SL15')+val('SV15')+val('SL45')+val('SV45'); };
 const setupCalc = (cls, fn) => { document.querySelectorAll(`.calc-${cls}`).forEach(i => i.addEventListener('input', fn)); }
@@ -622,7 +592,6 @@ function calcRetroDiff() {
     else { txtRetro.className = "tx-novedad"; txtRetro.style.display = 'none'; }
 }
 
-// --- ESCRITURA BATCH EN FIREBASE ---
 async function enviarBatch(payload) {
     if(!confirm(`¿Confirmar operación de ${payload.modo}?`)) return;
     document.querySelectorAll('button').forEach(b => {b.disabled=true;});
@@ -633,10 +602,10 @@ async function enviarBatch(payload) {
         const refCcarga = collection(db, "ccarga");
         
         if (payload.modo === 'SALIDA') {
-            const nuevoId = generarIdViaje(false); 
+            const nuevoId = generarIdViaje(false); // CCYYYYMMDDXXXX
             batch.set(doc(refCcarga, nuevoId), {
                 idViaje: nuevoId,
-                idTurno: idTurnoActivo, 
+                idTurno: idTurnoActivo, // EL PARENTESCO
                 estado: payload.tipoViaje === 'COMPRA' ? 'COMPRA_EN_RUTA' : 'EN_RUTA',
                 chofer: payload.chofer,
                 fechaSalida: getFechaStr(),
@@ -665,10 +634,10 @@ async function enviarBatch(payload) {
             });
         } 
         else if (payload.modo === 'RETROACTIVO') {
-            const nuevoId = generarIdViaje(true); 
+            const nuevoId = generarIdViaje(true); // CCYYYYMMDDXXXX-R
             batch.set(doc(refCcarga, nuevoId), {
                 idViaje: nuevoId,
-                idTurno: idTurnoActivo, 
+                idTurno: idTurnoActivo, // EL PARENTESCO
                 estado: payload.diferencia !== 0 ? 'CON_DIFERENCIA' : 'FINALIZADO',
                 chofer: payload.chofer,
                 fechaSalida: getFechaStr(), horaSalida: getHoraStr(),
@@ -682,35 +651,10 @@ async function enviarBatch(payload) {
                 auditor: usuarioActivo,
                 timestampMs: Date.now()
             });
-
-            // OPCIÓN A: Reparador de Huérfanos. Busca las ventas sin camión de este chofer y las enlaza al nuevo ID.
-            const qHuerfanas = query(collection(db, "movimientos"), 
-                where("ID_VIAJE", "==", "SIN_CAMION"), 
-                where("idTurno", "==", idTurnoActivo)
-            );
-            
-            const huerfanasSnap = await getDocs(qHuerfanas);
-            
-            // Usamos un loop porque no podemos filtrar por 'USUARIO' (nombre del chofer) directamente en la query 
-            // si el valor no coincide exactamente o tiene diferencias de mayúsculas. 
-            // Filtrar en cliente asegura precisión.
-            huerfanasSnap.forEach(docH => {
-                const movData = docH.data();
-                const choferEnMovimiento = normalizarStr(movData.USUARIO);
-                const choferSeleccionado = normalizarStr(payload.chofer);
-                
-                // Si la venta huérfana la hizo el chofer al que le estamos haciendo el retroactivo
-                if(choferEnMovimiento === choferSeleccionado) {
-                    batch.update(doc(collection(db, "movimientos"), docH.id), {
-                        ID_VIAJE: nuevoId
-                    });
-                }
-            });
         }
 
         await batch.commit();
-        
-        toggleLoader(true, "¡GUARDADO!", true);
+        showToast('Guardado correctamente', 'success');
         setTimeout(() => { window.location.reload(); }, 1200);
         
     } catch(e) {
@@ -721,7 +665,6 @@ async function enviarBatch(payload) {
     }
 }
 
-// --- EVENTOS BOTONES ---
 document.getElementById('btnRegistrarSalida').onclick = () => {
     const sel = document.getElementById('selChofer'); const c = sel.value;
     const tot = val('SL10')+val('SV10')+val('SL15')+val('SV15')+val('SL45')+val('SV45');
@@ -752,20 +695,16 @@ document.getElementById('btnFinalizar').onclick = () => {
 
 document.getElementById('btnRegistrarRetro').onclick = () => {
     const c = document.getElementById('selChofer').value;
-    const chk = document.getElementById('chkRetroAudit').checked;
     const motivo = document.getElementById('retroMotivoTxt').value.trim();
+    const chk = document.getElementById('chkRetroAudit').checked;
     
     if(!c) return showToast('Selecciona chofer arriba', 'error');
     if(!chk) return showToast('⚠️ Debes aceptar la Declaración Jurada.', 'error');
+    if(!motivo) return showToast('⚠️ El motivo es obligatorio.', 'error');
     
     const totS = val('R_SL10')+val('R_SV10')+val('R_SL15')+val('R_SV15')+val('R_SL45')+val('R_SV45');
     const totL = val('R_RL10')+val('R_RV10')+val('R_RL15')+val('R_RV15')+val('R_RL45')+val('R_RV45');
     if(totS === 0) return showToast('Salida vacía', 'error');
-    
-    // Validar motivo solo si hay diferencia
-    if ((totS - totL) !== 0 && !motivo) {
-        return showToast('⚠️ El motivo es obligatorio porque hay diferencia de envases.', 'error');
-    }
 
     enviarBatch({
         modo: 'RETROACTIVO', chofer: c, motivo: motivo, alertaAuditoria: true,
