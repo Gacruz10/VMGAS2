@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getFirestore, doc, getDoc, collection, getDocs, writeBatch, increment } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, getDocs, writeBatch, increment, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
@@ -41,7 +41,26 @@ let audioChunks = [];
 let audioBase64 = null;
 let recordingTimer = null;
 let recSeconds = 0;
-let isSyncing = false; 
+let isSyncing = false;
+
+// Nota de voz desactivada por ahora. Para restaurarla: cambiar a true.
+const AUDIO_HABILITADO = false;
+
+// Evita que un pago supere lo que falta cobrar (venta normal / consignación)
+function limitarPagoAlTotal(inputId) {
+    if (document.getElementById('pagoDeuda').checked) return;
+    const objetivo = Number(window.__objetivoCaja) || 0;
+    if (objetivo <= 0) return;
+    const esEfec = inputId === 'montoEfectivo';
+    const otroId = esEfec ? 'montoTransferencia' : 'montoEfectivo';
+    const otroChk = esEfec ? 'pagoTransferencia' : 'pagoEfectivo';
+    const otro = document.getElementById(otroChk).checked ? parseM(otroId) : 0;
+    const maximo = Math.max(0, objetivo - otro);
+    if (parseM(inputId) > maximo) {
+        document.getElementById(inputId).value = maximo ? maximo.toLocaleString('es-AR') : '';
+        showToast(`Ajustado: solo quedaban $${maximo.toLocaleString('es-AR')} por cobrar.`, 'warning');
+    }
+}
 
 function autocompletarFaltante() {
     const el = document.getElementById('pagoEstado');
@@ -178,65 +197,72 @@ function showToast(msg, type = 'info') {
     setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3500);
 }
 
-function updateLoader(title, sub) { document.getElementById('txtLoading').textContent = title; document.getElementById('txtSubLoading').textContent = sub; }
+let guardandoUI = false;
+
+function updateLoader(title, sub) {
+    if (guardandoUI) {
+        const t = document.getElementById('ssTitle'), st = document.getElementById('ssSub');
+        if (t) t.textContent = title;
+        if (st) st.textContent = sub;
+        return;
+    }
+    document.getElementById('txtLoading').textContent = title;
+    document.getElementById('txtSubLoading').textContent = sub;
+}
+
+function setEstadoGuardado(estado, titulo, sub) {
+    const pill = document.getElementById('saveStatus');
+    if (!pill) return;
+    pill.className = `save-status show ss-${estado}`;
+    const icon = document.getElementById('ssIcon');
+    icon.className = 'ss-icon';
+    if (estado === 'yellow') {
+        if (!icon.querySelector('.ss-spinner')) icon.innerHTML = '<div class="ss-spinner"></div>';
+    } else {
+        icon.innerHTML = estado === 'green' ? '✓' : '✕';
+        icon.classList.add('pop');
+    }
+    document.getElementById('ssTitle').textContent = titulo;
+    document.getElementById('ssSub').textContent = sub;
+}
+
+function colapsarFormulario() {
+    const f = document.getElementById('formContainer');
+    f.style.maxHeight = f.offsetHeight + 'px';
+    void f.offsetHeight;
+    f.classList.add('collapsed');
+    f.style.maxHeight = '0px';
+}
+
+function expandirFormulario() {
+    const f = document.getElementById('formContainer');
+    f.classList.remove('collapsed');
+    f.style.maxHeight = f.scrollHeight + 'px';
+    setTimeout(() => { f.style.maxHeight = ''; }, 450);
+}
 
 function mostrarLoaderGuardando(titulo, subtitulo) {
-    const overlay = document.getElementById('loadingOverlay');
-    const form = document.getElementById('formContainer');
-    
-    overlay.className = 'loading-overlay glass-yellow';
-    overlay.style.visibility = 'visible';
-    overlay.style.display = 'flex';
-    overlay.style.opacity = '1';
-    form.classList.add('is-loading');
-    
-    document.getElementById('spinnerAnim').style.display = 'block';
-    document.getElementById('statusIcon').style.display = 'none';
-    document.getElementById('btnCerrarError').style.display = 'none';
-    
-    updateLoader(titulo, subtitulo);
+    guardandoUI = true;
+    setEstadoGuardado('yellow', titulo, subtitulo);
+    colapsarFormulario();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function mostrarExito(mensaje) {
-    const overlay = document.getElementById('loadingOverlay');
-    
-    overlay.className = 'loading-overlay glass-green'; 
-    
-    document.getElementById('spinnerAnim').style.display = 'none';
-    const icon = document.getElementById('statusIcon');
-    icon.innerHTML = '✅';
-    icon.style.display = 'block';
-    
-    updateLoader("¡REGISTRO EXITOSO!", mensaje);
+function mostrarExito(mensaje, titulo = "¡REGISTRO EXITOSO!") {
+    guardandoUI = true;
+    setEstadoGuardado('green', titulo, mensaje);
 }
 
-function mostrarError(mensaje) {
-    const overlay = document.getElementById('loadingOverlay');
-    
-    overlay.className = 'loading-overlay glass-red'; 
-    
-    document.getElementById('spinnerAnim').style.display = 'none';
-    const icon = document.getElementById('statusIcon');
-    icon.innerHTML = '❌';
-    icon.style.display = 'block';
-    
-    document.getElementById('btnCerrarError').style.display = 'block';
-    
-    updateLoader("ERROR AL GUARDAR", mensaje);
+function mostrarError(mensaje, titulo = "ERROR AL GUARDAR") {
+    guardandoUI = true;
+    setEstadoGuardado('red', titulo, mensaje);
 }
 
 window.cerrarLoaderError = function() {
-    const overlay = document.getElementById('loadingOverlay');
-    overlay.style.opacity = '0';
-    setTimeout(() => { 
-        overlay.style.visibility = 'hidden'; 
-        overlay.style.display = 'none'; 
-        overlay.className = 'loading-overlay'; 
-        document.getElementById('formContainer').classList.remove('is-loading');
-    }, 300);
-    
-    const btn = document.getElementById('btnGuardar');
-    btn.disabled = false;
+    guardandoUI = false;
+    document.getElementById('saveStatus').classList.remove('show');
+    expandirFormulario();
+    actualizarTotales();
 };
 
 async function init() {
@@ -269,17 +295,16 @@ async function init() {
         document.getElementById('welcomeMessage').textContent = `Usuario: ${window.nombreUsuarioMostrar.toUpperCase()}`;
         startTimer();
         actualizarIndicadorOffline();
+        iniciarSyncAutomatico();
 
         calentarGPS();
         await cargarDatos();
-        iniciarManejadorAudio();
+        if (AUDIO_HABILITADO) iniciarManejadorAudio();
+        else { const bx = document.querySelector('.audio-recorder-box'); if (bx) bx.style.display = 'none'; }
         aplicarAutoFoco();
 
         sugerirClientesCercanos();
 
-        if (navigator.onLine) {
-            setTimeout(sincronizarCola, 1500);
-        }
     } catch (e) { 
         console.error("Init Error", e);
         window.location.replace('index.html'); 
@@ -699,11 +724,17 @@ document.getElementById('modoEnvase').addEventListener('change', function () {
     verificarSiNecesitaPin(); actualizarTotales();
 });
 
+document.querySelectorAll('.money-input, .garrafa-cantidad').forEach(el => {
+    el.setAttribute('inputmode', 'numeric');
+    el.setAttribute('pattern', '[0-9]*');
+});
+
 document.querySelectorAll('input, select').forEach(el => {
     if (el.classList.contains('money-input')) {
         el.addEventListener('blur', function () {
             let v = this.value.replace(/\D/g, "");
             this.value = v ? parseInt(v).toLocaleString('es-AR') : "";
+            if (this.id === 'montoEfectivo' || this.id === 'montoTransferencia') limitarPagoAlTotal(this.id);
             actualizarTotales();
         });
 
@@ -782,6 +813,7 @@ function actualizarTotales() {
     let msjDeuda = (!isModoFlotante && operandoEnvase && modo === 'comodato') ? " (+ Prestados)" : "";
     document.getElementById('totalFinal').textContent = `$${objetivoCaja.toLocaleString('es-AR')}${msjDeuda}`;
 
+    window.__objetivoCaja = objetivoCaja;
     validarPagos(objetivoCaja, (!isModoFlotante && operandoEnvase && modo === 'consignacion'));
 }
 
@@ -1099,59 +1131,126 @@ document.getElementById('entregaGas').onclick = () => { document.getElementById(
 document.getElementById('ventaEnvases').onclick = () => { document.getElementById('sectionEnvases').style.display = document.getElementById('ventaEnvases').checked ? 'block' : 'none'; verificarSiNecesitaPin(); actualizarTotales(); toggleMutuallyExclusive('ventaEnvases'); };
 document.getElementById('declaracionGastos').onclick = () => { document.getElementById('sectionGastos').style.display = document.getElementById('declaracionGastos').checked ? 'block' : 'none'; checkVisibilidadCascada(); verificarSiNecesitaPin(); actualizarTotales(); toggleMutuallyExclusive('declaracionGastos'); };
 document.getElementById('pagoDeuda').onclick = () => { document.getElementById('sectionPagoDeuda').style.display = document.getElementById('pagoDeuda').checked ? 'block' : 'none'; checkVisibilidadCascada(); actualizarTotales(); };
-document.getElementById('pagoEfectivo').onclick = () => { document.getElementById('efectivoInput').style.display = document.getElementById('pagoEfectivo').checked ? 'block' : 'none'; actualizarTotales(); };
-document.getElementById('pagoTransferencia').onclick = () => { document.getElementById('transferenciaInput').style.display = document.getElementById('pagoTransferencia').checked ? 'block' : 'none'; actualizarTotales(); };
+document.getElementById('pagoEfectivo').onclick = () => { const on = document.getElementById('pagoEfectivo').checked; document.getElementById('efectivoInput').style.display = on ? 'block' : 'none'; if (!on) document.getElementById('montoEfectivo').value = ''; actualizarTotales(); };
+document.getElementById('pagoTransferencia').onclick = () => { const on = document.getElementById('pagoTransferencia').checked; document.getElementById('transferenciaInput').style.display = on ? 'block' : 'none'; if (!on) document.getElementById('montoTransferencia').value = ''; actualizarTotales(); };
 
-function guardarEnCola(payload) {
-    let cola = JSON.parse(localStorage.getItem('cola_ventas') || '[]');
-    payload._offline_ts = new Date().getTime();
-    cola.push(payload);
-    localStorage.setItem('cola_ventas', JSON.stringify(cola));
-    showToast("📡 SIN CONEXIÓN: Datos guardados localmente.", "warning");
-    actualizarIndicadorOffline();
-    setTimeout(() => window.location.reload(), 2000);
+function conTimeout(promesa, ms) {
+    return Promise.race([promesa, new Promise((_, rej) => setTimeout(() => rej(new Error('TIMEOUT')), ms))]);
 }
 
-function actualizarIndicadorOffline() { let cola = JSON.parse(localStorage.getItem('cola_ventas') || '[]'); const btnSync = document.getElementById('btn-sync'); if (cola.length > 0) { btnSync.style.display = 'block'; btnSync.innerText = `🔄 SINCRONIZAR (${cola.length} PENDIENTES)`; } else { btnSync.style.display = 'none'; } }
+function esErrorDeRed(e) {
+    const code = String((e && e.code) || '').replace('firestore/', '');
+    const msg = String((e && e.message) || e || '');
+    return !navigator.onLine || msg === 'TIMEOUT' ||
+        ['unavailable', 'deadline-exceeded', 'cancelled', 'aborted', 'resource-exhausted', 'internal', 'unknown'].includes(code) ||
+        /offline|network|fetch|Failed to get document/i.test(msg);
+}
+
+function leerCola() {
+    try { return JSON.parse(localStorage.getItem('cola_ventas') || '[]'); } catch (e) { return []; }
+}
+function escribirCola(c) { localStorage.setItem('cola_ventas', JSON.stringify(c)); }
+
+// Escribe la venta y sus efectos sobre el cliente UNA sola vez (si ya existe, no hace nada).
+async function enviarVentaFirestore(payload) {
+    const data = { ...payload };
+    delete data._offline_ts;
+    if (data.esClienteNuevo && !data.ID_CLIENTE) data.ID_CLIENTE = doc(collection(db, "clientes")).id;
+    const movRef = doc(db, "movimientos", data.N);
+
+    return runTransaction(db, async (tx) => {
+        const ya = await tx.get(movRef);
+        if (ya.exists()) return 'DUPLICADA';
+
+        tx.set(movRef, data);
+
+        if (data.esClienteNuevo) {
+            tx.set(doc(db, "clientes", data.ID_CLIENTE), {
+                nombre: data.clienteNombre, zona: data.clienteZona, categoria: data.clienteCategoria,
+                direccion: data.clienteDireccion, telefono: data.clienteTelefono, cuit_dni: data.cuit_dni,
+                plata: 0, env10: 0, env15: 0, env45: 0
+            });
+            tx.update(doc(db, "seguridad", "pin"), { version_datos: increment(1) });
+        } else if (data.ID_CLIENTE) {
+            const cliRef = doc(db, "clientes", data.ID_CLIENTE);
+            const updates = {};
+            if (data.esPagoDeuda) {
+                if (data.pagoDeudaDinero) updates.plata = increment(-data.pagoDeudaDinero);
+                if (data.dev10) updates.env10 = increment(-data.dev10);
+                if (data.dev15) updates.env15 = increment(-data.dev15);
+                if (data.dev45) updates.env45 = increment(-data.dev45);
+            }
+            if (data.operacionEnvase === 'consignacion') {
+                const deudEnv = (data.CE10$ || 0) + (data.CE15$ || 0) + (data.CE45$ || 0);
+                if (deudEnv > 0) updates.plata = increment(deudEnv);
+            }
+            if (data.operacionEnvase === 'comodato') {
+                if (data.CE10) updates.env10 = increment(data.CE10);
+                if (data.CE15) updates.env15 = increment(data.CE15);
+                if (data.CE45) updates.env45 = increment(data.CE45);
+            }
+            if (Object.keys(updates).length > 0) tx.update(cliRef, updates);
+        }
+        return 'OK';
+    });
+}
+
+function guardarEnCola(payload) {
+    const cola = leerCola().filter(x => x.N !== payload.N);
+    payload._offline_ts = Date.now();
+    cola.push(payload);
+    escribirCola(cola);
+    mostrarExito("Se enviará sola apenas haya conexión.", "GUARDADO EN EL TELÉFONO");
+    setTimeout(() => window.location.reload(), 1800);
+}
+
+// Sin botón: la cola se envía sola. Se mantiene la función por compatibilidad.
+function actualizarIndicadorOffline() {
+    const btnSync = document.getElementById('btn-sync');
+    if (btnSync) btnSync.style.display = 'none';
+}
+
+const syncAvisados = new Set();
 
 async function sincronizarCola() {
-    if (!navigator.onLine) { showToast("Todavía no tienes internet.", "error"); return; }
-    if (isSyncing) return; 
+    if (!navigator.onLine || isSyncing) return;
+    if (leerCola().length === 0) return;
 
-    let cola = JSON.parse(localStorage.getItem('cola_ventas') || '[]');
-    if (cola.length === 0) return;
+    const lock = Number(localStorage.getItem('sync_lock') || 0);
+    if (Date.now() - lock < 45000) return; // otra pestaña ya está enviando
 
     isSyncing = true;
-    const btnSync = document.getElementById('btn-sync');
-    const origText = btnSync.innerText;
-    btnSync.innerText = "Sincronizando...";
-    btnSync.disabled = true;
+    localStorage.setItem('sync_lock', String(Date.now()));
+    let enviados = 0;
 
-    let errores = 0;
-    let procesados = 0;
-    let nuevaCola = [];
-
-    for (let item of cola) {
-        try {
-            const batch = writeBatch(db);
-            const movRef = doc(collection(db, "movimientos"), item.N);
-            batch.set(movRef, item);
-            await batch.commit();
-            procesados++;
-        } catch (e) {
-            showToast("🔌 FALLO DE RED: " + e.message, "error");
-            nuevaCola.push(item);
-            errores++;
+    try {
+        for (const item of leerCola()) {
+            try {
+                localStorage.setItem('sync_lock', String(Date.now()));
+                await conTimeout(enviarVentaFirestore(item), 20000);
+                escribirCola(leerCola().filter(x => x.N !== item.N)); // se saca de la cola en el momento
+                enviados++;
+            } catch (e) {
+                console.warn("Sync falló:", item.N, e);
+                if (esErrorDeRed(e)) break; // sin conexión real: se reintenta solo más tarde
+                if (!syncAvisados.has(item.N)) {
+                    syncAvisados.add(item.N);
+                    showToast(`No se pudo enviar la venta ${item.N}: ${e.code || e.message}`, "error");
+                }
+            }
         }
+    } finally {
+        isSyncing = false;
+        localStorage.removeItem('sync_lock');
     }
 
-    localStorage.setItem('cola_ventas', JSON.stringify(nuevaCola));
-    showToast(`Sincronización: ${procesados} subidos, ${errores} errores.`, errores > 0 ? "warning" : "success");
+    if (enviados > 0) showToast(`✅ ${enviados} venta${enviados > 1 ? 's' : ''} pendiente${enviados > 1 ? 's' : ''} enviada${enviados > 1 ? 's' : ''}.`, "success");
+}
 
-    btnSync.disabled = false;
-    btnSync.innerText = origText;
-    actualizarIndicadorOffline();
-    isSyncing = false;
+function iniciarSyncAutomatico() {
+    sincronizarCola();
+    setInterval(() => { if (navigator.onLine && leerCola().length > 0) sincronizarCola(); }, 20000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sincronizarCola(); });
 }
 
 async function guardar() {
@@ -1173,6 +1272,18 @@ async function guardar() {
             return;
         }
         pinParaEnviar = val;
+    }
+
+    {
+        const ef = document.getElementById('pagoEfectivo').checked ? parseM('montoEfectivo') : 0;
+        const tr = document.getElementById('pagoTransferencia').checked ? parseM('montoTransferencia') : 0;
+        const obj = Number(window.__objetivoCaja) || 0;
+        const esDeuda = document.getElementById('pagoDeuda').checked;
+        const esFlot = document.getElementById('ventaPlanta').checked;
+        if (!esDeuda && !esFlot && (ef + tr) > obj + 0.5) {
+            showToast(`⚠️ Los pagos ($${(ef + tr).toLocaleString('es-AR')}) superan el total ($${obj.toLocaleString('es-AR')}). Corrija los montos.`, "error");
+            return;
+        }
     }
 
     btn.disabled = true;
@@ -1281,7 +1392,10 @@ async function guardar() {
         }
     }
 
-    let pagado = parseM('montoEfectivo') + parseM('montoTransferencia');
+    // Solo cuenta lo de los medios de pago tildados (un monto oculto nunca suma)
+    const efectivoOK = document.getElementById('pagoEfectivo').checked ? parseM('montoEfectivo') : 0;
+    const transfOK = document.getElementById('pagoTransferencia').checked ? parseM('montoTransferencia') : 0;
+    let pagado = efectivoOK + transfOK;
     let objetivoGas = (q10 * parseM('precioGarrafa1')) + (q15 * parseM('precioGarrafa2')) + (q45 * parseM('precioGarrafa3'));
     let totalOperacion = objetivoGas + ce10$ + ce15$+ ce45$;
 
@@ -1319,7 +1433,7 @@ async function guardar() {
     const payload = {
         USUARIO: document.getElementById('welcomeMessage').textContent.replace('Usuario: ', '').toLowerCase().trim(),
         TIPO: tipoOp, FECHA: now.toLocaleDateString('es-AR'), HORA: hora24, C: nombreC, N: `V-${generarID()}`,
-        'E$': parseM('montoEfectivo'), 'T$': parseM('montoTransferencia'), TOTAL: pagado,
+        'E$': efectivoOK, 'T$': transfOK, TOTAL: pagado,
         G: esGasto ? document.getElementById('descripcionGastos').value : '', GASTO_TOTAL: esGasto ? parseM('montoGastos') : 0,
         declaracionGastos: esGasto, garrafas: JSON.stringify(garrafasArray), pin: pinParaEnviar, esClienteNuevo: esNuevo, clienteNombre: esNuevo ? document.getElementById('nombreCliente').value : '',
         clienteZona: esNuevo ? document.getElementById('nuevaZona').value : document.getElementById('zona').value, clienteCategoria: cat, clienteDireccion: document.getElementById('nuevaDireccion').value, clienteTelefono: document.getElementById('nuevoTelefono').value, clienteMail: document.getElementById('nuevoMail').value,
@@ -1342,6 +1456,8 @@ async function guardar() {
         MOV_NETO_10: neto10, MOV_NETO_15: neto15, MOV_NETO_45: neto45, MOV_NETO_DINERO: netoDinero
     };
 
+    if (payload.esClienteNuevo) payload.ID_CLIENTE = doc(collection(db, "clientes")).id; // id fijo: sirve igual si se guarda sin conexión
+
     if (!isModoFlotante && document.getElementById('pagoDeuda').checked) {
         payload.esPagoDeuda = true;
         payload.pagoDeudaDinero = parseM('pagoDeudaDinero');
@@ -1350,7 +1466,7 @@ async function guardar() {
         payload.dev45 = parseInt(document.getElementById('dev45').value) || 0;
     }
 
-    if (audioBase64) {
+    if (AUDIO_HABILITADO && audioBase64) {
         if (!navigator.onLine) {
             showToast("⚠️ Estás sin conexión. No se subirá el audio, pero se guardará el registro.", "warning");
         } else {
@@ -1383,50 +1499,16 @@ async function guardar() {
     updateLoader("GUARDANDO REGISTRO...", "Impactando en Firebase");
 
     try {
-        const batch = writeBatch(db);
-        const movRef = doc(collection(db, "movimientos"), payload.N);
-        batch.set(movRef, payload);
-
-        if (payload.esClienteNuevo) {
-            const newCliRef = doc(collection(db, "clientes"));
-            payload.ID_CLIENTE = newCliRef.id; 
-            batch.set(movRef, payload); 
-            batch.set(newCliRef, {
-                nombre: payload.clienteNombre, zona: payload.clienteZona, categoria: payload.clienteCategoria,
-                direccion: payload.clienteDireccion, telefono: payload.clienteTelefono, cuit_dni: payload.cuit_dni,
-                plata: 0, env10: 0, env15: 0, env45: 0
-            });
-            batch.update(doc(db, "seguridad", "pin"), { version_datos: increment(1) });
-        } else if (payload.ID_CLIENTE) {
-            const cliRef = doc(db, "clientes", payload.ID_CLIENTE);
-            let updates = {};
-            if (payload.esPagoDeuda) {
-                if (payload.pagoDeudaDinero) updates.plata = increment(-payload.pagoDeudaDinero);
-                if (payload.dev10) updates.env10 = increment(-payload.dev10);
-                if (payload.dev15) updates.env15 = increment(-payload.dev15);
-                if (payload.dev45) updates.env45 = increment(-payload.dev45);
-            }
-            if (payload.operacionEnvase === 'consignacion') {
-                const deudEnv = payload.CE10$ + payload.CE15$ + payload.CE45$;
-                if (deudEnv > 0) updates.plata = increment(deudEnv);
-            }
-            if (payload.operacionEnvase === 'comodato') {
-                if (payload.CE10) updates.env10 = increment(payload.CE10);
-                if (payload.CE15) updates.env15 = increment(payload.CE15);
-                if (payload.CE45) updates.env45 = increment(payload.CE45);
-            }
-            if (Object.keys(updates).length > 0) batch.update(cliRef, updates);
-        }
-
-        await batch.commit();
-
+        await conTimeout(enviarVentaFirestore(payload), 20000);
         mostrarExito("La operación se registró correctamente.");
-        setTimeout(() => window.location.replace(`inicio.html?k=${k}`), 1500);
-
+        setTimeout(() => window.location.replace(`inicio.html?k=${k}`), 1200);
     } catch (e) {
-        console.warn("Fallo de red o servidor:", e);
-        mostrarError("Fallo de red. Guardado en cola offline.");
-        guardarEnCola(payload);
+        console.warn("Fallo al guardar:", e);
+        if (esErrorDeRed(e)) {
+            guardarEnCola(payload);
+        } else {
+            mostrarError("No se pudo guardar: " + (e.code || e.message || "error desconocido"));
+        }
     }
 }
 

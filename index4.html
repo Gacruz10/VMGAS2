@@ -29,7 +29,15 @@
         <div id="timerDisplay" class="timer-display">05:00</div>
         <div class="welcome-message" id="welcomeMessage">Cargando...</div>
         <h1>REGISTRO DE VENTA</h1>
-        <button id="btn-sync" onclick="sincronizarCola()">🔄 SINCRONIZAR PENDIENTES</button>
+    </div>
+
+    <div id="saveStatus" class="save-status" role="status" aria-live="polite">
+        <div id="ssIcon" class="ss-icon"></div>
+        <div class="ss-text">
+            <div id="ssTitle" class="ss-title"></div>
+            <div id="ssSub" class="ss-sub"></div>
+        </div>
+        <button type="button" id="ssBtn" class="ss-btn" onclick="cerrarLoaderError()">VOLVER</button>
     </div>
 
     <div class="form-container is-loading" id="formContainer">
@@ -136,15 +144,15 @@
             <div class="checkbox-item" id="chkEntregaGas"><input type="checkbox" id="entregaGas"><label for="entregaGas" class="yellow-label">GAS LLENO</label></div>
             <div id="sectionGas" class="hidden-section">
                 <div class="garrafa-row">
-                    <label style="flex:1">10kg</label><input type="text" id="precioGarrafa1" class="money-input" style="width:100px" readonly><input type="text" inputmode="numeric" pattern="[0-9]*" id="cantidadGarrafa1" class="garrafa-cantidad" value="0">
+                    <label style="flex:1">10kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="precioGarrafa1" class="money-input" style="width:100px" readonly><input type="text" inputmode="numeric" pattern="[0-9]*" id="cantidadGarrafa1" class="garrafa-cantidad" value="0">
                 </div>
                 <div class="manual-check-container"><input type="checkbox" id="manualPriceCheck1" onchange="pedirPinSiCorresponde(this, 'precioGarrafa1')"><label for="manualPriceCheck1">PRECIO MANUAL</label></div>
                 <div class="garrafa-row">
-                    <label style="flex:1">15kg</label><input type="text" id="precioGarrafa2" class="money-input" style="width:100px" readonly><input type="text" inputmode="numeric" pattern="[0-9]*" id="cantidadGarrafa2" class="garrafa-cantidad" value="0">
+                    <label style="flex:1">15kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="precioGarrafa2" class="money-input" style="width:100px" readonly><input type="text" inputmode="numeric" pattern="[0-9]*" id="cantidadGarrafa2" class="garrafa-cantidad" value="0">
                 </div>
                 <div class="manual-check-container"><input type="checkbox" id="manualPriceCheck2" onchange="pedirPinSiCorresponde(this, 'precioGarrafa2')"><label for="manualPriceCheck2">PRECIO MANUAL</label></div>
                 <div class="garrafa-row">
-                    <label style="flex:1">45kg</label><input type="text" id="precioGarrafa3" class="money-input" style="width:100px" readonly><input type="text" inputmode="numeric" pattern="[0-9]*" id="cantidadGarrafa3" class="garrafa-cantidad" value="0">
+                    <label style="flex:1">45kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="precioGarrafa3" class="money-input" style="width:100px" readonly><input type="text" inputmode="numeric" pattern="[0-9]*" id="cantidadGarrafa3" class="garrafa-cantidad" value="0">
                 </div>
                 <div class="manual-check-container"><input type="checkbox" id="manualPriceCheck3" onchange="pedirPinSiCorresponde(this, 'precioGarrafa3')"><label for="manualPriceCheck3">PRECIO MANUAL</label></div>
             </div>
@@ -158,9 +166,9 @@
                 </select>
 
                 <div id="uiVentaEnvase">
-                    <div class="garrafa-row"><label style="flex:1">10kg</label><input type="text" id="precioVentaEnv10" class="money-input" style="width:100px" readonly><input type="text" inputmode="numeric" pattern="[0-9]*" id="cantVentaEnv10" class="garrafa-cantidad" value="0"></div>
-                    <div class="garrafa-row"><label style="flex:1">15kg</label><input type="text" id="precioVentaEnv15" class="money-input" style="width:100px" readonly><input type="text" inputmode="numeric" pattern="[0-9]*" id="cantVentaEnv15" class="garrafa-cantidad" value="0"></div>
-                    <div class="garrafa-row"><label style="flex:1">45kg</label><input type="text" id="precioVentaEnv45" class="money-input" style="width:100px" readonly><input type="text" inputmode="numeric" pattern="[0-9]*" id="cantVentaEnv45" class="garrafa-cantidad" value="0"></div>
+                    <div class="garrafa-row"><label style="flex:1">10kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="precioVentaEnv10" class="money-input" style="width:100px" readonly><input type="text" inputmode="numeric" pattern="[0-9]*" id="cantVentaEnv10" class="garrafa-cantidad" value="0"></div>
+                    <div class="garrafa-row"><label style="flex:1">15kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="precioVentaEnv15" class="money-input" style="width:100px" readonly><input type="text" inputmode="numeric" pattern="[0-9]*" id="cantVentaEnv15" class="garrafa-cantidad" value="0"></div>
+                    <div class="garrafa-row"><label style="flex:1">45kg</label><input type="text" inputmode="numeric" pattern="[0-9]*" id="precioVentaEnv45" class="money-input" style="width:100px" readonly><input type="text" inputmode="numeric" pattern="[0-9]*" id="cantVentaEnv45" class="garrafa-cantidad" value="0"></div>
                     <div class="manual-check-container" style="justify-content: flex-end; margin-top:5px;">
                         <input type="checkbox" id="precioAutorizadoCheck" onchange="togglePreciosEnvasesManuales(this)">
                         <label for="precioAutorizadoCheck">PRECIO MANUAL</label>
