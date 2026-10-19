@@ -250,7 +250,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-  import { getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs, updateDoc, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs, updateDoc, where, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
   const firebaseConfig = {
       apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
@@ -265,13 +265,19 @@
   const db = getFirestore(app);
 
   let k = new URLSearchParams(window.location.search).get('k') || sessionStorage.getItem('k');
-  
+
+  const SIZES = [10, 15, 45];
+  const num = (v) => Number(v) || 0;
+  const cero = () => ({ l10:0, v10:0, l15:0, v15:0, l45:0, v45:0 });
+
   let state = {
       patrimonio: { t10: 0, t15: 0, t45: 0 },
       calle: { t10: 0, t15: 0, t45: 0 },
-      esperado: { l10:0, v10:0, l15:0, v15:0, l45:0, v45:0 },
+      esperado: null,          // teórico en plataforma (null = no hay referencia, ej. primer turno)
       turnoActivo: null,
-      hayCamionesEnRuta: false
+      ultimoTurno: null,
+      hayCamionesEnRuta: false,
+      usuario: 'SISTEMA'
   };
 
   window.toggleTheme = () => {
@@ -299,164 +305,193 @@
   };
   ['click','mousemove','keypress','touchstart'].forEach(e => document.addEventListener(e, resetTimer));
 
+  // ---------- Helpers de fecha (mismo formato que usa app.js: es-AR, d/m/yyyy) ----------
+  const fechaStr = (d = new Date()) => d.toLocaleDateString('es-AR');
+  const horaStr = (d = new Date()) => d.toLocaleTimeString('es-AR', { hour12: false });
+
+  const parseFH = (f, h) => {
+      if (!f) return 0;
+      const [d, m, y] = String(f).split('/').map(Number);
+      const [hh = 0, mm = 0, ss = 0] = String(h || '0:0:0').split(':').map(Number);
+      return new Date(y, m - 1, d, hh, mm, ss).getTime();
+  };
+
+  const diasDesde = (desdeMs) => {
+      const out = [];
+      const d = new Date(desdeMs); d.setHours(0, 0, 0, 0);
+      const fin = new Date(); fin.setHours(0, 0, 0, 0);
+      let guard = 0;
+      while (d <= fin && guard < 7) { out.push(fechaStr(d)); d.setDate(d.getDate() + 1); guard++; }
+      return out;
+  };
+
+  // ---------- CÁLCULO DEL TEÓRICO (reemplaza calcularMovimientosDesde de Codigo.gs) ----------
+  // base: { l10, v10, ... } stock de partida | desdeMs: momento desde el cual se aplican movimientos.
+  // Solo lee lo que pasó desde ese momento (consultas acotadas), no recorre toda la historia.
+  async function calcularEsperado(base, desdeMs) {
+      const acc = { ...cero(), ...base };
+
+      // 1) Camiones (ccarga): resta lo que salió, suma lo que volvió
+      const snapC = await getDocs(query(collection(db, "ccarga"), where("timestampMs", ">=", desdeMs)));
+      snapC.forEach(d => {
+          const r = d.data();
+          SIZES.forEach(kg => {
+              acc[`l${kg}`] += num(r[`lL${kg}`]) - num(r[`sL${kg}`]);
+              acc[`v${kg}`] += num(r[`lV${kg}`]) - num(r[`sV${kg}`]);
+          });
+      });
+
+      // 2) Mostrador y flotantes (movimientos sin camión): resta llenos entregados, suma vacíos recibidos
+      for (const f of diasDesde(desdeMs)) {
+          const snapM = await getDocs(query(collection(db, "movimientos"), where("FECHA", "==", f)));
+          snapM.forEach(d => {
+              const m = d.data();
+              if (!(m.ventaDesdePlanta === true || m.esFlotante === true)) return; // las ventas de camión ya van en ccarga
+              if (parseFH(m.FECHA, m.HORA) < desdeMs) return;
+              SIZES.forEach(kg => {
+                  acc[`l${kg}`] -= num(m[`ALL${kg}`]);
+                  acc[`v${kg}`] += num(m[`AV${kg}`]) + (m.esPagoDeuda ? num(m[`dev${kg}`]) : 0);
+              });
+          });
+      }
+      return acc;
+  }
+
+  async function getUltimoTurno() {
+      const qs = await getDocs(query(collection(db, "turnos"), orderBy("timestampAperturaMs", "desc"), limit(1)));
+      return qs.empty ? null : { id: qs.docs[0].id, ...qs.docs[0].data() };
+  }
+
   async function init() {
-      if(!k) return window.location.href='inicio.html';
+      if (!k) return window.location.href = 'inicio.html';
       sessionStorage.setItem('k', k);
       window.history.replaceState({}, document.title, window.location.pathname);
       resetTimer();
+      try {
+          const tk = await getDoc(doc(db, "tokens", k));
+          if (!tk.exists() || (tk.data().expira && Date.now() > tk.data().expira)) return window.location.href = 'inicio.html';
+          state.usuario = tk.data().usuario || 'SISTEMA';
+      } catch (e) { return window.location.href = 'inicio.html'; }
       document.body.style.opacity = 1;
       await cargarDataFirebase();
   }
 
   async function cargarDataFirebase() {
       try {
-          // Patrimonio
+          // Patrimonio (stock fijo)
           let docPat = await getDoc(doc(db, "patrimonio", "totales"));
-          if(!docPat.exists()) {
+          if (!docPat.exists()) {
               await setDoc(doc(db, "patrimonio", "totales"), { env10: 0, env15: 0, env45: 0 });
               docPat = await getDoc(doc(db, "patrimonio", "totales"));
           }
           const dPat = docPat.data();
-          state.patrimonio = { t10: dPat.env10||0, t15: dPat.env15||0, t45: dPat.env45||0 };
+          state.patrimonio = { t10: dPat.env10 || 0, t15: dPat.env15 || 0, t45: dPat.env45 || 0 };
 
-          // Turno Activo
-          const qTurnos = query(collection(db, "turnos"), orderBy("timestampAperturaMs", "desc"), limit(1));
-          const qsTurnos = await getDocs(qTurnos);
-          
-          if (!qsTurnos.empty && qsTurnos.docs[0].data().estado === 'ABIERTO') {
-              state.turnoActivo = { id: qsTurnos.docs[0].id, ...qsTurnos.docs[0].data() };
-              document.getElementById('lblTurno').innerHTML = `TURNO ABIERTO: <span style="color:var(--start);">${state.turnoActivo.idTurno}</span>`;
+          // Turno
+          const ultimo = await getUltimoTurno();
+          state.ultimoTurno = ultimo;
+          const lbl = document.getElementById('lblTurno');
+          if (ultimo && ultimo.estado === 'ABIERTO') {
+              state.turnoActivo = ultimo;
+              lbl.innerHTML = `TURNO ABIERTO: <span style="color:var(--start);">${ultimo.idTurno}</span>`;
           } else {
               state.turnoActivo = null;
-              document.getElementById('lblTurno').innerHTML = `<span style="color:var(--error);">TURNO CERRADO (Requiere Apertura)</span>`;
+              lbl.innerHTML = `<span style="color:var(--error);">TURNO CERRADO (Requiere Apertura)</span>`;
           }
 
-          // En Calle
-          const qCam = query(collection(db, "ccarga"), where("estado", "in", ["EN_RUTA", "COMPRA_EN_RUTA"]));
-          const qsCam = await getDocs(qCam);
+          // En calle
+          const qsCam = await getDocs(query(collection(db, "ccarga"), where("estado", "in", ["EN_RUTA", "COMPRA_EN_RUTA"])));
           state.hayCamionesEnRuta = !qsCam.empty;
-          
           let c10 = 0, c15 = 0, c45 = 0;
           qsCam.forEach(c => {
               const r = c.data();
-              c10 += (Number(r.sL10)||0) + (Number(r.sV10)||0);
-              c15 += (Number(r.sL15)||0) + (Number(r.sV15)||0);
-              c45 += (Number(r.sL45)||0) + (Number(r.sV45)||0);
+              c10 += num(r.sL10) + num(r.sV10);
+              c15 += num(r.sL15) + num(r.sV15);
+              c45 += num(r.sL45) + num(r.sV45);
           });
           state.calle = { t10: c10, t15: c15, t45: c45 };
 
-          // Plataforma
-          const plat10 = state.patrimonio.t10 - state.calle.t10;
-          const plat15 = state.patrimonio.t15 - state.calle.t15;
-          const plat45 = state.patrimonio.t45 - state.calle.t45;
-
-          if(state.turnoActivo && state.turnoActivo.stockActual) {
-              state.esperado = state.turnoActivo.stockActual; 
+          // Teórico en plataforma
+          if (state.turnoActivo) {
+              state.esperado = await calcularEsperado(state.turnoActivo.ini || cero(), state.turnoActivo.timestampAperturaMs);
+          } else if (ultimo && ultimo.fin && ultimo.timestampCierreMs) {
+              // Apertura: cierre de ayer + compras/movimientos desde ese cierre
+              state.esperado = await calcularEsperado(ultimo.fin, ultimo.timestampCierreMs);
           } else {
-              state.esperado = { l10:0, v10:plat10, l15:0, v15:plat15, l45:0, v45:plat45 };
+              state.esperado = null; // primer turno: no hay referencia
           }
 
           actualizarUI();
           toggleLoader(false);
-
-      } catch(e) {
+      } catch (e) {
           console.error(e);
           showToast("Error de conexión con Firebase.", "error");
+          toggleLoader(false);
       }
   }
 
   function actualizarUI() {
+      const esp = state.esperado;
       document.getElementById('pat10').textContent = state.patrimonio.t10;
       document.getElementById('pat15').textContent = state.patrimonio.t15;
       document.getElementById('pat45').textContent = state.patrimonio.t45;
 
-      document.getElementById('calle10').textContent = state.calle.t10;
-      document.getElementById('calle15').textContent = state.calle.t15;
-      document.getElementById('calle45').textContent = state.calle.t45;
+      SIZES.forEach(kg => {
+          document.getElementById(`calle${kg}`).textContent = state.calle[`t${kg}`];
+          document.getElementById(`plat${kg}`).textContent = state.patrimonio[`t${kg}`] - state.calle[`t${kg}`];
+          document.getElementById(`platL${kg}`).textContent = esp ? esp[`l${kg}`] + 'L' : '—';
+          document.getElementById(`platV${kg}`).textContent = esp ? esp[`v${kg}`] + 'V' : '—';
+      });
 
-      document.getElementById('plat10').textContent = state.patrimonio.t10 - state.calle.t10;
-      document.getElementById('platL10').textContent = state.esperado.l10 + 'L';
-      document.getElementById('platV10').textContent = state.esperado.v10 + 'V';
-
-      document.getElementById('plat15').textContent = state.patrimonio.t15 - state.calle.t15;
-      document.getElementById('platL15').textContent = state.esperado.l15 + 'L';
-      document.getElementById('platV15').textContent = state.esperado.v15 + 'V';
-
-      document.getElementById('plat45').textContent = state.patrimonio.t45 - state.calle.t45;
-      document.getElementById('platL45').textContent = state.esperado.l45 + 'L';
-      document.getElementById('platV45').textContent = state.esperado.v45 + 'V';
-
-      const isApertura = !state.turnoActivo;
-      
-      const html = [10, 15, 45].map(kg => `
+      const html = SIZES.map(kg => `
         <div class="stock-row">
-            <div class="stock-header">
-                <span class="lbl-kg">${kg}kg</span>
-            </div>
+            <div class="stock-header"><span class="lbl-kg">${kg}kg</span></div>
             <div class="inputs-grid">
                 <div class="input-group">
                     <label style="color:var(--start);">LLENOS</label>
-                    ${!isApertura ? `<input class="inp-sys" value="Sist: ${state.esperado[`l${kg}`]}" readonly tabindex="-1">` : ''}
-                    <input type="number" id="R_L${kg}" class="inp-real" placeholder="0" inputmode="numeric" pattern="[0-9]*" oninput="window.validarControl()">
+                    ${esp ? `<input class="inp-sys" value="Sist: ${esp[`l${kg}`]}" readonly tabindex="-1">` : ''}
+                    <input type="number" id="R_L${kg}" class="inp-real" data-sys="${esp ? esp[`l${kg}`] : ''}" placeholder="0" inputmode="numeric" pattern="[0-9]*" oninput="window.validarControl()">
                 </div>
                 <div class="input-group">
                     <label style="color:var(--accent);">VACÍOS</label>
-                    ${!isApertura ? `<input class="inp-sys" value="Sist: ${state.esperado[`v${kg}`]}" readonly tabindex="-1">` : ''}
-                    <input type="number" id="R_V${kg}" class="inp-real" placeholder="0" inputmode="numeric" pattern="[0-9]*" oninput="window.validarControl()">
+                    ${esp ? `<input class="inp-sys" value="Sist: ${esp[`v${kg}`]}" readonly tabindex="-1">` : ''}
+                    <input type="number" id="R_V${kg}" class="inp-real" data-sys="${esp ? esp[`v${kg}`] : ''}" placeholder="0" inputmode="numeric" pattern="[0-9]*" oninput="window.validarControl()">
                 </div>
             </div>
-        </div>
-      `).join('');
-      
+        </div>`).join('');
       document.getElementById('gridAuditoria').innerHTML = html;
-      
-      const btn = document.getElementById('btnGuardarTurno');
-      if (isApertura) {
-          btn.className = "btn-main btn-start"; btn.textContent = "ABRIR TURNO 🟢"; btn.disabled = false;
-      } else {
-          btn.className = "btn-main btn-end"; btn.textContent = "CERRAR TURNO 🔴"; btn.disabled = false;
-          if(state.hayCamionesEnRuta) {
-              btn.className = "btn-main btn-disabled"; btn.textContent = "🔒 BLOQUEADO (CAMIONES EN RUTA)"; btn.disabled = true;
-          }
-      }
+      window.validarControl();
   }
 
   window.validarControl = function() {
-      if(!state.turnoActivo) return; 
-
-      let diff = false;
-      document.querySelectorAll('.inp-real').forEach(inp => {
-          const sys = inp.previousElementSibling;
-          if(sys && sys.classList.contains('inp-sys')) {
-              const vReal = Number(inp.value)||0;
-              const vSys = Number(sys.value.replace(/\D/g,''))||0;
-              if(vReal !== vSys && inp.value !== '') {
-                  inp.classList.add('diff'); inp.classList.remove('match'); diff = true;
-              } else if (inp.value !== '') {
-                  inp.classList.add('match'); inp.classList.remove('diff');
-              } else {
-                  inp.classList.remove('match', 'diff');
-              }
-          }
-      });
-
       const btn = document.getElementById('btnGuardarTurno');
       const box = document.getElementById('diffSection');
-      const txt = document.getElementById('txtMotivo').value.trim();
+      const isApertura = !state.turnoActivo;
+      const hayEsp = !!state.esperado;
+      let diff = false, completos = true;
 
-      if(state.hayCamionesEnRuta) return; 
+      document.querySelectorAll('.inp-real').forEach(inp => {
+          if (inp.value === '') { completos = false; inp.classList.remove('match', 'diff'); return; }
+          if (!hayEsp) return;
+          if (Number(inp.value) !== Number(inp.dataset.sys)) { inp.classList.add('diff'); inp.classList.remove('match'); diff = true; }
+          else { inp.classList.add('match'); inp.classList.remove('diff'); }
+      });
 
-      if(diff) {
-          box.style.display = 'block';
-          if(txt.length < 5) { btn.disabled = true; btn.textContent = "JUSTIFIQUE DIFERENCIA..."; btn.className = "btn-main btn-disabled"; }
-          else { btn.disabled = false; btn.textContent = "GUARDAR CON DIFERENCIA ⚠️"; btn.className = "btn-main btn-end"; }
-      } else {
-          box.style.display = 'none';
-          btn.disabled = false; btn.textContent = "CERRAR TURNO PERFECTO ✅"; btn.className = "btn-main btn-end";
+      const setBtn = (cls, txt, dis) => { btn.className = `btn-main ${cls}`; btn.textContent = txt; btn.disabled = dis; };
+      box.style.display = diff ? 'block' : 'none';
+
+      if (!isApertura && state.hayCamionesEnRuta) return setBtn('btn-disabled', '🔒 BLOQUEADO (CAMIONES EN RUTA)', true);
+      if (!completos) return setBtn('btn-disabled', 'COMPLETE EL CONTEO (LLENOS Y VACÍOS)', true);
+      if (diff) {
+          const txt = document.getElementById('txtMotivo').value.trim();
+          if (txt.length < 5) return setBtn('btn-disabled', 'JUSTIFIQUE DIFERENCIA...', true);
+          return setBtn(isApertura ? 'btn-start' : 'btn-end', isApertura ? 'ABRIR CON DIFERENCIA ⚠️' : 'GUARDAR CON DIFERENCIA ⚠️', false);
       }
+      setBtn(isApertura ? 'btn-start' : 'btn-end', isApertura ? 'ABRIR TURNO 🟢' : 'CERRAR TURNO PERFECTO ✅', false);
   };
   document.getElementById('txtMotivo').addEventListener('input', window.validarControl);
 
+  // ---------- Patrimonio (sin cambios de lógica) ----------
   window.abrirModalPatrimonio = () => {
       document.getElementById('inpPin').value = '';
       document.getElementById('modalPin').style.display = 'flex';
@@ -467,12 +502,11 @@
       toggleLoader(true, "Verificando...");
       try {
           let docConf = await getDoc(doc(db, "seguridad", "pin"));
-          if(!docConf.exists()) {
+          if (!docConf.exists()) {
               await setDoc(doc(db, "seguridad", "pin"), { dinamico: "1234", maestro: "0000" });
               docConf = await getDoc(doc(db, "seguridad", "pin"));
           }
-          
-          if(pinIngresado === String(docConf.data().dinamico)) {
+          if (pinIngresado === String(docConf.data().dinamico)) {
               document.getElementById('modalPin').style.display = 'none';
               document.getElementById('editPat10').value = state.patrimonio.t10;
               document.getElementById('editPat15').value = state.patrimonio.t15;
@@ -481,36 +515,103 @@
           } else {
               showToast("PIN Incorrecto", "error");
           }
-      } catch(e) { showToast("Error de validación", "error"); console.log(e); }
+      } catch (e) { showToast("Error de validación", "error"); console.log(e); }
       toggleLoader(false);
   };
 
   window.guardarPatrimonio = async () => {
       toggleLoader(true, "Actualizando Patrimonio...");
-      const n10 = Number(document.getElementById('editPat10').value)||0;
-      const n15 = Number(document.getElementById('editPat15').value)||0;
-      const n45 = Number(document.getElementById('editPat45').value)||0;
+      const n10 = Number(document.getElementById('editPat10').value) || 0;
+      const n15 = Number(document.getElementById('editPat15').value) || 0;
+      const n45 = Number(document.getElementById('editPat45').value) || 0;
       const nuevoPin = String(Math.floor(1000 + Math.random() * 9000));
-
       try {
           await updateDoc(doc(db, "patrimonio", "totales"), { env10: n10, env15: n15, env45: n45 });
           await updateDoc(doc(db, "seguridad", "pin"), { dinamico: nuevoPin });
-          
           document.getElementById('modalEditPatrimonio').style.display = 'none';
-          await cargarDataFirebase(); 
-          
+          await cargarDataFirebase();
           showToast("Patrimonio actualizado correctamente", "success");
-      } catch(e) { showToast("Error al guardar", "error"); }
+      } catch (e) { showToast("Error al guardar", "error"); }
       toggleLoader(false);
   };
 
+  // ---------- APERTURA / CIERRE DE TURNO ----------
   document.getElementById('btnGuardarTurno').onclick = async () => {
-      if(!confirm(`¿Confirma registrar la operación de ${state.turnoActivo ? 'CIERRE' : 'APERTURA'}?`)) return;
+      const isApertura = !state.turnoActivo;
+      if (!confirm(`¿Confirma registrar la operación de ${isApertura ? 'APERTURA' : 'CIERRE'}?`)) return;
       toggleLoader(true, "Registrando en Base de Datos...");
-      setTimeout(() => {
-          showToast("Operación exitosa", "success");
-          window.location.reload();
-      }, 1000);
+
+      try {
+          const real = {};
+          SIZES.forEach(kg => {
+              real[`l${kg}`] = num(document.getElementById(`R_L${kg}`).value);
+              real[`v${kg}`] = num(document.getElementById(`R_V${kg}`).value);
+          });
+          const motivoTxt = document.getElementById('txtMotivo').value.trim();
+
+          // Releer estado real justo antes de escribir (evita doble apertura / cierre desfasado)
+          const ultimo = await getUltimoTurno();
+          let esp = null;
+
+          if (isApertura) {
+              if (ultimo && ultimo.estado === 'ABIERTO') throw new Error('Ya hay un turno abierto. Recargue la pantalla.');
+              if (ultimo && ultimo.fin && ultimo.timestampCierreMs) esp = await calcularEsperado(ultimo.fin, ultimo.timestampCierreMs);
+          } else {
+              if (!ultimo || ultimo.estado !== 'ABIERTO' || ultimo.idTurno !== state.turnoActivo.idTurno) throw new Error('El turno ya fue cerrado. Recargue la pantalla.');
+              const enRuta = await getDocs(query(collection(db, "ccarga"), where("estado", "in", ["EN_RUTA", "COMPRA_EN_RUTA"]), limit(1)));
+              if (!enRuta.empty) throw new Error('⛔ NO SE PUEDE CERRAR: hay camiones EN RUTA. Finalícelos en Control de Carga.');
+              esp = await calcularEsperado(ultimo.ini || cero(), ultimo.timestampAperturaMs);
+          }
+
+          const hayDif = esp ? Object.keys(real).some(key => real[key] !== esp[key]) : false;
+          if (hayDif && motivoTxt.length < 5) throw new Error('Justifique la diferencia.');
+
+          const ahora = new Date();
+          const batch = writeBatch(db);
+
+          if (isApertura) {
+              const idTurno = crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
+              batch.set(doc(db, "turnos", idTurno), {
+                  idTurno, estado: 'ABIERTO',
+                  fecha: fechaStr(ahora), horaIni: horaStr(ahora),
+                  usuario: state.usuario,
+                  timestampAperturaMs: ahora.getTime(),
+                  ini: real,
+                  sistemaApertura: esp,
+                  difApertura: hayDif,
+                  motivoApertura: hayDif ? motivoTxt : ''
+              });
+              if (hayDif) batch.set(doc(collection(db, "alarmas")), {
+                  tipo: 'STOCK_DESCUADRE_APERTURA',
+                  descripcion: `Apertura con diferencias. Usuario: ${state.usuario}. Motivo: ${motivoTxt}`,
+                  usuario: state.usuario, pendiente: true, fecha_hora: serverTimestamp()
+              });
+          } else {
+              batch.update(doc(db, "turnos", ultimo.id), {
+                  estado: 'CERRADO',
+                  fechaCierre: fechaStr(ahora), horaFin: horaStr(ahora),
+                  timestampCierreMs: ahora.getTime(),
+                  usuarioCierre: state.usuario,
+                  fin: real,
+                  sistemaCierre: esp,
+                  hayDiferencia: hayDif,
+                  motivo: hayDif ? motivoTxt : ''
+              });
+              if (hayDif) batch.set(doc(collection(db, "alarmas")), {
+                  tipo: 'STOCK_DESCUADRE',
+                  descripcion: `Cierre con diferencias. Usuario: ${state.usuario}. Motivo: ${motivoTxt}`,
+                  usuario: state.usuario, pendiente: true, fecha_hora: serverTimestamp()
+              });
+          }
+
+          await batch.commit();
+          showToast(isApertura ? "Turno abierto correctamente" : "Turno cerrado correctamente", "success");
+          setTimeout(() => window.location.reload(), 1200);
+      } catch (e) {
+          console.error(e);
+          showToast(e.message || "Error al guardar", "error");
+          toggleLoader(false);
+      }
   };
 
   init();
