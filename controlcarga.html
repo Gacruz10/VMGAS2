@@ -369,6 +369,28 @@ async function cargarTodoFirebase() {
         viajesPendientes = [];
         enRutaSet = new Set();
 
+        // Ventas del viaje: movimientos no traen ID_VIAJE, se asignan por usuario + hora de salida
+        const normU = (v) => String(v ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const parseFH = (f, h) => {
+            if (!f) return 0;
+            const [d, m, y] = String(f).split('/').map(Number);
+            const [hh = 0, mm = 0, ss = 0] = String(h || '0:0:0').split(':').map(Number);
+            return new Date(y, m - 1, d, hh, mm, ss).getTime();
+        };
+        const mapU = {};
+        listaChoferes.forEach(c => { mapU[normU(c.usuario)] = normU(c.usuario); mapU[normU(c.nombreMostrar)] = normU(c.usuario); });
+        const salidasReparto = qsViajes.docs.filter(d => d.data().tipoViaje !== 'COMPRA').map(d => Number(d.data().timestampMs) || Date.now());
+        let movsViajes = [];
+        if (salidasReparto.length) {
+            const dia = new Date(Math.min(...salidasReparto)); dia.setHours(0, 0, 0, 0);
+            const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+            for (let g = 0; dia <= hoy && g < 7; g++) {
+                const snapM = await getDocs(query(collection(db, "movimientos"), where("FECHA", "==", dia.toLocaleDateString('es-AR'))));
+                snapM.forEach(x => movsViajes.push(x.data()));
+                dia.setDate(dia.getDate() + 1);
+            }
+        }
+
         for (const vDoc of qsViajes.docs) {
             const row = vDoc.data();
             enRutaSet.add(normalizarStr(row.chofer));
@@ -382,29 +404,26 @@ async function cargarTodoFirebase() {
                 const totalVacios = (row.sV10||0) + (row.sV15||0) + (row.sV45||0);
                 cargaLabel = `Llevó: ${totalVacios} Vacíos a Planta`;
             } else {
-                // Cálculo Matemático Avanzado con Préstamos y Recuperos
-                const qVentas = query(collection(db, "movimientos"), where("ID_VIAJE", "==", vDoc.id));
-                const qsVentas = await getDocs(qVentas);
-                
+                // Lo que el chofer hizo durante este viaje (ventas, comodatos, cobros de deuda, etc.)
+                const sal = Number(row.timestampMs) || 0;
+                const choferN = normU(row.chofer);
                 let b10=0, s10=0, b15=0, s15=0, b45=0, s45=0; // b=baja(lleno), s=sube(vacio)
-                
-                qsVentas.forEach(vtaDoc => {
-                    const v = vtaDoc.data();
-                    const tipo = String(v.TIPO || '').toUpperCase();
-                    
-                    if (['VENTA', 'FLOTANTE'].includes(tipo)) {
-                        b10 += Number(v.ALL10||0); s10 += Number(v.AV10||0);
-                        b15 += Number(v.ALL15||0); s15 += Number(v.AV15||0);
-                        b45 += Number(v.ALL45||0); s45 += Number(v.AV45||0);
-                    } else if (['PRESTAMO', 'COMODATO'].includes(tipo)) {
-                        b10 += Number(v.ALL10||0); // Baja lleno, NO suma vacío
-                        b15 += Number(v.ALL15||0); 
-                        b45 += Number(v.ALL45||0);
-                    } else if (tipo === 'RECUPERO') {
-                        s10 += Number(v.AV10||0); // NO baja lleno, suma vacío
-                        s15 += Number(v.AV15||0); 
-                        s45 += Number(v.AV45||0);
+
+                movsViajes.forEach(v => {
+                    let delViaje;
+                    if (v.ID_VIAJE) {
+                        delViaje = (v.ID_VIAJE === vDoc.id);
+                    } else {
+                        const quien = mapU[normU(v.USUARIO)] || normU(v.USUARIO);
+                        delViaje = (quien === choferN) && parseFH(v.FECHA, v.HORA) >= sal - 60000;
                     }
+                    if (!delViaje) return;
+
+                    // Regla única (igual que controlstock): salen ALL llenos, vuelven AV vacíos (+ envases devueltos por cobro de deuda)
+                    const dv = v.esPagoDeuda === true;
+                    b10 += Number(v.ALL10||0); s10 += Number(v.AV10||0) + (dv ? Number(v.dev10||0) : 0);
+                    b15 += Number(v.ALL15||0); s15 += Number(v.AV15||0) + (dv ? Number(v.dev15||0) : 0);
+                    b45 += Number(v.ALL45||0); s45 += Number(v.AV45||0) + (dv ? Number(v.dev45||0) : 0);
                 });
 
                 sug[10].L = Math.max(0, (row.sL10||0) - b10); sug[10].V = (row.sV10||0) + s10;
