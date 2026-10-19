@@ -227,8 +227,8 @@
   <div id="modalPin" class="modal">
     <div class="modal-content">
       <h3>🔒 Autorización Requerida</h3>
-      <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Ingrese el PIN Dinámico para modificar el Patrimonio Fijo.</p>
-      <input type="password" id="inpPin" placeholder="PIN de 4 dígitos" maxlength="4" inputmode="numeric" pattern="[0-9]*">
+      <p style="font-size:12px; color:var(--text-muted); margin-bottom:15px;">Ingrese el PIN Dinámico o el PIN Maestro para modificar el Patrimonio Fijo (nueva Fecha Cero).</p>
+      <input type="password" id="inpPin" placeholder="PIN (dinámico o maestro)" maxlength="12" inputmode="text" autocapitalize="off" autocomplete="off" spellcheck="false">
       <div style="display:flex; gap:10px;">
         <button class="btn-modal" onclick="window.validarPin()" style="flex:2;">VALIDAR</button>
         <button class="btn-modal" onclick="document.getElementById('modalPin').style.display='none'" style="flex:1; background:var(--error);">CANCELAR</button>
@@ -327,27 +327,48 @@
 
   // ---------- CÁLCULO DEL TEÓRICO (reemplaza calcularMovimientosDesde de Codigo.gs) ----------
   // base: { l10, v10, ... } stock de partida | desdeMs: momento desde el cual se aplican movimientos.
-  // Solo lee lo que pasó desde ese momento (consultas acotadas), no recorre toda la historia.
+  const norm = (v) => String(v ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  let _mapUsuarios = null;
+  async function getMapUsuarios() {
+      if (_mapUsuarios) return _mapUsuarios;
+      const m = {};
+      const snap = await getDocs(collection(db, "usuarios"));
+      snap.forEach(d => {
+          const u = d.data();
+          [d.id, u.nombre_mostrar, u.nombre_completo].forEach(x => { if (x) m[norm(x)] = norm(d.id); });
+      });
+      _mapUsuarios = m;
+      return m;
+  }
+
   async function calcularEsperado(base, desdeMs) {
       const acc = { ...cero(), ...base };
+      const mapU = await getMapUsuarios();
 
       // 1) Camiones (ccarga): resta lo que salió, suma lo que volvió
       const snapC = await getDocs(query(collection(db, "ccarga"), where("timestampMs", ">=", desdeMs)));
+      const viajes = [];
       snapC.forEach(d => {
           const r = d.data();
           SIZES.forEach(kg => {
               acc[`l${kg}`] += num(r[`lL${kg}`]) - num(r[`sL${kg}`]);
               acc[`v${kg}`] += num(r[`lV${kg}`]) - num(r[`sV${kg}`]);
           });
+          viajes.push({ chofer: norm(r.chofer), sal: num(r.timestampMs), lleg: r.timestampLlegadaMs ? num(r.timestampLlegadaMs) : Infinity });
       });
 
-      // 2) Mostrador y flotantes (movimientos sin camión): resta llenos entregados, suma vacíos recibidos
+      // 2) Mostrador (movimientos que NO ocurrieron durante un viaje de ese mismo usuario)
+      //    Las ventas hechas durante un viaje ya quedan reflejadas en lo que vuelve el camión.
       for (const f of diasDesde(desdeMs)) {
           const snapM = await getDocs(query(collection(db, "movimientos"), where("FECHA", "==", f)));
           snapM.forEach(d => {
               const m = d.data();
-              if (!(m.ventaDesdePlanta === true || m.esFlotante === true)) return; // las ventas de camión ya van en ccarga
-              if (parseFH(m.FECHA, m.HORA) < desdeMs) return;
+              const t = parseFH(m.FECHA, m.HORA);
+              if (t < desdeMs) return;
+              const u = norm(m.USUARIO);
+              const quien = mapU[u] || u;
+              const enViaje = viajes.some(v => v.chofer === quien && t >= v.sal - 60000 && t <= v.lleg + 60000);
+              if (enViaje) return;
               SIZES.forEach(kg => {
                   acc[`l${kg}`] -= num(m[`ALL${kg}`]);
                   acc[`v${kg}`] += num(m[`AV${kg}`]) + (m.esPagoDeuda ? num(m[`dev${kg}`]) : 0);
@@ -425,7 +446,10 @@
           toggleLoader(false);
       } catch (e) {
           console.error(e);
-          showToast("Error de conexión con Firebase.", "error");
+          const msg = (e && (e.code || e.message)) || 'desconocido';
+          document.getElementById('lblTurno').innerHTML = `<span style="color:var(--error);">ERROR AL CARGAR: ${msg}</span>`;
+          showToast("Error al cargar datos: " + msg, "error");
+          try { actualizarUI(); } catch (_) {}
           toggleLoader(false);
       }
   }
@@ -497,41 +521,59 @@
       document.getElementById('modalPin').style.display = 'flex';
   };
 
+  const normPin = (v) => String(v ?? '').trim().toLowerCase();
+  let pinTipoUsado = null;
+
   window.validarPin = async () => {
-      const pinIngresado = document.getElementById('inpPin').value;
+      const ing = normPin(document.getElementById('inpPin').value);
+      if (!ing) return showToast("Ingrese el PIN", "error");
       toggleLoader(true, "Verificando...");
       try {
-          let docConf = await getDoc(doc(db, "seguridad", "pin"));
-          if (!docConf.exists()) {
-              await setDoc(doc(db, "seguridad", "pin"), { dinamico: "1234", maestro: "0000" });
-              docConf = await getDoc(doc(db, "seguridad", "pin"));
-          }
-          if (pinIngresado === String(docConf.data().dinamico)) {
-              document.getElementById('modalPin').style.display = 'none';
-              document.getElementById('editPat10').value = state.patrimonio.t10;
-              document.getElementById('editPat15').value = state.patrimonio.t15;
-              document.getElementById('editPat45').value = state.patrimonio.t45;
-              document.getElementById('modalEditPatrimonio').style.display = 'flex';
-          } else {
-              showToast("PIN Incorrecto", "error");
-          }
-      } catch (e) { showToast("Error de validación", "error"); console.log(e); }
-      toggleLoader(false);
+          const snap = await getDoc(doc(db, "seguridad", "pin"));
+          if (!snap.exists()) { showToast("No hay PIN configurado en seguridad/pin", "error"); return; }
+          const d = snap.data();
+          const din = normPin(d.dinamico), mae = normPin(d.maestro);
+          if (ing === din) pinTipoUsado = 'DINAMICO';
+          else if (mae && ing === mae) pinTipoUsado = 'MAESTRO';
+          else { pinTipoUsado = null; showToast("PIN Incorrecto", "error"); return; }
+
+          document.getElementById('modalPin').style.display = 'none';
+          document.getElementById('editPat10').value = state.patrimonio.t10;
+          document.getElementById('editPat15').value = state.patrimonio.t15;
+          document.getElementById('editPat45').value = state.patrimonio.t45;
+          document.getElementById('modalEditPatrimonio').style.display = 'flex';
+      } catch (e) { showToast("Error de validación: " + (e.code || e.message), "error"); console.log(e); }
+      finally { toggleLoader(false); }
   };
 
+  // Nueva "Fecha Cero": reemplaza la línea base del patrimonio
   window.guardarPatrimonio = async () => {
+      if (!pinTipoUsado) return showToast("Vuelva a validar el PIN", "error");
       toggleLoader(true, "Actualizando Patrimonio...");
       const n10 = Number(document.getElementById('editPat10').value) || 0;
       const n15 = Number(document.getElementById('editPat15').value) || 0;
       const n45 = Number(document.getElementById('editPat45').value) || 0;
-      const nuevoPin = String(Math.floor(1000 + Math.random() * 9000));
+      const ahora = new Date();
       try {
-          await updateDoc(doc(db, "patrimonio", "totales"), { env10: n10, env15: n15, env45: n45 });
-          await updateDoc(doc(db, "seguridad", "pin"), { dinamico: nuevoPin });
+          const batch = writeBatch(db);
+          batch.set(doc(db, "patrimonio", "totales"), {
+              env10: n10, env15: n15, env45: n45,
+              fechaCero: fechaStr(ahora), horaCero: horaStr(ahora),
+              timestampCeroMs: ahora.getTime(), usuarioCero: state.usuario
+          });
+          if (pinTipoUsado === 'DINAMICO') {
+              batch.update(doc(db, "seguridad", "pin"), { dinamico: Math.random().toString(36).substring(2, 6).toLowerCase() });
+          }
+          batch.set(doc(collection(db, "historialPin")), {
+              fecha_hora: serverTimestamp(), usuario: state.usuario,
+              accion: 'MODIFICAR PATRIMONIO', tipo: pinTipoUsado
+          });
+          await batch.commit();
+          pinTipoUsado = null;
           document.getElementById('modalEditPatrimonio').style.display = 'none';
           await cargarDataFirebase();
-          showToast("Patrimonio actualizado correctamente", "success");
-      } catch (e) { showToast("Error al guardar", "error"); }
+          showToast("Patrimonio actualizado (nueva Fecha Cero)", "success");
+      } catch (e) { showToast("Error al guardar: " + (e.code || e.message), "error"); console.error(e); }
       toggleLoader(false);
   };
 
@@ -570,7 +612,7 @@
           const batch = writeBatch(db);
 
           if (isApertura) {
-              const idTurno = crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
+              const idTurno = (Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2, 6)).toUpperCase();
               batch.set(doc(db, "turnos", idTurno), {
                   idTurno, estado: 'ABIERTO',
                   fecha: fechaStr(ahora), horaIni: horaStr(ahora),
