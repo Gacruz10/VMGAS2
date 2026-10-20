@@ -902,3 +902,4 @@ body.tema-claro .save-status.ss-red    { background: rgba(255, 68, 68, 0.18); co
 .ss-sub { font-size: 12px; margin-top: 2px; opacity: 0.85; }
 .ss-btn { display: none; margin-left: auto; background: transparent; color: inherit; border: 1px solid currentColor; border-radius: 10px; padding: 8px 12px; font-weight: 800; font-size: 11px; cursor: pointer; white-space: nowrap; }
 .save-status.ss-red .ss-btn { display: block; }
+
