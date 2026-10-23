@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VM Gas · Visor de movimientos</title>
+<style>
+:root{--bg:#0b1020;--surface:#141b2e;--surface2:#1c2540;--border:#2a3558;--text:#e7ecf7;--dim:#8a95b5;--accent:#38bdf8;--pos:#34d399;--neg:#f87171;--warn:#fbbf24}
+body.light{--bg:#f4f6fb;--surface:#ffffff;--surface2:#eef1f8;--border:#d5dbea;--text:#17213a;--dim:#5b6785;--accent:#0369a1;--pos:#047857;--neg:#b91c1c;--warn:#a16207}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px;-webkit-text-size-adjust:100%}
+header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top,0px))}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.between{justify-content:space-between}
+h1{font-size:16px;margin:0;letter-spacing:.5px}
+input,select,button{font:inherit;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;min-height:38px}
+input[type=date]{color-scheme:dark}
+body.light input[type=date]{color-scheme:light}
+button{cursor:pointer}
+button.primary{background:var(--accent);color:#06121f;border-color:var(--accent);font-weight:700}
+button.on{border-color:var(--accent);color:var(--accent)}
+.tabs{display:flex;gap:6px;margin-top:8px}
+.tab{flex:1}
+main{padding:12px;padding-bottom:120px;max-width:1200px;margin:0 auto}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.chip{background:var(--surface2);border:1px solid var(--border);border-radius:999px;padding:3px 9px;font-size:12px;white-space:nowrap}
+.badge-on{background:rgba(251,191,36,.15);color:var(--warn);padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700}
+.muted{color:var(--dim);font-size:12px}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pos{color:var(--pos)}.neg{color:var(--neg)}.warn{color:var(--warn)}
+details{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin:8px 0;overflow:hidden}
+details>summary{list-style:none;cursor:pointer;padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+details>summary::-webkit-details-marker{display:none}
+details[open]>summary{border-bottom:1px solid var(--border);background:var(--surface2)}
+details details{margin:6px 0;border-radius:10px}
+.inner{padding:8px 10px}
+.sale{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:8px;border-radius:8px;cursor:pointer}
+.sale:active{background:var(--surface2)}
+.sale+.sale{border-top:1px dashed var(--border)}
+.tbl-wrap{overflow:auto;border:1px solid var(--border);border-radius:12px;background:var(--surface);-webkit-overflow-scrolling:touch;max-height:70vh}
+table{border-collapse:separate;border-spacing:0;width:100%;min-width:max-content}
+th,td{padding:7px 9px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+th{position:sticky;top:0;background:var(--surface2);z-index:2;cursor:pointer;font-size:12px;color:var(--dim)}
+td.r,th.r{text-align:right}
+td.sticky,th.sticky{position:sticky;left:0;background:var(--surface);z-index:1}
+th.sticky{z-index:3;background:var(--surface2)}
+tbody tr{cursor:pointer}
+tbody tr.sel td{background:rgba(56,189,248,.16)}
+tfoot td{font-weight:700;background:var(--surface2);position:sticky;bottom:0}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center;z-index:50}
+.modal.show{display:flex}
+.sheet{background:var(--surface);width:100%;max-width:640px;max-height:88vh;overflow:auto;border-radius:16px 16px 0 0;padding:14px;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+@media(min-width:720px){.modal{align-items:center}.sheet{border-radius:16px}}
+dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0}
+dt{color:var(--dim);font-size:12px}
+dd{margin:0;word-break:break-word}
+.selbar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--accent);padding:10px 12px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));display:none;z-index:30}
+.selbar.show{display:block}
+.loader{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35);z-index:60;color:#fff;font-weight:700}
+.loader.show{display:flex}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;background:var(--surface2);border:1px solid var(--border);padding:10px 14px;border-radius:10px;display:none;z-index:70;max-width:90vw}
+.toast.show{display:block}
+.filters{display:none;margin-top:8px}
+.filters.open{display:block}
+.cols-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+@media(min-width:720px){.cols-grid{grid-template-columns:repeat(3,1fr)}}
+label.ck{display:flex;gap:6px;align-items:center;font-size:13px;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="row between">
+    <h1>📊 Visor de movimientos</h1>
+    <div class="row">
+      <button id="btnTheme" title="Tema">🌙</button>
+      <button id="btnVolver" title="Volver">⬅</button>
+    </div>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <input type="date" id="fDesde" aria-label="Desde">
+    <input type="date" id="fHasta" aria-label="Hasta">
+    <button class="primary" id="btnBuscar">Buscar</button>
+    <button id="btnFiltros">Filtros</button>
+  </div>
+  <div class="filters" id="panelFiltros">
+    <div class="row">
+      <input id="fQ" placeholder="Cliente, usuario o N°" style="flex:1;min-width:160px">
+      <select id="fTipo"><option value="">Todos los tipos</option></select>
+      <select id="fUsr"><option value="">Todos los usuarios</option></select>
+      <button id="btnLimpiarF">Limpiar</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab on" data-view="det">Detallada</button>
+    <button class="tab" data-view="pla">Planilla</button>
+  </div>
+</header>
+
+<main>
+  <div class="row between" style="margin-bottom:6px">
+    <div class="muted" id="resumen"></div>
+    <div class="row">
+      <button id="btnCompacto" title="Números compactos">123</button>
+      <button id="btnCols">Columnas</button>
+      <button id="btnCsv">CSV</button>
+    </div>
+  </div>
+  <div id="vistaDet"></div>
+  <div id="vistaPla" style="display:none"></div>
+  <div id="vacio" class="muted" style="text-align:center;padding:40px;display:none">Sin registros en el rango seleccionado.</div>
+</main>
+
+<div class="selbar" id="selbar">
+  <div id="selTxt" class="num" style="font-size:13px;margin-bottom:8px"></div>
+  <div class="row">
+    <button class="primary" id="btnCopiar">Copiar selección</button>
+    <button id="btnLimpiarSel">Quitar selección</button>
+  </div>
+</div>
+
+<div class="modal" id="fichaModal"><div class="sheet">
+  <div class="row between"><b>Ficha de operación</b><button id="btnCerrarFicha">✖</button></div>
+  <div id="fichaBody" style="margin-top:10px"></div>
+</div></div>
+
+<div class="modal" id="colsModal"><div class="sheet">
+  <div class="row between"><b>Columnas</b><button id="btnCerrarCols">✖</button></div>
+  <div class="row" style="margin:10px 0">
+    <button id="btnColsBasicas">Básicas</button>
+    <button id="btnColsTodas">Todas</button>
+  </div>
+  <div class="cols-grid" id="colsGrid"></div>
+</div></div>
+
+<div class="loader" id="loader">Cargando…</div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getFirestore, doc, getDoc, getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
+  authDomain: "vmgaslr.firebaseapp.com",
+  projectId: "vmgaslr",
+  storageBucket: "vmgaslr.firebasestorage.app",
+  messagingSenderId: "75859850089",
+  appId: "1:75859850089:web:fc551c770bbf4ae25803f8"
+});
+const db = getFirestore(app);
+
+// ---------- Utilidades ----------
+const $ = id => document.getElementById(id);
+const SIZES = [10, 15, 45];
+const num = v => Number(v) || 0;
+const pad2 = n => String(n).padStart(2, '0');
+const normU = v => String(v ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const ymd = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const parseDay = s => { if (!s) return null; const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const hm = ms => ms ? new Date(ms).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }) : '--:--';
+const qty = n => String(Math.round(num(n)));
+
+function parseFH(f, h) {
+  if (!f) return 0;
+  const p = String(f).split('/').map(Number);
+  if (p.length !== 3 || p.some(isNaN)) return 0;
+  const t = String(h || '0:0:0').split(':').map(Number);
+  return new Date(p[2], p[1] - 1, p[0], t[0] || 0, t[1] || 0, t[2] || 0).getTime();
+}
+
+function money(n) {
+  n = Math.round(num(n));
+  if (S.compact) {
+    const a = Math.abs(n);
+    if (a >= 1e6) return '$' + (n / 1e6).toFixed(2).replace('.', ',') + 'M';
+    if (a >= 1e3) return '$' + Math.round(n / 1e3) + 'k';
+    return '$' + n;
+  }
+  return '$' + n.toLocaleString('es-AR');
+}
+
+function toast(msg) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('show'), 2800);
+}
+const loader = on => $('loader').classList.toggle('show', !!on);
+
+// ---------- Columnas ----------
+const COLS = [
+  { k: 'usuario', l: 'USUARIO', t: 'txt', def: 1, v: m => m.usuario },
+  { k: 'tipo', l: 'TIPO', t: 'txt', def: 1, v: m => m.tipo },
+  { k: 'fecha', l: 'FECHA', t: 'txt', def: 1, v: m => m.fecha },
+  { k: 'hora', l: 'HORA', t: 'txt', def: 1, v: m => m.hora },
+  { k: 'cliente', l: 'CLIENTE', t: 'txt', def: 1, v: m => m.cliente },
+  { k: 'L10', l: 'LLENOS 10', t: 'n', def: 1, v: m => m.L[10] },
+  { k: 'L15', l: 'LLENOS 15', t: 'n', def: 1, v: m => m.L[15] },
+  { k: 'L45', l: 'LLENOS 45', t: 'n', def: 1, v: m => m.L[45] },
+  { k: 'total', l: 'TOTAL', t: 'm', def: 1, v: m => m.total },
+  { k: 'efe', l: 'EFECTIVO', t: 'm', def: 1, v: m => m.efe },
+  { k: 'tra', l: 'TRANSF.', t: 'm', def: 1, v: m => m.tra },
+  { k: 'V10', l: 'VACÍOS 10', t: 'n', v: m => m.V[10] },
+  { k: 'V15', l: 'VACÍOS 15', t: 'n', v: m => m.V[15] },
+  { k: 'V45', l: 'VACÍOS 45', t: 'n', v: m => m.V[45] },
+  { k: 'N', l: 'N° operación', t: 'txt', v: m => m.id },
+  { k: 'ID_CLIENTE', l: 'ID cliente', t: 'txt', v: m => m.raw.ID_CLIENTE || '' },
+  { k: 'idTurno', l: 'ID turno', t: 'txt', v: m => m.turnoId || '' },
+  { k: 'idViaje', l: 'ID viaje', t: 'txt', v: m => m.viajeId || '' },
+  { k: 'GASTO_TOTAL', l: 'Gasto', t: 'm', v: m => num(m.raw.GASTO_TOTAL) },
+  { k: 'COMISION_TOTAL', l: 'Comisión', t: 'm', v: m => num(m.raw.COMISION_TOTAL) },
+  { k: 'clienteZona', l: 'Zona', t: 'txt', v: m => m.raw.clienteZona || '' },
+  { k: 'clienteCategoria', l: 'Categoría', t: 'txt', v: m => m.raw.clienteCategoria || '' },
+  { k: 'operacionEnvase', l: 'Operación envase', t: 'txt', v: m => m.raw.operacionEnvase || '' },
+  { k: 'esPagoDeuda', l: 'Cobro deuda', t: 'txt', v: m => m.raw.esPagoDeuda ? 'SÍ' : '' },
+  { k: 'esFlotante', l: 'Flotante', t: 'txt', v: m => m.raw.esFlotante ? 'SÍ' : '' },
+  { k: 'ventaDesdePlanta', l: 'Retira en planta', t: 'txt', v: m => m.raw.ventaDesdePlanta ? 'SÍ' : '' },
+  { k: 'garrafas', l: 'Detalle garrafas', t: 'txt', v: m => m.raw.garrafas || '' }
+];
+const COL_KEYS = COLS.map(c => c.k);
+const colByKey = k => COLS.find(c => c.k === k);
+const visibleCols = () => S.cols.map(colByKey).filter(Boolean);
+
+// ---------- Estado ----------
+const S = {
+  view: 'det',
+  compact: localStorage.getItem('vm_cmp') ? localStorage.getItem('vm_cmp') === '1' : window.innerWidth < 720,
+  cols: [],
+  sel: new Set(),
+  sort: { k: 'ms', dir: -1 },
+  f: { q: '', tipo: '', usr: '' },
+  ventas: [],   // todas las ventas del rango
+  grupos: [],   // turnos + "sin turno"
+  byId: new Map()
+};
+
+// ---------- Sesión ----------
+let TOKEN = new URLSearchParams(location.search).get('k') || sessionStorage.getItem('k');
+if (!TOKEN) { location.replace('inicio.html'); throw new Error('Sin sesión'); }
+sessionStorage.setItem('k', TOKEN);
+history.replaceState({}, document.title, location.pathname);
+
+async function validarSesion() {
+  try {
+    const s = await getDoc(doc(db, 'tokens', TOKEN));
+    const d = s.exists() ? s.data() : null;
+    if (!d || (d.expira && Date.now() > d.expira)) { location.replace('inicio.html'); return false; }
+    return true;
+  } catch (e) {
+    console.error(e);
+    toast('Error de conexión al validar la sesión');
+    return false;
+  }
+}
+
+// ---------- Carga y armado del modelo ----------
+function diasStrings(d1, fin) {
+  const out = [];
+  for (let t = d1.getTime(); t <= fin; t += 86400000) {
+    const d = new Date(t);
+    const a = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+    const b = `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
+    out.push(a);
+    if (b !== a) out.push(b);
+  }
+  return out;
+}
+
+async function cargar() {
+  const d1 = parseDay($('fDesde').value), d2 = parseDay($('fHasta').value);
+  if (!d1 || !d2 || d2 < d1) return toast('Rango de fechas inválido');
+  if ((d2 - d1) / 86400000 + 1 > 62) return toast('El rango máximo es de 62 días');
+
+  const ini = d1.getTime();
+  const fin = new Date(d2.getFullYear(), d2.getMonth(), d2.getDate(), 23, 59, 59, 999).getTime();
+  const dias = diasStrings(d1, fin);
+
+  loader(true);
+  try {
+    const [uSnap, tSnap, tAbSnap, cSnap] = await Promise.all([
+      getDocs(collection(db, 'usuarios')),
+      getDocs(query(collection(db, 'turnos'), where('timestampAperturaMs', '>=', ini - 2 * 86400000), where('timestampAperturaMs', '<=', fin))),
+      getDocs(query(collection(db, 'turnos'), where('estado', '==', 'ABIERTO'))),
+      getDocs(query(collection(db, 'ccarga'), where('timestampMs', '>=', ini), where('timestampMs', '<=', fin)))
+    ]);
+
+    // Usuarios: nombre para mostrar -> id de chofer
+    const mapU = {};
+    uSnap.forEach(x => {
+      const u = x.data();
+      [x.id, u.nombre_mostrar, u.nombre_completo].forEach(v => { if (v) mapU[normU(v)] = normU(x.id); });
+    });
+
+    // Turnos (sin duplicados)
+    const turnos = new Map();
+    [...tSnap.docs, ...tAbSnap.docs].forEach(x => {
+      if (turnos.has(x.id)) return;
+      const t = x.data();
+      turnos.set(x.id, {
+        ...t,
+        id: x.id,
+        ap: num(t.timestampAperturaMs),
+        ce: t.timestampCierreMs ? num(t.timestampCierreMs) : Infinity,
+        open: t.estado === 'ABIERTO',
+        ini: t.ini || null,
+        fin: t.fin || null
+      });
+    });
+    const turnoEnMs = ms => {
+      let r = null;
+      turnos.forEach(t => { if (ms >= t.ap - 60000 && ms <= t.ce && (!r || t.ap > r.ap)) r = t; });
+      return r;
+    };
+
+    // Viajes (ccarga)
+    const trips = cSnap.docs.map(x => {
+      const r = x.data();
+      const open = ['EN_RUTA', 'COMPRA_EN_RUTA'].includes(r.estado);
+      const hasLl = SIZES.some(k => r[`lL${k}`] !== undefined || r[`lV${k}`] !== undefined);
+      const llegMs = num(r.timestampLlegadaMs || r.timestampCierreMs) || (r.fechaLlegada ? parseFH(r.fechaLlegada, r.horaLlegada) : 0) || null;
+      const sL = {}, sV = {}, lL = {}, lV = {};
+      SIZES.forEach(k => {
+        sL[k] = num(r[`sL${k}`]); sV[k] = num(r[`sV${k}`]);
+        lL[k] = num(r[`lL${k}`]); lV[k] = num(r[`lV${k}`]);
+      });
+      return {
+        id: x.id,
+        idViaje: r.idViaje || x.id,
+        idTurno: r.idTurno || null,
+        chofer: normU(r.chofer),
+        choferNombre: r.chofer || '',
+        estado: r.estado || '',
+        tipo: r.tipoViaje || 'REPARTO',
+        ms: num(r.timestampMs),
+        llegMs,
+        open,
+        usaExp: open || !hasLl,   // si no hay conteo de regreso, se estima como el control de stock
+        sL, sV, lL, lV,
+        ventas: [],
+        turnoId: null,
+        raw: r
+      };
+    });
+
+    // Ventas (movimientos): FECHA es texto, se consulta por día en tandas de 30
+    const movsRaw = [];
+    for (let i = 0; i < dias.length; i += 30) {
+      const snap = await getDocs(query(collection(db, 'movimientos'), where('FECHA', 'in', dias.slice(i, i + 30))));
+      snap.forEach(x => movsRaw.push({ id: x.id, r: x.data() }));
+    }
+
+    const ventas = movsRaw.map(({ id, r }) => {
+      const L = {}, V = {};
+      SIZES.forEach(k => {
+        L[k] = num(r[`ALL${k}`]);
+        V[k] = num(r[`AV${k}`]) + (r.esPagoDeuda ? num(r[`dev${k}`]) : 0);
+      });
+      return {
+        id,
+        raw: r,
+        ms: parseFH(r.FECHA, r.HORA),
+        fecha: r.FECHA || '',
+        hora: String(r.HORA || ''),
+        usuario: r.USUARIO || '',
+        chofer: mapU[normU(r.USUARIO)] || normU(r.USUARIO),
+        tipo: r.TIPO || '',
+        cliente: r.C || r.clienteNombre || '',
+        total: num(r.TOTAL),
+        efe: num(r['E$']),
+        tra: num(r['T$']),
+        L, V,
+        idViaje: r.idViaje || r.ID_VIAJE || null,
+        idTurno: r.idTurno || r.ID_TURNO || null,
+        viajeId: null,
+        turnoId: null
+      };
+    }).filter(v => v.ms >= ini && v.ms <= fin);
+
+    // 1) Asignar cada venta a un viaje: por ID de viaje, o por chofer y ventana horaria
+    ventas.forEach(v => {
+      let t = null;
+      if (v.idViaje) t = trips.find(x => x.idViaje === v.idViaje) || null;
+      if (!t) {
+        trips.forEach(x => {
+          if (x.chofer !== v.chofer) return;
+          const lim = x.llegMs ? x.llegMs + 60000 : (x.open ? Infinity : x.ms + 12 * 3600000);
+          if (v.ms >= x.ms - 60000 && v.ms <= lim && (!t || x.ms > t.ms)) t = x;
+        });
+      }
+      if (t) { v.viajeId = t.idViaje; t.ventas.push(v); }
+    });
+
+    // 2) Turno de cada viaje
+    trips.forEach(t => {
+      const tn = (t.idTurno && turnos.get(t.idTurno)) || turnoEnMs(t.ms);
+      t.turnoId = tn ? tn.id : null;
+    });
+
+    // 3) Turno de cada venta: si está en un viaje, el del viaje; si no, ID de turno o por hora
+    ventas.forEach(v => {
+      if (v.viajeId) {
+        const tr = trips.find(x => x.idViaje === v.viajeId);
+        v.turnoId = tr ? tr.turnoId : null;
+        return;
+      }
+      const tn = (v.idTurno && turnos.get(v.idTurno)) || turnoEnMs(v.ms);
+      v.turnoId = tn ? tn.id : null;
+    });
+
+    // 4) Lo que tiene que haber en cada viaje (igual que el control de stock)
+    trips.forEach(t => {
+      const sumL = {}, sumV = {};
+      SIZES.forEach(k => { sumL[k] = 0; sumV[k] = 0; });
+      t.ventas.forEach(v => SIZES.forEach(k => { sumL[k] += v.L[k]; sumV[k] += v.V[k]; }));
+      t.exp = { L: {}, V: {} };
+      SIZES.forEach(k => {
+        t.exp.L[k] = t.usaExp ? t.sL[k] - sumL[k] : t.lL[k];
+        t.exp.V[k] = t.usaExp ? t.sV[k] + sumV[k] : t.lV[k];
+      });
+    });
+
+    // 5) Grupos: uno por turno, más "Sin turno"
+    const grupos = new Map();
+    const grupo = id => {
+      const k = id || '__sin';
+      if (!grupos.has(k)) grupos.set(k, { key: k, turno: id ? turnos.get(id) : null, viajes: [], sueltas: [], stock: null });
+      return grupos.get(k);
+    };
+    turnos.forEach(t => { if (t.ap <= fin && (t.open || t.ce >= ini)) grupo(t.id); });
+    trips.forEach(t => grupo(t.turnoId).viajes.push(t));
+    ventas.forEach(v => { if (!v.viajeId) grupo(v.turnoId).sueltas.push(v); });
+
+    // 6) Stock teórico por turno (misma lógica que controlstock)
+    grupos.forEach(g => {
+      const t = g.turno;
+      if (!t) return;
+      const tot = { L: {}, V: {} }, calle = { L: {}, V: {} };
+      SIZES.forEach(k => {
+        tot.L[k] = num(t.ini?.[`l${k}`]);
+        tot.V[k] = num(t.ini?.[`v${k}`]);
+        calle.L[k] = 0; calle.V[k] = 0;
+      });
+      g.viajes.forEach(x => SIZES.forEach(k => {
+        tot.L[k] += x.exp.L[k] - x.sL[k];
+        tot.V[k] += x.exp.V[k] - x.sV[k];
+        if (x.open) { calle.L[k] += x.exp.L[k]; calle.V[k] += x.exp.V[k]; }
+      }));
+      g.sueltas.forEach(v => SIZES.forEach(k => { tot.L[k] -= v.L[k]; tot.V[k] += v.V[k]; }));
+      const plat = { L: {}, V: {} };
+      SIZES.forEach(k => { plat.L[k] = tot.L[k] - calle.L[k]; plat.V[k] = tot.V[k] - calle.V[k]; });
+      g.stock = { tot, calle, plat };
+    });
+
+    // Ordenar: turnos más nuevos primero, "sin turno" al final
+    S.grupos = [...grupos.values()].sort((a, b) => {
+      if (!a.turno) return 1;
+      if (!b.turno) return -1;
+      return b.turno.ap - a.turno.ap;
+    });
+    S.ventas = ventas;
+    S.byId = new Map(ventas.map(v => [v.id, v]));
+    S.sel.clear();
+
+    cargarFiltros();
+    renderAll();
+  } catch (e) {
+    console.error(e);
+    toast('Error al cargar: ' + (e.code || e.message));
+  } finally {
+    loader(false);
+  }
+}
+
+// ---------- Filtros ----------
+function fOk(v) {
+  const f = S.f;
+  if (f.tipo && v.tipo !== f.tipo) return false;
+  if (f.usr && v.chofer !== f.usr) return false;
+  if (f.q) {
+    const q = f.q.toLowerCase();
+    if (!`${v.cliente} ${v.usuario} ${v.id}`.toLowerCase().includes(q)) return false;
+  }
+  return true;
+}
+const filtrosActivos = () => !!(S.f.q || S.f.tipo || S.f.usr);
+
+function cargarFiltros() {
+  const tipos = [...new Set(S.ventas.map(v => v.tipo).filter(Boolean))].sort();
+  const usr = new Map();
+  S.ventas.forEach(v => { if (v.chofer && !usr.has(v.chofer)) usr.set(v.chofer, v.usuario); });
+  const selT = $('fTipo'), selU = $('fUsr');
+  const prevT = S.f.tipo, prevU = S.f.usr;
+  selT.innerHTML = '<option value="">Todos los tipos</option>' + tipos.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  selU.innerHTML = '<option value="">Todos los usuarios</option>' + [...usr].map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
+  selT.value = tipos.includes(prevT) ? prevT : '';
+  selU.value = usr.has(prevU) ? prevU : '';
+  S.f.tipo = selT.value; S.f.usr = selU.value;
+}
+
+// ---------- Render general ----------
+function renderAll() {
+  renderDet();
+  renderPla();
+  renderSel();
+  const enDet = S.view === 'det';
+  $('vistaDet').style.display = enDet ? 'block' : 'none';
+  $('vistaPla').style.display = enDet ? 'none' : 'block';
+  $('btnCompacto').classList.toggle('on', S.compact);
+  const filtradas = S.ventas.filter(fOk);
+  const tot = filtradas.reduce((a, v) => a + v.total, 0);
+  $('resumen').textContent = enDet
+    ? `${S.grupos.length} turno(s) · ${S.ventas.length} ventas`
+    : `${filtradas.length} ventas · ${money(tot)}`;
+  const hayAlgo = S.grupos.some(g => g.viajes.length || g.sueltas.length);
+  $('vacio').style.display = hayAlgo || S.ventas.length ? 'none' : 'block';
+}
+
+// ---------- Vista Detallada ----------
+const lv = o => SIZES.map(k => `${k}kg ${qty(o.L[k])}L/${qty(o.V[k])}V`).join(' · ');
+
+function tablaViaje(x) {
+  const titulo = x.usaExp ? 'Volvió (estimado)' : 'Volvió';
+  const filas = SIZES.map(k => `
+    <tr>
+      <td>${k} kg</td>
+      <td class="r num">${qty(x.sL[k])}</td><td class="r num">${qty(x.sV[k])}</td>
+      <td class="r num">${qty(x.exp.L[k])}</td><td class="r num">${qty(x.exp.V[k])}</td>
+    </tr>`).join('');
+  return `<div class="tbl-wrap" style="max-height:none"><table>
+    <thead><tr><th>Presentación</th><th class="r">Salió L</th><th class="r">Salió V</th><th class="r">${titulo} L</th><th class="r">${titulo} V</th></tr></thead>
+    <tbody>${filas}</tbody></table></div>`;
+}
+
+function filaVenta(v) {
+  const det = SIZES.filter(k => v.L[k] || v.V[k]).map(k => `${k}: ${v.L[k]}L/${v.V[k]}V`).join(' · ') || 'sin envases';
+  const pagos = [v.efe ? `Efe ${money(v.efe)}` : '', v.tra ? `Transf ${money(v.tra)}` : ''].filter(Boolean).join(' · ');
+  return `<div class="sale" data-venta="${esc(v.id)}">
+    <div><b>${esc(v.hora.slice(0, 5))}</b> · ${esc(v.cliente || '—')} <span class="muted">${esc(v.usuario)}</span></div>
+    <div class="num"><b>${money(v.total)}</b></div>
+    <div class="muted" style="grid-column:1/-1">${det}${pagos ? ' · ' + pagos : ''}</div>
+  </div>`;
+}
+
+function bloqueStock(g) {
+  const s = g.stock, t = g.turno;
+  if (!s) return '';
+  let cierre = '';
+  if (!t.open && t.fin) {
+    const real = { L: {}, V: {} }, dif = { L: {}, V: {} };
+    SIZES.forEach(k => {
+      real.L[k] = num(t.fin[`l${k}`]); real.V[k] = num(t.fin[`v${k}`]);
+      dif.L[k] = real.L[k] - s.tot.L[k]; dif.V[k] = real.V[k] - s.tot.V[k];
+    });
+    const dd = SIZES.some(k => dif.L[k] || dif.V[k]);
+    cierre = `<div class="muted" style="margin-top:6px">Cierre real: ${lv(real)}</div>
+      <div class="${dd ? 'neg' : 'pos'}">${dd ? 'Diferencia: ' + lv(dif) : 'Cierre sin diferencias'}</div>`;
+  }
+  return `<div class="inner" style="border-bottom:1px solid var(--border)">
+    <div class="muted">Teórico total: ${lv(s.tot)}</div>
+    <div class="muted">En calle: ${lv(s.calle)}</div>
+    <div><b>En plataforma: ${lv(s.plat)}</b></div>
+    ${cierre}
+  </div>`;
+}
+
+function bloqueGrupo(g, viajes, sueltas) {
+  const t = g.turno;
+  const ventasG = [...viajes.flatMap(o => o.vs), ...sueltas];
+  const tot = ventasG.reduce((a, v) => a + v.total, 0);
+  const efe = ventasG.reduce((a, v) => a + v.efe, 0);
+  const tra = ventasG.reduce((a, v) => a + v.tra, 0);
+
+  const titulo = t
+    ? `🗂️ <b>TURNO ${esc(t.id)}</b> <span class="muted">${esc(t.fecha || '')} ${esc(t.horaIni || '')}</span>`
+    : `🚫 <b>SIN TURNO</b>`;
+  const badge = t ? (t.open ? '<span class="badge-on">ABIERTO</span>' : '<span class="chip">CERRADO</span>') : '';
+
+  const viajesHtml = viajes.map(({ x, vs }) => {
+    const sumV = vs.reduce((a, v) => a + v.total, 0);
+    const estado = x.open ? '<span class="warn">EN RUTA</span>' : '<span class="pos">FINALIZADO</span>';
+    return `<details>
+      <summary>🚚 <b>${esc(x.choferNombre || x.chofer)}</b> <span class="muted">${esc(x.tipo)} · ${hm(x.ms)}${x.llegMs ? ' → ' + hm(x.llegMs) : ''}</span> ${estado}
+        <span class="chip">${vs.length} ventas · ${money(sumV)}</span></summary>
+      <div class="inner">
+        <div class="muted" style="margin-bottom:6px">ID viaje: ${esc(x.idViaje)}</div>
+        ${tablaViaje(x)}
+        ${vs.map(filaVenta).join('') || '<div class="muted" style="padding:8px">Sin ventas en este viaje</div>'}
+      </div>
+    </details>`;
+  }).join('');
+
+  const sueltasHtml = sueltas.length ? `<details>
+    <summary>🏪 <b>Sin camión</b> <span class="chip">${sueltas.length} ventas · ${money(sueltas.reduce((a, v) => a + v.total, 0))}</span></summary>
+    <div class="inner">${sueltas.map(filaVenta).join('')}</div>
+  </details>` : '';
+
+  const stock = g.stock ? bloqueStock(g) : '';
+
+  return `<details open>
+    <summary>${titulo} ${badge}</summary>
+    ${stock}
+    <div class="inner">
+      <div class="chips">
+        <span class="chip">${ventasG.length} ventas</span>
+        <span class="chip">Total ${money(tot)}</span>
+        <span class="chip">Efe ${money(efe)}</span>
+        <span class="chip">Transf ${money(tra)}</span>
+      </div>
+      ${viajesHtml}
+      ${sueltasHtml}
+      ${!viajes.length && !sueltas.length ? '<div class="muted" style="padding:8px">Sin movimientos</div>' : ''}
+    </div>
+  </details>`;
+}
+
+function renderDet() {
+  const activo = filtrosActivos();
+  let html = '';
+  S.grupos.forEach(g => {
+    const viajes = g.viajes.map(x => ({ x, vs: x.ventas.filter(fOk) })).filter(o => !activo || o.vs.length);
+    const sueltas = g.sueltas.filter(fOk);
+    if (activo && !viajes.length && !sueltas.length) return;
+    html += bloqueGrupo(g, viajes, sueltas);
+  });
+  $('vistaDet').innerHTML = html;
+}
+
+// ---------- Vista Planilla ----------
+function celda(c, v) {
+  const val = c.v(v);
+  if (c.t === 'm') return money(val);
+  if (c.t === 'n') return qty(val);
+  return esc(val);
+}
+
+function ordenar(a, b) {
+  const c = S.sort.k === 'ms' ? null : colByKey(S.sort.k);
+  const va = c ? c.v(a) : a.ms, vb = c ? c.v(b) : b.ms;
+  if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * S.sort.dir;
+  return String(va).localeCompare(String(vb), 'es') * S.sort.dir;
+}
+
+function renderPla() {
+  const cols = visibleCols();
+  const rows = S.ventas.filter(fOk).sort(ordenar);
+  const sumas = {};
+  cols.forEach(c => { if (c.t !== 'txt') sumas[c.k] = rows.reduce((a, v) => a + (Number(c.v(v)) || 0), 0); });
+
+  const th = cols.map((c, i) => {
+    const flecha = S.sort.k === c.k || (S.sort.k === 'ms' && (c.k === 'fecha' || c.k === 'hora'))
+      ? (S.sort.dir > 0 ? ' ▲' : ' ▼') : '';
+    return `<th data-sort="${c.k}" class="${c.t !== 'txt' ? 'r' : ''} ${i === 0 ? 'sticky' : ''}">${c.l}${flecha}</th>`;
+  }).join('');
+
+  const body = rows.map(v => `
+    <tr data-venta="${esc(v.id)}" class="${S.sel.has(v.id) ? 'sel' : ''}">
+      ${cols.map((c, i) => `<td class="${c.t !== 'txt' ? 'r num' : ''} ${i === 0 ? 'sticky' : ''}">${celda(c, v)}</td>`).join('')}
+      <td><button data-ficha="${esc(v.id)}" title="Ver ficha">⋯</button></td>
+    </tr>`).join('');
+
+  const pie = cols.map((c, i) => {
+    if (i === 0) return `<td class="sticky">TOTAL (${rows.length})</td>`;
+    if (c.t === 'txt') return '<td></td>';
+    return `<td class="r num">${c.t === 'm' ? money(sumas[c.k]) : qty(sumas[c.k])}</td>`;
+  }).join('');
+
+  $('vistaPla').innerHTML = `<div class="tbl-wrap"><table>
+    <thead><tr>${th}<th></th></tr></thead>
+    <tbody>${body}</tbody>
+    <tfoot><tr>${pie}<td></td></tr></tfoot>
+  </table></div>`;
+}
+
+// ---------- Selección ----------
+function toggleSel(id) {
+  if (S.sel.has(id)) S.sel.delete(id); else S.sel.add(id);
+  renderPla();
+  renderSel();
+}
+
+function renderSel() {
+  const vs = [...S.sel].map(id => S.byId.get(id)).filter(Boolean);
+  $('selbar').classList.toggle('show', vs.length > 0);
+  if (!vs.length) return;
+  const tot = vs.reduce((a, v) => a + v.total, 0);
+  const efe = vs.reduce((a, v) => a + v.efe, 0);
+  const tra = vs.reduce((a, v) => a + v.tra, 0);
+  const L = {};
+  SIZES.forEach(k => { L[k] = vs.reduce((a, v) => a + v.L[k], 0); });
+  $('selTxt').innerHTML = `<b>${vs.length}</b> seleccionadas · Total <b>${money(tot)}</b> · Efe ${money(efe)} · Transf ${money(tra)}<br>
+    Llenos: ${SIZES.map(k => `${k}kg ${L[k]}`).join(' · ')}`;
+}
+
+// ---------- Ficha ----------
+function abrirFicha(id) {
+  const v = S.byId.get(id);
+  if (!v) return;
+  const campos = Object.entries(v.raw)
+    .filter(([k]) => k !== 'pin')
+    .map(([k, val]) => `<dt>${esc(k)}</dt><dd>${esc(val !== null && typeof val === 'object' ? JSON.stringify(val) : val)}</dd>`)
+    .join('');
+  $('fichaBody').innerHTML = `
+    <div class="muted" style="margin-bottom:8px">Solo lectura. La edición llega en el próximo paso.</div>
+    <div class="chips">
+      <span class="chip">${esc(v.tipo)}</span>
+      <span class="chip">Viaje: ${esc(v.viajeId || 'sin camión')}</span>
+      <span class="chip">Turno: ${esc(v.turnoId || 'sin turno')}</span>
+    </div>
+    <dl>${campos}</dl>`;
+  $('fichaModal').classList.add('show');
+}
+
+// ---------- Columnas ----------
+function setCols(keys) {
+  S.cols = COL_KEYS.filter(k => keys.includes(k));
+  localStorage.setItem('vm_cols_mov', JSON.stringify(S.cols));
+  renderPla();
+}
+
+function abrirCols() {
+  $('colsGrid').innerHTML = COLS.map(c =>
+    `<label class="ck"><input type="checkbox" value="${c.k}" ${S.cols.includes(c.k) ? 'checked' : ''}> ${c.l}</label>`).join('');
+  $('colsModal').classList.add('show');
+}
+
+// ---------- Exportar / copiar ----------
+function tabla(vs, sep) {
+  const cols = visibleCols();
+  const head = cols.map(c => c.l).join(sep);
+  const body = vs.map(v => cols.map(c => String(c.v(v) ?? '').replace(/[\r\n\t]+/g, ' ').trim()).join(sep));
+  return [head, ...body].join('\n');
+}
+
+function exportarCSV() {
+  const rows = S.ventas.filter(fOk).sort(ordenar);
+  if (!rows.length) return toast('No hay ventas para exportar');
+  const blob = new Blob(['\ufeff' + tabla(rows, ';')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `movimientos_${$('fDesde').value}_${$('fHasta').value}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function copiarSeleccion() {
+  const vs = [...S.sel].map(id => S.byId.get(id)).filter(Boolean);
+  const data = vs.length ? vs : S.ventas.filter(fOk).sort(ordenar);
+  if (!data.length) return toast('Nada para copiar');
+  navigator.clipboard?.writeText(tabla(data, '\t'))
+    .then(() => toast(`Copiado: ${data.length} filas`))
+    .catch(() => toast('No se pudo copiar'));
+}
+
+// ---------- Eventos ----------
+function setView(v) {
+  S.view = v;
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.view === v));
+  renderAll();
+}
+
+$('btnTheme').addEventListener('click', () => {
+  const light = document.body.classList.toggle('light');
+  localStorage.setItem('vm_theme', light ? 'light' : 'dark');
+  $('btnTheme').textContent = light ? '☀️' : '🌙';
+});
+$('btnVolver').addEventListener('click', () => location.href = `inicio.html?k=${TOKEN}`);
+$('btnBuscar').addEventListener('click', cargar);
+$('btnFiltros').addEventListener('click', () => $('panelFiltros').classList.toggle('open'));
+$('fQ').addEventListener('input', e => { S.f.q = e.target.value.trim(); renderAll(); });
+$('fTipo').addEventListener('change', e => { S.f.tipo = e.target.value; renderAll(); });
+$('fUsr').addEventListener('change', e => { S.f.usr = e.target.value; renderAll(); });
+$('btnLimpiarF').addEventListener('click', () => {
+  S.f = { q: '', tipo: '', usr: '' };
+  $('fQ').value = ''; $('fTipo').value = ''; $('fUsr').value = '';
+  renderAll();
+});
+document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+$('btnCompacto').addEventListener('click', () => {
+  S.compact = !S.compact;
+  localStorage.setItem('vm_cmp', S.compact ? '1' : '0');
+  renderAll();
+});
+$('btnCols').addEventListener('click', abrirCols);
+$('btnCerrarCols').addEventListener('click', () => $('colsModal').classList.remove('show'));
+$('btnColsBasicas').addEventListener('click', () => { setCols(COLS.filter(c => c.def).map(c => c.k)); abrirCols(); });
+$('btnColsTodas').addEventListener('click', () => { setCols(COL_KEYS); abrirCols(); });
+$('colsGrid').addEventListener('change', () => {
+  setCols([...$('colsGrid').querySelectorAll('input:checked')].map(i => i.value));
+});
+$('btnCsv').addEventListener('click', exportarCSV);
+$('btnCerrarFicha').addEventListener('click', () => $('fichaModal').classList.remove('show'));
+$('btnCopiar').addEventListener('click', copiarSeleccion);
+$('btnLimpiarSel').addEventListener('click', () => { S.sel.clear(); renderPla(); renderSel(); });
+$('fichaModal').addEventListener('click', e => { if (e.target.id === 'fichaModal') $('fichaModal').classList.remove('show'); });
+$('colsModal').addEventListener('click', e => { if (e.target.id === 'colsModal') $('colsModal').classList.remove('show'); });
+
+document.addEventListener('click', e => {
+  const ficha = e.target.closest('[data-ficha]');
+  if (ficha) { e.stopPropagation(); abrirFicha(ficha.dataset.ficha); return; }
+
+  const th = e.target.closest('th[data-sort]');
+  if (th) {
+    const k = th.dataset.sort === 'fecha' || th.dataset.sort === 'hora' ? 'ms' : th.dataset.sort;
+    S.sort = { k, dir: S.sort.k === k ? -S.sort.dir : 1 };
+    renderPla();
+    return;
+  }
+
+  const fila = e.target.closest('tr[data-venta]');
+  if (fila && S.view === 'pla') { toggleSel(fila.dataset.venta); return; }
+
+  const venta = e.target.closest('.sale[data-venta]');
+  if (venta) abrirFicha(venta.dataset.venta);
+});
+
+// ---------- Arranque ----------
+(async function init() {
+  const hoy = new Date();
+  $('fDesde').value = ymd(hoy);
+  $('fHasta').value = ymd(hoy);
+  if (localStorage.getItem('vm_theme') === 'light') document.body.classList.add('light');
+  $('btnTheme').textContent = document.body.classList.contains('light') ? '☀️' : '🌙';
+  const guardadas = JSON.parse(localStorage.getItem('vm_cols_mov') || 'null');
+  S.cols = Array.isArray(guardadas) && guardadas.length
+    ? guardadas.filter(k => COL_KEYS.includes(k))
+    : COLS.filter(c => c.def).map(c => c.k);
+  if (await validarSesion()) await cargar();
+})();
+</script>
+</body>
+</html>
