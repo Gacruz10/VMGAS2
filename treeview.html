@@ -107,6 +107,33 @@ label.ck{display:flex;gap:6px;align-items:center;font-size:13px;padding:6px;bord
   .body{padding:8px 10px}
   .fgrid{grid-template-columns:1fr}
 }
+/* ---- Densidad escritorio ---- */
+main{max-width:1500px;padding:8px 10px;padding-bottom:110px}
+.top{padding:8px 12px}
+.summary{gap:8px}
+.summary .card{padding:7px 12px;min-width:120px;margin:0}
+.summary .card>div:nth-child(2){font-size:15px!important}
+.card{margin:6px 0}
+details>summary{padding:6px 10px;gap:8px}
+.dayhead{padding:6px 10px}
+.turnhead{padding:6px 10px}
+.purple{margin:6px}
+.purple>summary{padding:6px 10px}
+.trip{margin:5px}
+.body{padding:6px 10px}
+.strip{padding:5px 10px;gap:6px}
+.qbox{font-size:11px;padding:2px 6px;gap:3px}
+.stat .k{font-size:10px}
+@media(min-width:601px){
+  .sale{grid-template-columns:52px minmax(0,1fr) auto auto;padding:5px 10px;gap:8px}
+  .sale .det{grid-column:auto;justify-self:end;font-size:11px;order:2}
+  .sale .tot{min-width:110px;order:3}
+}
+/* ---- Edición en planilla ---- */
+td.editable{cursor:cell;box-shadow:inset 0 0 0 1px var(--line)}
+td.pend{background:rgba(232,130,12,.18)!important;font-weight:700}
+.cell-in{width:100%;min-width:90px;padding:3px 6px;min-height:28px;font-size:13px}
+#editHint{font-size:12px}
 </style>
 </head>
 <body>
@@ -127,6 +154,8 @@ label.ck{display:flex;gap:6px;align-items:center;font-size:13px;padding:6px;bord
     <button id="btnContraer">▲ Contraer todo</button>
     <div class="grow"></div>
     <button id="btnCols">Columnas</button>
+    <span id="editHint" class="muted" style="display:none">Tocá una celda para editarla</span>
+    <button id="btnEditar" title="Editar celdas de la planilla">✎ Editar</button>
     <button id="btnCsv">CSV</button>
   </div>
   <div class="filters" id="panelFiltros">
@@ -155,6 +184,16 @@ label.ck{display:flex;gap:6px;align-items:center;font-size:13px;padding:6px;bord
   <div class="row">
     <button class="primary" id="btnCopiar">Copiar selección</button>
     <button id="btnLimpiarSel">Quitar selección</button>
+  </div>
+</div>
+
+<div class="selbar" id="pendBar">
+  <div class="row between">
+    <b id="pendTxt"></b>
+    <div class="row">
+      <button id="pendDescartar">Descartar</button>
+      <button class="primary" id="pendGuardar">Guardar cambios</button>
+    </div>
   </div>
 </div>
 
@@ -302,7 +341,9 @@ const S = {
   dias: [],
   byId: new Map(),
   actual: null,
-  accion: null
+  accion: null,
+  editMode: false,
+  pend: new Map()
 };
 
 // ---------- Sesión ----------
@@ -349,6 +390,7 @@ function sumar(list) {
 }
 
 async function cargar() {
+  if (S.pend.size && !confirm('Hay cambios sin guardar en la planilla. ¿Descartarlos y cambiar de rango?')) return;
   const d1 = parseDay($('fDesde').value), d2 = parseDay($('fHasta').value);
   if (!d1 || !d2 || d2 < d1) return toast('Rango de fechas inválido');
   if ((d2 - d1) / 86400000 + 1 > 62) return toast('El rango máximo es de 62 días');
@@ -679,8 +721,7 @@ function turnoHtml(g, viajes, sueltas) {
   let cab;
   if (t) {
     cab = `<summary class="turnhead ${t.open ? '' : 'closed'}">
-      <span>TURNO: <b>${t.open ? '<span style="color:var(--red)">●</span> EN VIVO' : esc(t.id)}</b></span>
-      ${t.open ? `<span class="muted">${esc(t.id)}</span>` : ''}
+      <span>TURNO: <b>${esc(t.id)}</b></span>
       ${estadoPill(t.open)}
       <span class="grow"></span>
       <span class="muted">Apertura: ${hm(t.ap)}${t.open ? '' : ' · Cierre: ' + hm(t.ce)}</span>
@@ -754,11 +795,17 @@ function renderDet() {
 }
 
 // ---------- Planilla ----------
-function celda(c, v) {
-  const val = c.v(v);
-  if (c.t === 'm') return fm(val);
-  if (c.t === 'n') return fq(val);
-  return esc(val);
+const valorCelda = (c, v) => { const p = S.pend.get(v.id); return p && c.k in p ? p[c.k] : c.v(v); };
+
+function celdaHtml(c, v, i) {
+  const p = S.pend.get(v.id);
+  const pendiente = !!(p && c.k in p);
+  const val = valorCelda(c, v);
+  const txt = c.t === 'm' ? fm(val) : c.t === 'n' ? fq(val) : esc(val);
+  const editable = !!EDIT_MAP[c.k];
+  const cls = [c.t !== 'txt' ? 'r num' : '', i === 0 ? 'sticky' : '', pendiente ? 'pend' : '', editable && S.editMode ? 'editable' : ''].join(' ');
+  const data = editable ? ` data-edit="${c.k}" data-id="${esc(v.id)}"` : '';
+  return `<td class="${cls}"${data}>${txt}</td>`;
 }
 
 function ordenar(a, b) {
@@ -772,7 +819,7 @@ function renderPla() {
   const cols = visibleCols();
   const rows = S.ventas.filter(fOk).sort(ordenar);
   const sumas = {};
-  cols.forEach(c => { if (c.t !== 'txt') sumas[c.k] = rows.reduce((a, v) => a + (Number(c.v(v)) || 0), 0); });
+  cols.forEach(c => { if (c.t !== 'txt') sumas[c.k] = rows.reduce((a, v) => a + (Number(valorCelda(c, v)) || 0), 0); });
 
   const th = cols.map((c, i) => {
     const flecha = S.sort.k === c.k || (S.sort.k === 'ms' && (c.k === 'fecha' || c.k === 'hora'))
@@ -781,7 +828,7 @@ function renderPla() {
   }).join('');
 
   const body = rows.map(v => `<tr data-venta="${esc(v.id)}" class="${S.sel.has(v.id) ? 'sel' : ''}">
-    ${cols.map((c, i) => `<td class="${c.t !== 'txt' ? 'r num' : ''} ${i === 0 ? 'sticky' : ''}">${celda(c, v)}</td>`).join('')}
+    ${cols.map((c, i) => celdaHtml(c, v, i)).join('')}
     <td><button class="ghost" data-ficha="${esc(v.id)}" title="Ver / editar">⋯</button></td>
   </tr>`).join('');
 
@@ -796,6 +843,106 @@ function renderPla() {
     <tbody>${body}</tbody>
     <tfoot><tr>${pie}<td></td></tr></tfoot>
   </table></div>`;
+}
+
+// ---------- Edición en planilla ----------
+const EDIT_MAP = {
+  usuario: { f: 'USUARIO', t: 'txt', l: 'USUARIO' },
+  tipo: { f: 'TIPO', t: 'txt', l: 'TIPO' },
+  fecha: { f: 'FECHA', t: 'txt', l: 'FECHA' },
+  hora: { f: 'HORA', t: 'txt', l: 'HORA' },
+  cliente: { f: 'C', t: 'txt', l: 'CLIENTE' },
+  L10: { f: 'ALL10', t: 'int', l: 'LLENOS 10' },
+  L15: { f: 'ALL15', t: 'int', l: 'LLENOS 15' },
+  L45: { f: 'ALL45', t: 'int', l: 'LLENOS 45' },
+  V10: { f: 'AV10', t: 'int', l: 'VACÍOS 10' },
+  V15: { f: 'AV15', t: 'int', l: 'VACÍOS 15' },
+  V45: { f: 'AV45', t: 'int', l: 'VACÍOS 45' },
+  total: { f: 'TOTAL', t: 'int', l: 'TOTAL' },
+  efe: { f: 'E$', t: 'int', l: 'EFECTIVO' },
+  tra: { f: 'T$', t: 'int', l: 'TRANSF.' }
+};
+
+function setPend(id, k, raw) {
+  const meta = EDIT_MAP[k], v = S.byId.get(id);
+  const texto = String(raw ?? '').trim();
+  if (meta.t === 'int' && !/^\d*$/.test(texto)) { toast('Ingrese solo números'); return; }
+  const nuevo = meta.t === 'int' ? num(texto) : texto;
+  const original = meta.t === 'int' ? num(v.raw[meta.f]) : String(v.raw[meta.f] ?? '');
+  const p = { ...(S.pend.get(id) || {}) };
+  if (nuevo === original) delete p[k]; else p[k] = nuevo;
+  if (Object.keys(p).length) S.pend.set(id, p); else S.pend.delete(id);
+}
+
+function abrirEdicionCelda(td) {
+  if (td.querySelector('input')) return;
+  const id = td.dataset.id, k = td.dataset.edit;
+  const v = S.byId.get(id);
+  if (!v) return;
+  const meta = EDIT_MAP[k];
+  td.innerHTML = `<input class="cell-in" value="${esc(valorCelda(colByKey(k), v))}" ${meta.t === 'int' ? 'inputmode="numeric" pattern="[0-9]*"' : ''}>`;
+  const inp = td.querySelector('input');
+  inp.focus(); inp.select();
+  let cerrado = false;
+  const cerrar = guardar => {
+    if (cerrado) return;
+    cerrado = true;
+    if (guardar) setPend(id, k, inp.value);
+    renderPla();
+    renderSel();
+  };
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); cerrar(true); }
+    if (e.key === 'Escape') cerrar(false);
+  });
+  inp.addEventListener('blur', () => cerrar(true));
+}
+
+function renderPendBar() {
+  const n = [...S.pend.values()].reduce((a, p) => a + Object.keys(p).length, 0);
+  $('pendBar').classList.toggle('show', n > 0);
+  $('pendTxt').textContent = `${n} cambio(s) en ${S.pend.size} operación(es) sin guardar`;
+}
+
+function guardarPendientes() {
+  const filas = [];
+  S.pend.forEach((p, id) => {
+    const v = S.byId.get(id);
+    Object.entries(p).forEach(([k, nuevo]) => {
+      const meta = EDIT_MAP[k];
+      filas.push({
+        id, k, f: meta.f, t: meta.t, label: meta.l,
+        antes: meta.t === 'int' ? num(v.raw[meta.f]) : String(v.raw[meta.f] ?? ''),
+        despues: nuevo,
+        operacion: `${v.fecha} ${v.hora.slice(0, 5)} · ${v.cliente || '—'}`
+      });
+    });
+  });
+  if (!filas.length) return;
+  const cuerpo = `<div style="max-height:40vh;overflow:auto"><table style="width:100%;font-size:12px">
+    <thead><tr><th style="text-align:left">Operación</th><th style="text-align:left">Campo</th><th style="text-align:right">Antes</th><th style="text-align:right">Después</th></tr></thead>
+    <tbody>${filas.map(r => `<tr><td>${esc(r.operacion)}</td><td>${esc(r.label)}</td><td class="r">${esc(r.antes)}</td><td class="r"><b>${esc(r.despues)}</b></td></tr>`).join('')}</tbody>
+    </table></div>`;
+  pedirConfirmacion({
+    titulo: `Confirmar ${filas.length} cambio(s)`,
+    cuerpo,
+    onOk: async (motivo, pinTipo) => {
+      const porDoc = new Map();
+      filas.forEach(r => {
+        if (!porDoc.has(r.id)) porDoc.set(r.id, {});
+        porDoc.get(r.id)[r.f] = r.t === 'int' ? num(r.despues) : r.despues;
+      });
+      const batch = writeBatch(db);
+      porDoc.forEach((datos, id) => batch.update(doc(db, 'movimientos', id), datos));
+      batch.set(doc(collection(db, 'auditoria')), {
+        tipo: 'EDITAR_PLANILLA', usuario: S.usuarioSesion, pinTipo, motivo,
+        cambios: filas.map(r => ({ movId: r.id, campo: r.f, antes: r.antes, despues: r.despues })),
+        fecha_hora: serverTimestamp()
+      });
+      await batch.commit();
+      S.pend.clear();
+    }
+  });
 }
 
 // ---------- Resumen del rango ----------
@@ -829,6 +976,7 @@ function toggleSel(id) {
 }
 
 function renderSel() {
+  renderPendBar();
   const vs = [...S.sel].map(id => S.byId.get(id)).filter(Boolean);
   $('selbar').classList.toggle('show', vs.length > 0);
   if (!vs.length) return;
@@ -1052,6 +1200,16 @@ $('btnColsBasicas').addEventListener('click', () => { setCols(COLS.filter(c => c
 $('btnColsTodas').addEventListener('click', () => { setCols(COL_KEYS); abrirCols(); });
 $('colsGrid').addEventListener('change', () => setCols([...$('colsGrid').querySelectorAll('input:checked')].map(i => i.value)));
 $('btnCsv').addEventListener('click', exportarCSV);
+$('btnEditar').addEventListener('click', () => {
+  S.editMode = !S.editMode;
+  if (S.editMode) { S.sel.clear(); setView('pla'); }
+  $('btnEditar').classList.toggle('on', S.editMode);
+  $('editHint').style.display = S.editMode ? 'inline' : 'none';
+  renderPla();
+  renderSel();
+});
+$('pendGuardar').addEventListener('click', guardarPendientes);
+$('pendDescartar').addEventListener('click', () => { S.pend.clear(); renderPla(); renderSel(); });
 $('btnCerrarFicha').addEventListener('click', () => $('fichaModal').classList.remove('show'));
 $('fichaModal').addEventListener('click', e => { if (e.target.id === 'fichaModal') $('fichaModal').classList.remove('show'); });
 $('colsModal').addEventListener('click', e => { if (e.target.id === 'colsModal') $('colsModal').classList.remove('show'); });
@@ -1068,8 +1226,10 @@ document.addEventListener('click', e => {
     renderPla();
     return;
   }
+  const celdaEd = e.target.closest('td[data-edit]');
+  if (celdaEd && S.editMode && !celdaEd.querySelector('input')) { abrirEdicionCelda(celdaEd); return; }
   const fila = e.target.closest('tr[data-venta]');
-  if (fila && S.view === 'pla') { toggleSel(fila.dataset.venta); return; }
+  if (fila && S.view === 'pla' && !S.editMode) { toggleSel(fila.dataset.venta); return; }
   const venta = e.target.closest('.sale[data-venta]');
   if (venta) abrirFicha(venta.dataset.venta);
 });
