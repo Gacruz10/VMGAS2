@@ -3,109 +3,148 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>VM Gas · Visor de movimientos</title>
+<title>VM Gas · Visor Pro</title>
 <style>
-:root{--bg:#0b1020;--surface:#141b2e;--surface2:#1c2540;--border:#2a3558;--text:#e7ecf7;--dim:#8a95b5;--accent:#38bdf8;--pos:#34d399;--neg:#f87171;--warn:#fbbf24}
-body.light{--bg:#f4f6fb;--surface:#ffffff;--surface2:#eef1f8;--border:#d5dbea;--text:#17213a;--dim:#5b6785;--accent:#0369a1;--pos:#047857;--neg:#b91c1c;--warn:#a16207}
+:root{--bg:#eef1f6;--card:#ffffff;--head:#ffffff;--line:#dfe4ee;--text:#1c2638;--dim:#6b7689;--blue:#1e6fd9;--green:#0f9d58;--orange:#e8820c;--red:#e5484d;--purple:#7c3aed;--purpleBg:#f3ecff;--shadow:0 1px 2px rgba(16,24,40,.06),0 2px 8px rgba(16,24,40,.05)}
+body.dark{--bg:#0e1420;--card:#18213a;--head:#141c30;--line:#2a3555;--text:#e6ebf5;--dim:#8f9bb8;--blue:#4c9bff;--green:#34d399;--orange:#fb923c;--red:#f87171;--purple:#a78bfa;--purpleBg:#231a3d;--shadow:none}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px;-webkit-text-size-adjust:100%}
-header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top,0px))}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px;-webkit-text-size-adjust:100%}
+.top{position:sticky;top:0;z-index:20;background:var(--head);box-shadow:var(--shadow);padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top,0px))}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.between{justify-content:space-between}
-h1{font-size:16px;margin:0;letter-spacing:.5px}
-input,select,button{font:inherit;color:var(--text);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;min-height:38px}
-input[type=date]{color-scheme:dark}
-body.light input[type=date]{color-scheme:light}
-button{cursor:pointer}
-button.primary{background:var(--accent);color:#06121f;border-color:var(--accent);font-weight:700}
-button.on{border-color:var(--accent);color:var(--accent)}
+.grow{flex:1}
+.brand{font-weight:900;letter-spacing:.5px;color:var(--blue);font-size:15px}
+.brand span{color:var(--dim);font-weight:600}
+input,select,button,textarea{font:inherit;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-height:36px}
+input[type=date]{color-scheme:light}
+body.dark input[type=date]{color-scheme:dark}
+button{cursor:pointer;white-space:nowrap}
+button.primary{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.ghost{background:transparent}
+button.on{border-color:var(--blue);color:var(--blue);font-weight:700}
 .tabs{display:flex;gap:6px;margin-top:8px}
-.tab{flex:1}
-main{padding:12px;padding-bottom:120px;max-width:1200px;margin:0 auto}
-.chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
-.chip{background:var(--surface2);border:1px solid var(--border);border-radius:999px;padding:3px 9px;font-size:12px;white-space:nowrap}
-.badge-on{background:rgba(251,191,36,.15);color:var(--warn);padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700}
+.tabs button{flex:1}
+main{padding:12px;padding-bottom:110px;max-width:1280px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);margin:10px 0;overflow:hidden}
+details{margin:0}
+details>summary{list-style:none;cursor:pointer;padding:10px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"▸";color:var(--dim);transition:transform .15s}
+details[open]>summary::before{transform:rotate(90deg)}
+.dayhead{background:var(--head);border-left:4px solid var(--blue)}
+.turnhead{border-left:4px solid var(--red)}
+.turnhead.closed{border-left-color:var(--dim)}
+.purple{background:var(--purpleBg);border:1px solid var(--purple);border-radius:10px;margin:10px;overflow:hidden}
+.purple>summary{color:var(--purple);font-weight:800}
+.trip{border:1px solid var(--line);border-radius:10px;margin:8px;background:var(--card)}
+.trip>summary{background:var(--bg);border-radius:10px}
+.body{padding:10px 14px}
+.pill{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;letter-spacing:.3px;white-space:nowrap}
+.p-live{background:rgba(229,72,77,.12);color:var(--red);border:1px solid var(--red)}
+.p-closed{background:var(--bg);color:var(--dim);border:1px solid var(--line)}
+.p-route{background:rgba(232,130,12,.12);color:var(--orange);border:1px solid var(--orange)}
+.p-done{background:rgba(15,157,88,.12);color:var(--green);border:1px solid var(--green)}
+.p-tag{background:rgba(30,111,217,.1);color:var(--blue);border:1px solid var(--blue)}
 .muted{color:var(--dim);font-size:12px}
 .num{font-variant-numeric:tabular-nums;white-space:nowrap}
-.pos{color:var(--pos)}.neg{color:var(--neg)}.warn{color:var(--warn)}
-details{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin:8px 0;overflow:hidden}
-details>summary{list-style:none;cursor:pointer;padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-details>summary::-webkit-details-marker{display:none}
-details[open]>summary{border-bottom:1px solid var(--border);background:var(--surface2)}
-details details{margin:6px 0;border-radius:10px}
-.inner{padding:8px 10px}
-.sale{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:8px;border-radius:8px;cursor:pointer}
-.sale:active{background:var(--surface2)}
-.sale+.sale{border-top:1px dashed var(--border)}
-.tbl-wrap{overflow:auto;border:1px solid var(--border);border-radius:12px;background:var(--surface);-webkit-overflow-scrolling:touch;max-height:70vh}
+.neg{color:var(--red)!important}
+.money{font-weight:800;color:var(--green)}
+.money.blue{color:var(--blue)}
+.strip{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 14px;border-top:1px solid var(--line)}
+.lbl{font-size:11px;font-weight:800;letter-spacing:.4px;margin-right:4px}
+.l-ini{color:var(--green)}.l-fin{color:var(--orange)}.l-tot{color:var(--blue)}
+.qbox{display:inline-flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 7px;font-size:12px;font-variant-numeric:tabular-nums}
+.qbox b.o{color:var(--orange)}
+.qbox .sep{color:var(--dim)}
+.stat{display:flex;gap:6px;align-items:baseline}
+.stat .k{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.3px}
+.sale{display:grid;grid-template-columns:auto 1fr auto;gap:4px 10px;align-items:center;padding:9px 10px;border-top:1px solid var(--line);cursor:pointer}
+.sale:hover{background:var(--bg)}
+.sale .hora{font-weight:700;color:var(--dim);font-size:12px}
+.sale .cli{font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.sale .det{grid-column:2/-1;display:flex;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--dim);align-items:center}
+.sale .tot{font-weight:800;text-align:right}
+.tbl-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--card);-webkit-overflow-scrolling:touch;max-height:72vh}
 table{border-collapse:separate;border-spacing:0;width:100%;min-width:max-content}
-th,td{padding:7px 9px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
-th{position:sticky;top:0;background:var(--surface2);z-index:2;cursor:pointer;font-size:12px;color:var(--dim)}
-td.r,th.r{text-align:right}
-td.sticky,th.sticky{position:sticky;left:0;background:var(--surface);z-index:1}
-th.sticky{z-index:3;background:var(--surface2)}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{position:sticky;top:0;background:var(--head);z-index:2;cursor:pointer;font-size:12px;color:var(--dim);font-weight:700}
+td.r,th.r{text-align:right;font-variant-numeric:tabular-nums}
+td.sticky,th.sticky{position:sticky;left:0;background:var(--card);z-index:1}
+th.sticky{z-index:3;background:var(--head)}
 tbody tr{cursor:pointer}
-tbody tr.sel td{background:rgba(56,189,248,.16)}
-tfoot td{font-weight:700;background:var(--surface2);position:sticky;bottom:0}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center;z-index:50}
+tbody tr:hover td{background:var(--bg)}
+tbody tr.sel td{background:rgba(30,111,217,.14)}
+tfoot td{font-weight:800;background:var(--head);position:sticky;bottom:0}
+.modal{position:fixed;inset:0;background:rgba(10,15,30,.55);display:none;align-items:flex-end;justify-content:center;z-index:50}
 .modal.show{display:flex}
-.sheet{background:var(--surface);width:100%;max-width:640px;max-height:88vh;overflow:auto;border-radius:16px 16px 0 0;padding:14px;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+.sheet{background:var(--card);width:100%;max-width:680px;max-height:90vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
 @media(min-width:720px){.modal{align-items:center}.sheet{border-radius:16px}}
-dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0}
-dt{color:var(--dim);font-size:12px}
-dd{margin:0;word-break:break-word}
-.selbar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--accent);padding:10px 12px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));display:none;z-index:30}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fgrid label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--dim)}
+.fgrid input{color:var(--text)}
+.fgrid input.changed{border-color:var(--orange);background:rgba(232,130,12,.08)}
+.warnbox{background:rgba(229,72,77,.08);border:1px solid var(--red);color:var(--red);padding:8px 10px;border-radius:8px;font-size:12px;margin:10px 0}
+.selbar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:2px solid var(--blue);padding:10px 14px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));display:none;z-index:30;box-shadow:0 -4px 16px rgba(0,0,0,.08)}
 .selbar.show{display:block}
-.loader{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35);z-index:60;color:#fff;font-weight:700}
+.loader{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.3);z-index:60;color:#fff;font-weight:700}
 .loader.show{display:flex}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;background:var(--surface2);border:1px solid var(--border);padding:10px 14px;border-radius:10px;display:none;z-index:70;max-width:90vw}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:100px;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);padding:10px 16px;border-radius:10px;display:none;z-index:70;max-width:90vw}
 .toast.show{display:block}
 .filters{display:none;margin-top:8px}
 .filters.open{display:block}
 .cols-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 @media(min-width:720px){.cols-grid{grid-template-columns:repeat(3,1fr)}}
-label.ck{display:flex;gap:6px;align-items:center;font-size:13px;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--surface2)}
+label.ck{display:flex;gap:6px;align-items:center;font-size:13px;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.summary{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 2px}
+.summary .card{margin:0;padding:10px 14px;min-width:140px;flex:1}
+@media(max-width:600px){
+  .sale{grid-template-columns:1fr auto}
+  .sale .hora{display:none}
+  .sale .det{grid-column:1/-1}
+  .strip{padding:8px 10px}
+  .purple{margin:8px 4px}
+  .trip{margin:6px 4px}
+  .body{padding:8px 10px}
+  .fgrid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
 
-<header>
-  <div class="row between">
-    <h1>📊 Visor de movimientos</h1>
-    <div class="row">
-      <button id="btnTheme" title="Tema">🌙</button>
-      <button id="btnVolver" title="Volver">⬅</button>
-    </div>
-  </div>
-  <div class="row" style="margin-top:8px">
+<div class="top">
+  <div class="row">
+    <div class="brand">VM GAS <span>· VISOR PRO</span></div>
+    <div class="grow"></div>
     <input type="date" id="fDesde" aria-label="Desde">
     <input type="date" id="fHasta" aria-label="Hasta">
     <button class="primary" id="btnBuscar">Buscar</button>
+    <button id="btnTheme" class="ghost" title="Tema">🌙</button>
+    <button id="btnVolver" class="ghost" title="Volver">⬅</button>
+  </div>
+  <div class="row" style="margin-top:8px">
     <button id="btnFiltros">Filtros</button>
+    <button id="btnDesplegar">▼ Desplegar todo</button>
+    <button id="btnContraer">▲ Contraer todo</button>
+    <div class="grow"></div>
+    <button id="btnCols">Columnas</button>
+    <button id="btnCsv">CSV</button>
   </div>
   <div class="filters" id="panelFiltros">
     <div class="row">
       <input id="fQ" placeholder="Cliente, usuario o N°" style="flex:1;min-width:160px">
       <select id="fTipo"><option value="">Todos los tipos</option></select>
-      <select id="fUsr"><option value="">Todos los usuarios</option></select>
+      <select id="fUsr"><option value="">Todos los choferes/usuarios</option></select>
       <button id="btnLimpiarF">Limpiar</button>
     </div>
   </div>
   <div class="tabs">
-    <button class="tab on" data-view="det">Detallada</button>
-    <button class="tab" data-view="pla">Planilla</button>
+    <button class="on" data-view="det">Detallada</button>
+    <button data-view="pla">Planilla</button>
   </div>
-</header>
+</div>
 
 <main>
-  <div class="row between" style="margin-bottom:6px">
-    <div class="muted" id="resumen"></div>
-    <div class="row">
-      <button id="btnCompacto" title="Números compactos">123</button>
-      <button id="btnCols">Columnas</button>
-      <button id="btnCsv">CSV</button>
-    </div>
-  </div>
+  <div class="summary" id="resumenRango"></div>
   <div id="vistaDet"></div>
   <div id="vistaPla" style="display:none"></div>
   <div id="vacio" class="muted" style="text-align:center;padding:40px;display:none">Sin registros en el rango seleccionado.</div>
@@ -119,13 +158,29 @@ label.ck{display:flex;gap:6px;align-items:center;font-size:13px;padding:6px;bord
   </div>
 </div>
 
+<!-- Ficha: ver y editar -->
 <div class="modal" id="fichaModal"><div class="sheet">
-  <div class="row between"><b>Ficha de operación</b><button id="btnCerrarFicha">✖</button></div>
+  <div class="row"><b class="grow" style="font-size:15px">Operación</b><button id="btnCerrarFicha" class="ghost">✖</button></div>
   <div id="fichaBody" style="margin-top:10px"></div>
 </div></div>
 
+<!-- Confirmación con PIN -->
+<div class="modal" id="confModal"><div class="sheet" style="max-width:480px">
+  <div class="row"><b class="grow" id="confTitulo" style="font-size:15px"></b><button id="confX" class="ghost">✖</button></div>
+  <div id="confBody" style="margin:10px 0" class="muted"></div>
+  <label class="muted" style="display:block;margin-top:8px">Motivo (obligatorio)</label>
+  <textarea id="confMotivo" rows="2" style="width:100%"></textarea>
+  <label class="muted" style="display:block;margin-top:8px">PIN (dinámico o maestro)</label>
+  <input id="confPin" type="password" autocomplete="off" autocapitalize="off" style="width:100%">
+  <div class="row" style="margin-top:14px;justify-content:flex-end">
+    <button id="confCancelar">Cancelar</button>
+    <button id="confOk" class="primary">Confirmar</button>
+  </div>
+</div></div>
+
+<!-- Columnas -->
 <div class="modal" id="colsModal"><div class="sheet">
-  <div class="row between"><b>Columnas</b><button id="btnCerrarCols">✖</button></div>
+  <div class="row"><b class="grow">Columnas de la planilla</b><button id="btnCerrarCols" class="ghost">✖</button></div>
   <div class="row" style="margin:10px 0">
     <button id="btnColsBasicas">Básicas</button>
     <button id="btnColsTodas">Todas</button>
@@ -138,7 +193,7 @@ label.ck{display:flex;gap:6px;align-items:center;font-size:13px;padding:6px;bord
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getFirestore, doc, getDoc, getDocs, collection, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, getDocs, collection, query, where, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
@@ -159,8 +214,12 @@ const normU = v => String(v ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const ymd = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 const parseDay = s => { if (!s) return null; const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nf = new Intl.NumberFormat('es-AR');
+const fm = n => { n = Math.round(num(n)); return (n < 0 ? '-' : '') + '$' + nf.format(Math.abs(n)); };
+const fq = n => nf.format(Math.round(num(n)));
 const hm = ms => ms ? new Date(ms).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }) : '--:--';
-const qty = n => String(Math.round(num(n)));
+const diaLabel = ms => ms ? new Date(ms).toLocaleDateString('es-AR') : '';
+const qCls = n => num(n) < 0 ? 'neg' : '';
 
 function parseFH(f, h) {
   if (!f) return 0;
@@ -168,17 +227,6 @@ function parseFH(f, h) {
   if (p.length !== 3 || p.some(isNaN)) return 0;
   const t = String(h || '0:0:0').split(':').map(Number);
   return new Date(p[2], p[1] - 1, p[0], t[0] || 0, t[1] || 0, t[2] || 0).getTime();
-}
-
-function money(n) {
-  n = Math.round(num(n));
-  if (S.compact) {
-    const a = Math.abs(n);
-    if (a >= 1e6) return '$' + (n / 1e6).toFixed(2).replace('.', ',') + 'M';
-    if (a >= 1e3) return '$' + Math.round(n / 1e3) + 'k';
-    return '$' + n;
-  }
-  return '$' + n.toLocaleString('es-AR');
 }
 
 function toast(msg) {
@@ -190,7 +238,7 @@ function toast(msg) {
 }
 const loader = on => $('loader').classList.toggle('show', !!on);
 
-// ---------- Columnas ----------
+// ---------- Columnas de la planilla ----------
 const COLS = [
   { k: 'usuario', l: 'USUARIO', t: 'txt', def: 1, v: m => m.usuario },
   { k: 'tipo', l: 'TIPO', t: 'txt', def: 1, v: m => m.tipo },
@@ -224,17 +272,37 @@ const COL_KEYS = COLS.map(c => c.k);
 const colByKey = k => COLS.find(c => c.k === k);
 const visibleCols = () => S.cols.map(colByKey).filter(Boolean);
 
+// Campos editables de una operación
+const EDITABLE = [
+  { k: 'USUARIO', l: 'Usuario', t: 'txt' },
+  { k: 'C', l: 'Cliente', t: 'txt' },
+  { k: 'TIPO', l: 'Tipo', t: 'txt' },
+  { k: 'FECHA', l: 'Fecha (dd/mm/aaaa)', t: 'txt' },
+  { k: 'HORA', l: 'Hora (hh:mm:ss)', t: 'txt' },
+  { k: 'ALL10', l: 'Llenos 10', t: 'int' },
+  { k: 'ALL15', l: 'Llenos 15', t: 'int' },
+  { k: 'ALL45', l: 'Llenos 45', t: 'int' },
+  { k: 'AV10', l: 'Vacíos 10', t: 'int' },
+  { k: 'AV15', l: 'Vacíos 15', t: 'int' },
+  { k: 'AV45', l: 'Vacíos 45', t: 'int' },
+  { k: 'TOTAL', l: 'Total $', t: 'int' },
+  { k: 'E$', l: 'Efectivo $', t: 'int' },
+  { k: 'T$', l: 'Transferencia $', t: 'int' }
+];
+
 // ---------- Estado ----------
 const S = {
   view: 'det',
-  compact: localStorage.getItem('vm_cmp') ? localStorage.getItem('vm_cmp') === '1' : window.innerWidth < 720,
+  usuarioSesion: 'SISTEMA',
   cols: [],
   sel: new Set(),
   sort: { k: 'ms', dir: -1 },
   f: { q: '', tipo: '', usr: '' },
-  ventas: [],   // todas las ventas del rango
-  grupos: [],   // turnos + "sin turno"
-  byId: new Map()
+  ventas: [],
+  dias: [],
+  byId: new Map(),
+  actual: null,
+  accion: null
 };
 
 // ---------- Sesión ----------
@@ -248,6 +316,7 @@ async function validarSesion() {
     const s = await getDoc(doc(db, 'tokens', TOKEN));
     const d = s.exists() ? s.data() : null;
     if (!d || (d.expira && Date.now() > d.expira)) { location.replace('inicio.html'); return false; }
+    S.usuarioSesion = d.usuario || 'SISTEMA';
     return true;
   } catch (e) {
     console.error(e);
@@ -256,7 +325,7 @@ async function validarSesion() {
   }
 }
 
-// ---------- Carga y armado del modelo ----------
+// ---------- Carga y modelo ----------
 function diasStrings(d1, fin) {
   const out = [];
   for (let t = d1.getTime(); t <= fin; t += 86400000) {
@@ -267,6 +336,16 @@ function diasStrings(d1, fin) {
     if (b !== a) out.push(b);
   }
   return out;
+}
+
+const emptyT = () => ({ n: 0, tot: 0, efe: 0, tra: 0, L: { 10: 0, 15: 0, 45: 0 }, V: { 10: 0, 15: 0, 45: 0 } });
+function sumar(list) {
+  const t = emptyT();
+  list.forEach(v => {
+    t.n++; t.tot += v.total; t.efe += v.efe; t.tra += v.tra;
+    SIZES.forEach(k => { t.L[k] += v.L[k]; t.V[k] += v.V[k]; });
+  });
+  return t;
 }
 
 async function cargar() {
@@ -287,21 +366,18 @@ async function cargar() {
       getDocs(query(collection(db, 'ccarga'), where('timestampMs', '>=', ini), where('timestampMs', '<=', fin)))
     ]);
 
-    // Usuarios: nombre para mostrar -> id de chofer
     const mapU = {};
     uSnap.forEach(x => {
       const u = x.data();
       [x.id, u.nombre_mostrar, u.nombre_completo].forEach(v => { if (v) mapU[normU(v)] = normU(x.id); });
     });
 
-    // Turnos (sin duplicados)
     const turnos = new Map();
     [...tSnap.docs, ...tAbSnap.docs].forEach(x => {
       if (turnos.has(x.id)) return;
       const t = x.data();
       turnos.set(x.id, {
-        ...t,
-        id: x.id,
+        ...t, id: x.id,
         ap: num(t.timestampAperturaMs),
         ce: t.timestampCierreMs ? num(t.timestampCierreMs) : Infinity,
         open: t.estado === 'ABIERTO',
@@ -315,7 +391,6 @@ async function cargar() {
       return r;
     };
 
-    // Viajes (ccarga)
     const trips = cSnap.docs.map(x => {
       const r = x.data();
       const open = ['EN_RUTA', 'COMPRA_EN_RUTA'].includes(r.estado);
@@ -337,15 +412,13 @@ async function cargar() {
         ms: num(r.timestampMs),
         llegMs,
         open,
-        usaExp: open || !hasLl,   // si no hay conteo de regreso, se estima como el control de stock
+        usaExp: open || !hasLl,
         sL, sV, lL, lV,
         ventas: [],
-        turnoId: null,
-        raw: r
+        turnoId: null
       };
     });
 
-    // Ventas (movimientos): FECHA es texto, se consulta por día en tandas de 30
     const movsRaw = [];
     for (let i = 0; i < dias.length; i += 30) {
       const snap = await getDocs(query(collection(db, 'movimientos'), where('FECHA', 'in', dias.slice(i, i + 30))));
@@ -359,8 +432,7 @@ async function cargar() {
         V[k] = num(r[`AV${k}`]) + (r.esPagoDeuda ? num(r[`dev${k}`]) : 0);
       });
       return {
-        id,
-        raw: r,
+        id, raw: r,
         ms: parseFH(r.FECHA, r.HORA),
         fecha: r.FECHA || '',
         hora: String(r.HORA || ''),
@@ -379,7 +451,7 @@ async function cargar() {
       };
     }).filter(v => v.ms >= ini && v.ms <= fin);
 
-    // 1) Asignar cada venta a un viaje: por ID de viaje, o por chofer y ventana horaria
+    // Ventas -> viaje (por ID o por chofer y ventana horaria)
     ventas.forEach(v => {
       let t = null;
       if (v.idViaje) t = trips.find(x => x.idViaje === v.idViaje) || null;
@@ -393,13 +465,13 @@ async function cargar() {
       if (t) { v.viajeId = t.idViaje; t.ventas.push(v); }
     });
 
-    // 2) Turno de cada viaje
+    // Viaje -> turno
     trips.forEach(t => {
       const tn = (t.idTurno && turnos.get(t.idTurno)) || turnoEnMs(t.ms);
       t.turnoId = tn ? tn.id : null;
     });
 
-    // 3) Turno de cada venta: si está en un viaje, el del viaje; si no, ID de turno o por hora
+    // Venta -> turno
     ventas.forEach(v => {
       if (v.viajeId) {
         const tr = trips.find(x => x.idViaje === v.viajeId);
@@ -410,7 +482,7 @@ async function cargar() {
       v.turnoId = tn ? tn.id : null;
     });
 
-    // 4) Lo que tiene que haber en cada viaje (igual que el control de stock)
+    // Lo que tiene que haber en cada viaje
     trips.forEach(t => {
       const sumL = {}, sumV = {};
       SIZES.forEach(k => { sumL[k] = 0; sumV[k] = 0; });
@@ -422,7 +494,7 @@ async function cargar() {
       });
     });
 
-    // 5) Grupos: uno por turno, más "Sin turno"
+    // Grupos por turno
     const grupos = new Map();
     const grupo = id => {
       const k = id || '__sin';
@@ -433,14 +505,13 @@ async function cargar() {
     trips.forEach(t => grupo(t.turnoId).viajes.push(t));
     ventas.forEach(v => { if (!v.viajeId) grupo(v.turnoId).sueltas.push(v); });
 
-    // 6) Stock teórico por turno (misma lógica que controlstock)
+    // Stock teórico por turno (misma lógica que controlstock)
     grupos.forEach(g => {
       const t = g.turno;
       if (!t) return;
       const tot = { L: {}, V: {} }, calle = { L: {}, V: {} };
       SIZES.forEach(k => {
-        tot.L[k] = num(t.ini?.[`l${k}`]);
-        tot.V[k] = num(t.ini?.[`v${k}`]);
+        tot.L[k] = num(t.ini?.[`l${k}`]); tot.V[k] = num(t.ini?.[`v${k}`]);
         calle.L[k] = 0; calle.V[k] = 0;
       });
       g.viajes.forEach(x => SIZES.forEach(k => {
@@ -454,16 +525,28 @@ async function cargar() {
       g.stock = { tot, calle, plat };
     });
 
-    // Ordenar: turnos más nuevos primero, "sin turno" al final
-    S.grupos = [...grupos.values()].sort((a, b) => {
+    // Días: turnos agrupados por fecha de apertura; "sin turno" al final
+    const porDia = new Map();
+    [...grupos.values()].forEach(g => {
+      const k = g.turno ? diaLabel(g.turno.ap) : '__sin';
+      if (!porDia.has(k)) porDia.set(k, { key: k, label: g.turno ? k : 'SIN TURNO', ms: g.turno ? g.turno.ap : 0, grupos: [] });
+      porDia.get(k).grupos.push(g);
+    });
+    const diasOrdenados = [...porDia.values()].sort((a, b) => {
+      if (a.key === '__sin') return 1;
+      if (b.key === '__sin') return -1;
+      return b.ms - a.ms;
+    });
+    diasOrdenados.forEach(d => d.grupos.sort((a, b) => {
       if (!a.turno) return 1;
       if (!b.turno) return -1;
-      return b.turno.ap - a.turno.ap;
-    });
+      return a.turno.ap - b.turno.ap;
+    }));
+
+    S.dias = diasOrdenados;
     S.ventas = ventas;
     S.byId = new Map(ventas.map(v => [v.id, v]));
     S.sel.clear();
-
     cargarFiltros();
     renderAll();
   } catch (e) {
@@ -479,10 +562,7 @@ function fOk(v) {
   const f = S.f;
   if (f.tipo && v.tipo !== f.tipo) return false;
   if (f.usr && v.chofer !== f.usr) return false;
-  if (f.q) {
-    const q = f.q.toLowerCase();
-    if (!`${v.cliente} ${v.usuario} ${v.id}`.toLowerCase().includes(q)) return false;
-  }
+  if (f.q && !`${v.cliente} ${v.usuario} ${v.id}`.toLowerCase().includes(f.q.toLowerCase())) return false;
   return true;
 }
 const filtrosActivos = () => !!(S.f.q || S.f.tipo || S.f.usr);
@@ -494,145 +574,190 @@ function cargarFiltros() {
   const selT = $('fTipo'), selU = $('fUsr');
   const prevT = S.f.tipo, prevU = S.f.usr;
   selT.innerHTML = '<option value="">Todos los tipos</option>' + tipos.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
-  selU.innerHTML = '<option value="">Todos los usuarios</option>' + [...usr].map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
+  selU.innerHTML = '<option value="">Todos los choferes/usuarios</option>' + [...usr].map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join('');
   selT.value = tipos.includes(prevT) ? prevT : '';
   selU.value = usr.has(prevU) ? prevU : '';
   S.f.tipo = selT.value; S.f.usr = selU.value;
 }
 
-// ---------- Render general ----------
-function renderAll() {
-  renderDet();
-  renderPla();
-  renderSel();
-  const enDet = S.view === 'det';
-  $('vistaDet').style.display = enDet ? 'block' : 'none';
-  $('vistaPla').style.display = enDet ? 'none' : 'block';
-  $('btnCompacto').classList.toggle('on', S.compact);
-  const filtradas = S.ventas.filter(fOk);
-  const tot = filtradas.reduce((a, v) => a + v.total, 0);
-  $('resumen').textContent = enDet
-    ? `${S.grupos.length} turno(s) · ${S.ventas.length} ventas`
-    : `${filtradas.length} ventas · ${money(tot)}`;
-  const hayAlgo = S.grupos.some(g => g.viajes.length || g.sueltas.length);
-  $('vacio').style.display = hayAlgo || S.ventas.length ? 'none' : 'block';
+// ---------- Componentes visuales ----------
+function qbox(label, l, v) {
+  return `<span class="qbox"><span class="muted">${label}</span> <b class="${qCls(l)}">${fq(l)}</b><span class="sep">|</span><b class="o ${qCls(v)}">${fq(v)}</b></span>`;
+}
+const estadoPill = open => open ? '<span class="pill p-live">● EN VIVO</span>' : '<span class="pill p-closed">CERRADO</span>';
+
+function stripLV(titulo, cls, o) {
+  return `<span class="lbl ${cls}">${titulo}</span>` + SIZES.map(k => qbox(k, o.L[k], o.V[k])).join('');
 }
 
-// ---------- Vista Detallada ----------
-const lv = o => SIZES.map(k => `${k}kg ${qty(o.L[k])}L/${qty(o.V[k])}V`).join(' · ');
-
-function tablaViaje(x) {
-  const titulo = x.usaExp ? 'Volvió (estimado)' : 'Volvió';
-  const filas = SIZES.map(k => `
-    <tr>
-      <td>${k} kg</td>
-      <td class="r num">${qty(x.sL[k])}</td><td class="r num">${qty(x.sV[k])}</td>
-      <td class="r num">${qty(x.exp.L[k])}</td><td class="r num">${qty(x.exp.V[k])}</td>
-    </tr>`).join('');
-  return `<div class="tbl-wrap" style="max-height:none"><table>
-    <thead><tr><th>Presentación</th><th class="r">Salió L</th><th class="r">Salió V</th><th class="r">${titulo} L</th><th class="r">${titulo} V</th></tr></thead>
-    <tbody>${filas}</tbody></table></div>`;
-}
-
-function filaVenta(v) {
-  const det = SIZES.filter(k => v.L[k] || v.V[k]).map(k => `${k}: ${v.L[k]}L/${v.V[k]}V`).join(' · ') || 'sin envases';
-  const pagos = [v.efe ? `Efe ${money(v.efe)}` : '', v.tra ? `Transf ${money(v.tra)}` : ''].filter(Boolean).join(' · ');
+function ventaHtml(v) {
+  const llenos = SIZES.filter(k => v.L[k] || v.V[k]).map(k => `<span class="pill p-tag">${k}kg ${fq(v.L[k])}L/${fq(v.V[k])}V</span>`).join('');
+  const pagos = [v.efe ? `Efe <b>${fm(v.efe)}</b>` : '', v.tra ? `Transf <b>${fm(v.tra)}</b>` : ''].filter(Boolean).join(' · ');
   return `<div class="sale" data-venta="${esc(v.id)}">
-    <div><b>${esc(v.hora.slice(0, 5))}</b> · ${esc(v.cliente || '—')} <span class="muted">${esc(v.usuario)}</span></div>
-    <div class="num"><b>${money(v.total)}</b></div>
-    <div class="muted" style="grid-column:1/-1">${det}${pagos ? ' · ' + pagos : ''}</div>
+    <span class="hora">${esc(v.hora.slice(0, 5))}</span>
+    <span class="cli">${esc(v.cliente || '—')} <span class="muted">· ${esc(v.usuario)}</span></span>
+    <span class="tot num">${fm(v.total)}</span>
+    <div class="det">${llenos}${pagos ? `<span>${pagos}</span>` : ''}</div>
   </div>`;
 }
 
-function bloqueStock(g) {
-  const s = g.stock, t = g.turno;
-  if (!s) return '';
-  let cierre = '';
-  if (!t.open && t.fin) {
-    const real = { L: {}, V: {} }, dif = { L: {}, V: {} };
-    SIZES.forEach(k => {
-      real.L[k] = num(t.fin[`l${k}`]); real.V[k] = num(t.fin[`v${k}`]);
-      dif.L[k] = real.L[k] - s.tot.L[k]; dif.V[k] = real.V[k] - s.tot.V[k];
-    });
-    const dd = SIZES.some(k => dif.L[k] || dif.V[k]);
-    cierre = `<div class="muted" style="margin-top:6px">Cierre real: ${lv(real)}</div>
-      <div class="${dd ? 'neg' : 'pos'}">${dd ? 'Diferencia: ' + lv(dif) : 'Cierre sin diferencias'}</div>`;
-  }
-  return `<div class="inner" style="border-bottom:1px solid var(--border)">
-    <div class="muted">Teórico total: ${lv(s.tot)}</div>
-    <div class="muted">En calle: ${lv(s.calle)}</div>
-    <div><b>En plataforma: ${lv(s.plat)}</b></div>
-    ${cierre}
-  </div>`;
+function totalesHtml(t) {
+  return `<span class="stat"><span class="k">Ventas</span><b>${t.n}</b></span>
+    <span class="stat"><span class="k">Efectivo</span><b class="money">${fm(t.efe)}</b></span>
+    <span class="stat"><span class="k">Transf.</span><b class="money blue">${fm(t.tra)}</b></span>
+    <span class="stat"><span class="k">Total</span><b class="money">${fm(t.tot)}</b></span>`;
 }
 
-function bloqueGrupo(g, viajes, sueltas) {
-  const t = g.turno;
-  const ventasG = [...viajes.flatMap(o => o.vs), ...sueltas];
-  const tot = ventasG.reduce((a, v) => a + v.total, 0);
-  const efe = ventasG.reduce((a, v) => a + v.efe, 0);
-  const tra = ventasG.reduce((a, v) => a + v.tra, 0);
+// Viaje: salida, llegada real o estimada, ventas del viaje
+function viajeHtml(x, vs) {
+  const t = sumar(vs);
+  const estado = x.open ? '<span class="pill p-route">EN RUTA</span>' : '<span class="pill p-done">FINALIZADO</span>';
+  const etiquetaLlegada = x.open ? 'ESTIMADO' : 'LLEGADA';
+  return `<details class="trip">
+    <summary>
+      <span>🚚 <b>${esc(x.tipo)}: ${esc(x.idViaje)}</b></span>
+      <span class="muted">S: ${hm(x.ms)} / L: ${x.open ? '--:--' : hm(x.llegMs)}</span>
+      ${estado}
+      <span class="grow"></span>
+      <span class="muted">${t.n} ops</span>
+      <span class="money num">TOT: ${fm(t.tot)}</span>
+    </summary>
+    <div class="body">
+      <div class="strip" style="border:0;padding:0 0 8px">${stripLV('SALIDA', 'l-ini', { L: x.sL, V: x.sV })}</div>
+      <div class="strip" style="border:0;padding:0 0 10px">${stripLV(etiquetaLlegada, 'l-fin', { L: x.exp.L, V: x.exp.V })}</div>
+      <div class="strip" style="border:0;padding:6px 0 4px">${totalesHtml(t)}</div>
+      ${vs.map(ventaHtml).join('') || '<div class="muted" style="padding:10px">Sin ventas en este viaje</div>'}
+    </div>
+  </details>`;
+}
 
-  const titulo = t
-    ? `🗂️ <b>TURNO ${esc(t.id)}</b> <span class="muted">${esc(t.fecha || '')} ${esc(t.horaIni || '')}</span>`
-    : `🚫 <b>SIN TURNO</b>`;
-  const badge = t ? (t.open ? '<span class="badge-on">ABIERTO</span>' : '<span class="chip">CERRADO</span>') : '';
+// Chofer: agrupa sus viajes dentro del turno
+function choferHtml(nombre, viajes) {
+  const t = sumar(viajes.flatMap(o => o.vs));
+  return `<details class="purple" open>
+    <summary>👤 CHOFER: ${esc(nombre)}
+      <span class="grow"></span>
+      <span class="muted">Viajes: ${viajes.length}</span>
+      <span class="muted">Ops: ${t.n}</span>
+      <span class="money num">Recaudación: ${fm(t.tot)}</span>
+    </summary>
+    <div style="padding:4px 0 8px">
+      <div class="strip" style="border:0;padding:0 14px 6px">${totalesHtml(t)}</div>
+      ${viajes.map(o => viajeHtml(o.x, o.vs)).join('')}
+    </div>
+  </details>`;
+}
 
-  const viajesHtml = viajes.map(({ x, vs }) => {
-    const sumV = vs.reduce((a, v) => a + v.total, 0);
-    const estado = x.open ? '<span class="warn">EN RUTA</span>' : '<span class="pos">FINALIZADO</span>';
-    return `<details>
-      <summary>🚚 <b>${esc(x.choferNombre || x.chofer)}</b> <span class="muted">${esc(x.tipo)} · ${hm(x.ms)}${x.llegMs ? ' → ' + hm(x.llegMs) : ''}</span> ${estado}
-        <span class="chip">${vs.length} ventas · ${money(sumV)}</span></summary>
-      <div class="inner">
-        <div class="muted" style="margin-bottom:6px">ID viaje: ${esc(x.idViaje)}</div>
-        ${tablaViaje(x)}
-        ${vs.map(filaVenta).join('') || '<div class="muted" style="padding:8px">Sin ventas en este viaje</div>'}
-      </div>
+// Sin camión: agrupado por usuario
+function sinCamionHtml(sueltas) {
+  const porUsr = new Map();
+  sueltas.forEach(v => {
+    if (!porUsr.has(v.usuario)) porUsr.set(v.usuario, []);
+    porUsr.get(v.usuario).push(v);
+  });
+  const t = sumar(sueltas);
+  const bloques = [...porUsr].map(([usr, vs]) => {
+    const tu = sumar(vs);
+    return `<details class="trip" open>
+      <summary>🏪 <b>${esc(usr)}</b> <span class="grow"></span> <span class="muted">${tu.n} ops</span>
+        <span class="money num">Efe ${fm(tu.efe)}</span><span class="money blue num">Transf ${fm(tu.tra)}</span><span class="money num">TOT ${fm(tu.tot)}</span>
+      </summary>
+      <div class="body">${vs.map(ventaHtml).join('')}</div>
     </details>`;
   }).join('');
+  return `<details class="purple" style="border-color:var(--blue);background:transparent" open>
+    <summary style="color:var(--blue)">🏪 SIN CAMIÓN <span class="grow"></span>
+      <span class="muted">Ops: ${t.n}</span><span class="money num">TOT: ${fm(t.tot)}</span></summary>
+    <div style="padding:4px 0 8px">${bloques}</div>
+  </details>`;
+}
 
-  const sueltasHtml = sueltas.length ? `<details>
-    <summary>🏪 <b>Sin camión</b> <span class="chip">${sueltas.length} ventas · ${money(sueltas.reduce((a, v) => a + v.total, 0))}</span></summary>
-    <div class="inner">${sueltas.map(filaVenta).join('')}</div>
-  </details>` : '';
+function turnoHtml(g, viajes, sueltas) {
+  const t = g.turno;
+  const tt = sumar([...viajes.flatMap(o => o.vs), ...sueltas]);
 
-  const stock = g.stock ? bloqueStock(g) : '';
+  let cab;
+  if (t) {
+    cab = `<summary class="turnhead ${t.open ? '' : 'closed'}">
+      <span>TURNO: <b>${t.open ? '<span style="color:var(--red)">●</span> EN VIVO' : esc(t.id)}</b></span>
+      ${t.open ? `<span class="muted">${esc(t.id)}</span>` : ''}
+      ${estadoPill(t.open)}
+      <span class="grow"></span>
+      <span class="muted">Apertura: ${hm(t.ap)}${t.open ? '' : ' · Cierre: ' + hm(t.ce)}</span>
+    </summary>`;
+  } else {
+    cab = `<summary class="turnhead closed" style="border-left-color:var(--orange)">
+      <span><b>SIN TURNO</b></span><span class="grow"></span><span class="muted">Viajes y ventas fuera de turno</span>
+    </summary>`;
+  }
 
-  return `<details open>
-    <summary>${titulo} ${badge}</summary>
-    ${stock}
-    <div class="inner">
-      <div class="chips">
-        <span class="chip">${ventasG.length} ventas</span>
-        <span class="chip">Total ${money(tot)}</span>
-        <span class="chip">Efe ${money(efe)}</span>
-        <span class="chip">Transf ${money(tra)}</span>
-      </div>
-      ${viajesHtml}
-      ${sueltasHtml}
-      ${!viajes.length && !sueltas.length ? '<div class="muted" style="padding:8px">Sin movimientos</div>' : ''}
-    </div>
+  let stock = '';
+  if (t && g.stock) {
+    const aper = { L: {}, V: {} };
+    SIZES.forEach(k => { aper.L[k] = num(t.ini?.[`l${k}`]); aper.V[k] = num(t.ini?.[`v${k}`]); });
+    let cierre = null;
+    if (!t.open && t.fin) {
+      cierre = { L: {}, V: {} };
+      SIZES.forEach(k => { cierre.L[k] = num(t.fin[`l${k}`]); cierre.V[k] = num(t.fin[`v${k}`]); });
+    }
+    stock = `<div class="strip">${stripLV('APERTURA', 'l-ini', aper)}</div>
+      <div class="strip">${cierre ? stripLV('CIERRE', 'l-fin', cierre) : stripLV('TEÓRICO', 'l-tot', g.stock.tot)}</div>
+      <div class="strip">${stripLV('EN CALLE', 'l-tot', g.stock.calle)}</div>
+      <div class="strip">${stripLV('PLATAFORMA', 'l-ini', g.stock.plat)}</div>`;
+  }
+
+  const caja = `<div class="strip" style="background:var(--bg)">
+      <span class="lbl" style="color:var(--dim)">CAJA TURNO</span>
+      <span class="stat"><span class="k">Efectivo</span><b class="money">${fm(tt.efe)}</b></span>
+      <span class="stat"><span class="k">Transf.</span><b class="money blue">${fm(tt.tra)}</b></span>
+      <span class="stat"><span class="k">Recaudación</span><b class="money">${fm(tt.tot)}</b></span>
+      <span class="stat"><span class="k">Ops</span><b>${tt.n}</b></span>
+    </div>`;
+
+  const porChofer = new Map();
+  viajes.forEach(o => {
+    const k = o.x.chofer;
+    if (!porChofer.has(k)) porChofer.set(k, { nombre: o.x.choferNombre || o.x.chofer, viajes: [] });
+    porChofer.get(k).viajes.push(o);
+  });
+  const choferes = [...porChofer.values()].map(c => choferHtml(c.nombre, c.viajes)).join('');
+  const sueltasHtml = sueltas.length ? sinCamionHtml(sueltas) : '';
+  const vacio = !viajes.length && !sueltas.length ? '<div class="muted" style="padding:12px">Sin movimientos</div>' : '';
+
+  return `<details class="card" open>${cab}${stock}${caja}
+    <div style="padding-bottom:8px">${choferes}${sueltasHtml}${vacio}</div>
   </details>`;
 }
 
 function renderDet() {
   const activo = filtrosActivos();
   let html = '';
-  S.grupos.forEach(g => {
-    const viajes = g.viajes.map(x => ({ x, vs: x.ventas.filter(fOk) })).filter(o => !activo || o.vs.length);
-    const sueltas = g.sueltas.filter(fOk);
-    if (activo && !viajes.length && !sueltas.length) return;
-    html += bloqueGrupo(g, viajes, sueltas);
+  S.dias.forEach(d => {
+    const bloques = [];
+    d.grupos.forEach(g => {
+      const viajes = g.viajes.map(x => ({ x, vs: x.ventas.filter(fOk) })).filter(o => !activo || o.vs.length);
+      const sueltas = g.sueltas.filter(fOk);
+      if (activo && !viajes.length && !sueltas.length) return;
+      bloques.push(turnoHtml(g, viajes, sueltas));
+    });
+    if (!bloques.length) return;
+    const td = sumar(d.grupos.flatMap(g => [...g.viajes.flatMap(x => x.ventas), ...g.sueltas]).filter(fOk));
+    html += `<details class="card" open>
+      <summary class="dayhead">📅 <b>${esc(d.label)}</b>
+        <span class="grow"></span>
+        ${totalesHtml(td)}
+      </summary>
+      <div style="padding:6px 6px 10px">${bloques.join('')}</div>
+    </details>`;
   });
   $('vistaDet').innerHTML = html;
 }
 
-// ---------- Vista Planilla ----------
+// ---------- Planilla ----------
 function celda(c, v) {
   const val = c.v(v);
-  if (c.t === 'm') return money(val);
-  if (c.t === 'n') return qty(val);
+  if (c.t === 'm') return fm(val);
+  if (c.t === 'n') return fq(val);
   return esc(val);
 }
 
@@ -655,16 +780,15 @@ function renderPla() {
     return `<th data-sort="${c.k}" class="${c.t !== 'txt' ? 'r' : ''} ${i === 0 ? 'sticky' : ''}">${c.l}${flecha}</th>`;
   }).join('');
 
-  const body = rows.map(v => `
-    <tr data-venta="${esc(v.id)}" class="${S.sel.has(v.id) ? 'sel' : ''}">
-      ${cols.map((c, i) => `<td class="${c.t !== 'txt' ? 'r num' : ''} ${i === 0 ? 'sticky' : ''}">${celda(c, v)}</td>`).join('')}
-      <td><button data-ficha="${esc(v.id)}" title="Ver ficha">⋯</button></td>
-    </tr>`).join('');
+  const body = rows.map(v => `<tr data-venta="${esc(v.id)}" class="${S.sel.has(v.id) ? 'sel' : ''}">
+    ${cols.map((c, i) => `<td class="${c.t !== 'txt' ? 'r num' : ''} ${i === 0 ? 'sticky' : ''}">${celda(c, v)}</td>`).join('')}
+    <td><button class="ghost" data-ficha="${esc(v.id)}" title="Ver / editar">⋯</button></td>
+  </tr>`).join('');
 
   const pie = cols.map((c, i) => {
     if (i === 0) return `<td class="sticky">TOTAL (${rows.length})</td>`;
     if (c.t === 'txt') return '<td></td>';
-    return `<td class="r num">${c.t === 'm' ? money(sumas[c.k]) : qty(sumas[c.k])}</td>`;
+    return `<td class="r num">${c.t === 'm' ? fm(sumas[c.k]) : fq(sumas[c.k])}</td>`;
   }).join('');
 
   $('vistaPla').innerHTML = `<div class="tbl-wrap"><table>
@@ -672,6 +796,29 @@ function renderPla() {
     <tbody>${body}</tbody>
     <tfoot><tr>${pie}<td></td></tr></tfoot>
   </table></div>`;
+}
+
+// ---------- Resumen del rango ----------
+function renderResumen() {
+  const t = sumar(S.ventas.filter(fOk));
+  const viajes = S.dias.flatMap(d => d.grupos.flatMap(g => g.viajes))
+    .filter(x => !filtrosActivos() || x.ventas.some(fOk)).length;
+  $('resumenRango').innerHTML = `
+    <div class="card"><div class="muted">Total del rango</div><div class="money" style="font-size:18px">${fm(t.tot)}</div></div>
+    <div class="card"><div class="muted">Efectivo</div><div class="money" style="font-size:18px">${fm(t.efe)}</div></div>
+    <div class="card"><div class="muted">Transferencia</div><div class="money blue" style="font-size:18px">${fm(t.tra)}</div></div>
+    <div class="card"><div class="muted">Operaciones</div><div style="font-size:18px;font-weight:800">${t.n}</div></div>
+    <div class="card"><div class="muted">Viajes</div><div style="font-size:18px;font-weight:800">${viajes}</div></div>`;
+}
+
+function renderAll() {
+  const enDet = S.view === 'det';
+  renderResumen();
+  if (enDet) renderDet(); else renderPla();
+  $('vistaDet').style.display = enDet ? 'block' : 'none';
+  $('vistaPla').style.display = enDet ? 'none' : 'block';
+  $('vacio').style.display = S.ventas.length || S.dias.length ? 'none' : 'block';
+  renderSel();
 }
 
 // ---------- Selección ----------
@@ -685,55 +832,176 @@ function renderSel() {
   const vs = [...S.sel].map(id => S.byId.get(id)).filter(Boolean);
   $('selbar').classList.toggle('show', vs.length > 0);
   if (!vs.length) return;
-  const tot = vs.reduce((a, v) => a + v.total, 0);
-  const efe = vs.reduce((a, v) => a + v.efe, 0);
-  const tra = vs.reduce((a, v) => a + v.tra, 0);
-  const L = {};
-  SIZES.forEach(k => { L[k] = vs.reduce((a, v) => a + v.L[k], 0); });
-  $('selTxt').innerHTML = `<b>${vs.length}</b> seleccionadas · Total <b>${money(tot)}</b> · Efe ${money(efe)} · Transf ${money(tra)}<br>
-    Llenos: ${SIZES.map(k => `${k}kg ${L[k]}`).join(' · ')}`;
+  const t = sumar(vs);
+  $('selTxt').innerHTML = `<b>${t.n}</b> seleccionadas · Total <b>${fm(t.tot)}</b> · Efe ${fm(t.efe)} · Transf ${fm(t.tra)}<br>
+    Llenos: ${SIZES.map(k => `${k}kg ${fq(t.L[k])}`).join(' · ')}`;
 }
 
-// ---------- Ficha ----------
+// ---------- Confirmación con PIN ----------
+function pedirConfirmacion({ titulo, cuerpo, motivoObligatorio = true, onOk }) {
+  S.accion = onOk;
+  $('confTitulo').textContent = titulo;
+  $('confBody').innerHTML = cuerpo;
+  $('confMotivo').value = '';
+  $('confPin').value = '';
+  $('confMotivo').style.display = motivoObligatorio ? 'block' : 'none';
+  $('confModal').classList.add('show');
+  setTimeout(() => $('confPin').focus(), 50);
+}
+const cerrarConf = () => { $('confModal').classList.remove('show'); S.accion = null; };
+
+async function verificarPin(pin) {
+  const p = String(pin ?? '').trim().toLowerCase();
+  if (!p) return null;
+  const snap = await getDoc(doc(db, 'seguridad', 'pin'));
+  if (!snap.exists()) return null;
+  const d = snap.data();
+  if (p === String(d.dinamico ?? '').trim().toLowerCase()) return 'DINAMICO';
+  if (d.maestro && p === String(d.maestro).trim().toLowerCase()) return 'MAESTRO';
+  return null;
+}
+
+// ---------- Editar / eliminar ----------
 function abrirFicha(id) {
   const v = S.byId.get(id);
   if (!v) return;
-  const campos = Object.entries(v.raw)
-    .filter(([k]) => k !== 'pin')
-    .map(([k, val]) => `<dt>${esc(k)}</dt><dd>${esc(val !== null && typeof val === 'object' ? JSON.stringify(val) : val)}</dd>`)
-    .join('');
+  S.actual = v;
+  const campos = EDITABLE.map(c => `
+    <label>${c.l}
+      <input data-f="${c.k}" data-t="${c.t}" value="${esc(v.raw[c.k] ?? (c.t === 'int' ? 0 : ''))}" ${c.t === 'int' ? 'inputmode="numeric" pattern="[0-9]*"' : ''}>
+    </label>`).join('');
+  const sistema = Object.entries(v.raw)
+    .filter(([k]) => !EDITABLE.some(c => c.k === k) && k !== 'pin')
+    .map(([k, val]) => `<dt>${esc(k)}</dt><dd>${esc(val !== null && typeof val === 'object' ? JSON.stringify(val) : val)}</dd>`).join('');
   $('fichaBody').innerHTML = `
-    <div class="muted" style="margin-bottom:8px">Solo lectura. La edición llega en el próximo paso.</div>
-    <div class="chips">
-      <span class="chip">${esc(v.tipo)}</span>
-      <span class="chip">Viaje: ${esc(v.viajeId || 'sin camión')}</span>
-      <span class="chip">Turno: ${esc(v.turnoId || 'sin turno')}</span>
+    <div class="row" style="margin-bottom:8px">
+      <span class="pill p-tag">${esc(v.tipo)}</span>
+      <span class="muted">N° ${esc(v.id)}</span>
+      <span class="muted">Viaje: ${esc(v.viajeId || 'sin camión')} · Turno: ${esc(v.turnoId || 'sin turno')}</span>
     </div>
-    <dl>${campos}</dl>`;
+    <div class="fgrid">${campos}</div>
+    <div class="warnbox" id="avisoCambios" style="display:none">Cambios sin guardar. Al guardar se pide PIN y motivo. El saldo de clientes no se recalcula.</div>
+    <div class="row" style="margin-top:12px;justify-content:space-between">
+      <button id="btnEliminar" style="color:var(--red);border-color:var(--red)">🗑 Eliminar operación</button>
+      <button id="btnGuardar" class="primary" disabled>Guardar cambios</button>
+    </div>
+    <details style="margin-top:12px"><summary style="padding:8px 0">Campos del sistema (solo lectura)</summary>
+      <dl style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0">${sistema}</dl></details>`;
   $('fichaModal').classList.add('show');
+  $('fichaBody').querySelectorAll('[data-f]').forEach(inp => inp.addEventListener('input', recalcularCambios));
+  $('btnGuardar').addEventListener('click', guardarCambios);
+  $('btnEliminar').addEventListener('click', eliminarOperacion);
 }
 
-// ---------- Columnas ----------
+function cambiosActuales() {
+  const v = S.actual, cambios = [];
+  $('fichaBody').querySelectorAll('[data-f]').forEach(inp => {
+    const k = inp.dataset.f, t = inp.dataset.t;
+    const original = t === 'int' ? num(v.raw[k]) : String(v.raw[k] ?? '');
+    const nuevo = t === 'int' ? num(inp.value) : String(inp.value).trim();
+    const changed = original !== nuevo;
+    inp.classList.toggle('changed', changed);
+    if (changed) cambios.push({ k, t, antes: original, despues: nuevo, label: EDITABLE.find(c => c.k === k)?.l || k });
+  });
+  return cambios;
+}
+
+function recalcularCambios() {
+  const c = cambiosActuales();
+  $('btnGuardar').disabled = c.length === 0;
+  $('avisoCambios').style.display = c.length ? 'block' : 'none';
+}
+
+function guardarCambios() {
+  const cambios = cambiosActuales();
+  if (!cambios.length) return;
+  const cuerpo = `<table style="width:100%;font-size:13px"><thead><tr><th style="text-align:left">Campo</th><th style="text-align:right">Antes</th><th style="text-align:right">Después</th></tr></thead><tbody>
+    ${cambios.map(c => `<tr><td>${esc(c.label)}</td><td class="r">${esc(c.antes)}</td><td class="r"><b>${esc(c.despues)}</b></td></tr>`).join('')}
+    </tbody></table>`;
+  const movId = S.actual.id;
+  pedirConfirmacion({
+    titulo: 'Confirmar modificación',
+    cuerpo,
+    onOk: async (motivo, pinTipo) => {
+      const datos = {};
+      cambios.forEach(c => { datos[c.k] = c.t === 'int' ? num(c.despues) : c.despues; });
+      const batch = writeBatch(db);
+      batch.update(doc(db, 'movimientos', movId), datos);
+      batch.set(doc(collection(db, 'auditoria')), {
+        tipo: 'EDITAR', movId, usuario: S.usuarioSesion, pinTipo, motivo,
+        cambios: cambios.map(c => ({ campo: c.k, antes: c.antes, despues: c.despues })),
+        fecha_hora: serverTimestamp()
+      });
+      await batch.commit();
+    }
+  });
+}
+
+function eliminarOperacion() {
+  const v = S.actual;
+  const movId = v.id, raw = v.raw;
+  pedirConfirmacion({
+    titulo: 'Eliminar operación',
+    cuerpo: `<b>${esc(v.cliente || 'Sin cliente')}</b> · ${fm(v.total)} · ${esc(v.fecha)} ${esc(v.hora)}<br>
+      La operación pasa a la papelera y sale de los totales.`,
+    onOk: async (motivo, pinTipo) => {
+      const batch = writeBatch(db);
+      batch.set(doc(db, 'papelera_movimientos', movId), {
+        ...raw,
+        _eliminado: { por: S.usuarioSesion, motivo, fecha_hora: serverTimestamp(), pinTipo }
+      });
+      batch.delete(doc(db, 'movimientos', movId));
+      batch.set(doc(collection(db, 'auditoria')), {
+        tipo: 'ELIMINAR', movId, usuario: S.usuarioSesion, pinTipo, motivo,
+        antes: raw, fecha_hora: serverTimestamp()
+      });
+      await batch.commit();
+    }
+  });
+}
+
+$('confOk').addEventListener('click', async () => {
+  const motivo = $('confMotivo').value.trim();
+  const obligatorio = $('confMotivo').style.display !== 'none';
+  if (obligatorio && motivo.length < 5) return toast('Escriba un motivo (mínimo 5 caracteres)');
+  loader(true);
+  try {
+    const tipo = await verificarPin($('confPin').value);
+    if (!tipo) { toast('PIN incorrecto'); return; }
+    const accion = S.accion;
+    cerrarConf();
+    $('fichaModal').classList.remove('show');
+    await accion(motivo, tipo);
+    toast('Cambios guardados');
+    await cargar();
+  } catch (e) {
+    console.error(e);
+    toast('Error: ' + (e.code || e.message));
+  } finally {
+    loader(false);
+  }
+});
+$('confCancelar').addEventListener('click', cerrarConf);
+$('confX').addEventListener('click', cerrarConf);
+$('confModal').addEventListener('click', e => { if (e.target.id === 'confModal') cerrarConf(); });
+
+// ---------- Columnas / exportar / copiar ----------
 function setCols(keys) {
   S.cols = COL_KEYS.filter(k => keys.includes(k));
   localStorage.setItem('vm_cols_mov', JSON.stringify(S.cols));
   renderPla();
 }
-
 function abrirCols() {
   $('colsGrid').innerHTML = COLS.map(c =>
     `<label class="ck"><input type="checkbox" value="${c.k}" ${S.cols.includes(c.k) ? 'checked' : ''}> ${c.l}</label>`).join('');
   $('colsModal').classList.add('show');
 }
-
-// ---------- Exportar / copiar ----------
 function tabla(vs, sep) {
   const cols = visibleCols();
   const head = cols.map(c => c.l).join(sep);
   const body = vs.map(v => cols.map(c => String(c.v(v) ?? '').replace(/[\r\n\t]+/g, ' ').trim()).join(sep));
   return [head, ...body].join('\n');
 }
-
 function exportarCSV() {
   const rows = S.ventas.filter(fOk).sort(ordenar);
   if (!rows.length) return toast('No hay ventas para exportar');
@@ -744,7 +1012,6 @@ function exportarCSV() {
   a.click();
   URL.revokeObjectURL(a.href);
 }
-
 function copiarSeleccion() {
   const vs = [...S.sel].map(id => S.byId.get(id)).filter(Boolean);
   const data = vs.length ? vs : S.ventas.filter(fOk).sort(ordenar);
@@ -757,14 +1024,13 @@ function copiarSeleccion() {
 // ---------- Eventos ----------
 function setView(v) {
   S.view = v;
-  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.view === v));
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.view === v));
   renderAll();
 }
-
 $('btnTheme').addEventListener('click', () => {
-  const light = document.body.classList.toggle('light');
-  localStorage.setItem('vm_theme', light ? 'light' : 'dark');
-  $('btnTheme').textContent = light ? '☀️' : '🌙';
+  const dark = document.body.classList.toggle('dark');
+  localStorage.setItem('vm_theme', dark ? 'dark' : 'light');
+  $('btnTheme').textContent = dark ? '☀️' : '🌙';
 });
 $('btnVolver').addEventListener('click', () => location.href = `inicio.html?k=${TOKEN}`);
 $('btnBuscar').addEventListener('click', cargar);
@@ -777,30 +1043,24 @@ $('btnLimpiarF').addEventListener('click', () => {
   $('fQ').value = ''; $('fTipo').value = ''; $('fUsr').value = '';
   renderAll();
 });
-document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
-$('btnCompacto').addEventListener('click', () => {
-  S.compact = !S.compact;
-  localStorage.setItem('vm_cmp', S.compact ? '1' : '0');
-  renderAll();
-});
+$('btnDesplegar').addEventListener('click', () => document.querySelectorAll('#vistaDet details').forEach(d => d.open = true));
+$('btnContraer').addEventListener('click', () => document.querySelectorAll('#vistaDet details').forEach(d => d.open = false));
+document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
 $('btnCols').addEventListener('click', abrirCols);
 $('btnCerrarCols').addEventListener('click', () => $('colsModal').classList.remove('show'));
 $('btnColsBasicas').addEventListener('click', () => { setCols(COLS.filter(c => c.def).map(c => c.k)); abrirCols(); });
 $('btnColsTodas').addEventListener('click', () => { setCols(COL_KEYS); abrirCols(); });
-$('colsGrid').addEventListener('change', () => {
-  setCols([...$('colsGrid').querySelectorAll('input:checked')].map(i => i.value));
-});
+$('colsGrid').addEventListener('change', () => setCols([...$('colsGrid').querySelectorAll('input:checked')].map(i => i.value)));
 $('btnCsv').addEventListener('click', exportarCSV);
 $('btnCerrarFicha').addEventListener('click', () => $('fichaModal').classList.remove('show'));
-$('btnCopiar').addEventListener('click', copiarSeleccion);
-$('btnLimpiarSel').addEventListener('click', () => { S.sel.clear(); renderPla(); renderSel(); });
 $('fichaModal').addEventListener('click', e => { if (e.target.id === 'fichaModal') $('fichaModal').classList.remove('show'); });
 $('colsModal').addEventListener('click', e => { if (e.target.id === 'colsModal') $('colsModal').classList.remove('show'); });
+$('btnCopiar').addEventListener('click', copiarSeleccion);
+$('btnLimpiarSel').addEventListener('click', () => { S.sel.clear(); renderPla(); renderSel(); });
 
 document.addEventListener('click', e => {
   const ficha = e.target.closest('[data-ficha]');
   if (ficha) { e.stopPropagation(); abrirFicha(ficha.dataset.ficha); return; }
-
   const th = e.target.closest('th[data-sort]');
   if (th) {
     const k = th.dataset.sort === 'fecha' || th.dataset.sort === 'hora' ? 'ms' : th.dataset.sort;
@@ -808,10 +1068,8 @@ document.addEventListener('click', e => {
     renderPla();
     return;
   }
-
   const fila = e.target.closest('tr[data-venta]');
   if (fila && S.view === 'pla') { toggleSel(fila.dataset.venta); return; }
-
   const venta = e.target.closest('.sale[data-venta]');
   if (venta) abrirFicha(venta.dataset.venta);
 });
@@ -821,8 +1079,8 @@ document.addEventListener('click', e => {
   const hoy = new Date();
   $('fDesde').value = ymd(hoy);
   $('fHasta').value = ymd(hoy);
-  if (localStorage.getItem('vm_theme') === 'light') document.body.classList.add('light');
-  $('btnTheme').textContent = document.body.classList.contains('light') ? '☀️' : '🌙';
+  if (localStorage.getItem('vm_theme') === 'dark') document.body.classList.add('dark');
+  $('btnTheme').textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
   const guardadas = JSON.parse(localStorage.getItem('vm_cols_mov') || 'null');
   S.cols = Array.isArray(guardadas) && guardadas.length
     ? guardadas.filter(k => COL_KEYS.includes(k))
