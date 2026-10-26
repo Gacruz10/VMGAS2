@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arqueo de Caja - Finanzas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --glass: rgba(0, 0, 0, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --accent: #FFD700;
+      --ok: #2dd4bf;
+      --error: #ff4444;
+      --text-primary: #ffffff;
+      --text-muted: rgba(255, 255, 255, 0.5);
+      --bg-color: #020617;
+    }
+
+    body.light-mode {
+      --glass: rgba(255, 255, 255, 0.65);
+      --glass-border: rgba(0, 0, 0, 0.15);
+      --accent: #d97706;
+      --text-primary: #1a1a1a;
+      --text-muted: rgba(0, 0, 0, 0.6);
+      --bg-color: #f8fafc;
+      background: #f8fafc !important;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: 'Inter', sans-serif; color: var(--text-primary);
+      background: radial-gradient(at 0% 0%, #0f172a 0%, transparent 50%),
+                  radial-gradient(at 100% 100%, #1e1b4b 0%, transparent 50%), var(--bg-color);
+      background-attachment: fixed; min-height: 100vh; padding: 10px;
+      opacity: 0; transition: opacity 0.5s ease, color 0.3s ease, background 0.3s ease;
+    }
+
+    .theme-toggle {
+      position: absolute; top: 10px; left: 10px; width: 40px; height: 40px; border-radius: 50%;
+      background: var(--glass); border: 1px solid var(--glass-border); color: var(--text-primary);
+      display: flex; justify-content: center; align-items: center; font-size: 20px; cursor: pointer;
+      backdrop-filter: blur(10px); transition: all 0.3s ease; z-index: 1000;
+    }
+    .theme-toggle:hover { transform: scale(1.1); border-color: var(--accent); }
+
+    .header { display: flex; justify-content: flex-end; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; margin-top: 5px; position: relative; }
+    .header h1 { font-size: 1.1rem; font-weight: 800; color: var(--accent); margin: 0; position: absolute; left: 60px; top: 10px; }
+    .header-buttons { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; flex: 1; margin-top: 5px; }
+
+    .btn-action { padding: 6px 10px; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.75rem; transition: 0.3s; border: 1px solid; }
+    .btn-volver { background: rgba(255,255,255,0.05); border-color: var(--glass-border); color: var(--text-primary); }
+    .btn-volver:hover { background: rgba(128,128,128,0.2); }
+
+    .container { max-width: 900px; margin: 0 auto; display: grid; gap: 10px; grid-template-columns: 1fr; margin-top: 25px; }
+    @media (min-width: 768px) { .container { grid-template-columns: 1fr 1fr; } .full-width { grid-column: 1 / -1; } }
+
+    .led-alert {
+      background: rgba(255, 68, 68, 0.05); border: 1px solid var(--error); color: var(--error);
+      padding: 8px; border-radius: 6px; text-align: center; font-weight: 700; font-size: 0.75rem;
+      animation: flashLed 2s infinite; display: none; margin-bottom: 2px;
+    }
+    @keyframes flashLed { 0%, 100% { box-shadow: 0 0 5px rgba(255,68,68,0.1); } 50% { box-shadow: 0 0 15px rgba(255,68,68,0.3); } }
+    .led-alert.active { display: block; }
+
+    .card { background: var(--glass); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); border-radius: 10px; padding: 12px; }
+    .card-title { font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(128,128,128,0.2); padding-bottom: 4px; gap: 8px; }
+
+    .period-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .period-row label { font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; white-space: nowrap; }
+    .period-row select { max-width: 220px; }
+
+    .dias-container { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .dia-item { display: flex; align-items: center; justify-content: space-between; background: rgba(128,128,128,0.1); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--glass-border); cursor: pointer; transition: 0.2s; }
+    .dia-item:hover { background: rgba(128,128,128,0.2); }
+    .dia-item.disabled { opacity: 0.4; text-decoration: line-through; border-color: transparent; }
+    .dia-info { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; font-weight: 600; }
+    .dia-fecha { font-weight: 800; }
+    .dia-meta { font-size: 0.68rem; color: var(--text-muted); font-weight: 600; }
+    .dia-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; margin: 0; }
+
+    .empty-state { text-align: center; padding: 16px 8px; color: var(--ok); font-weight: 700; font-size: 0.8rem; }
+
+    .data-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed rgba(128,128,128,0.2); }
+    .data-label { color: var(--text-muted); font-size: 0.75rem; }
+    .data-value { font-weight: 700; font-size: 0.85rem; }
+    .data-total { font-size: 1rem; color: var(--accent); margin-top: 4px; border: none; }
+
+    .input-group { margin-bottom: 8px; }
+    .input-group label { display: block; font-size: 0.65rem; color: var(--text-muted); margin-bottom: 3px; font-weight: 600; }
+
+    input[type="number"], textarea, select {
+      width: 100%; background: rgba(128,128,128,0.1); border: 1px solid var(--glass-border);
+      border-radius: 6px; padding: 8px; color: var(--text-primary); font-size: 0.9rem; font-weight: 600; outline: none; transition: 0.3s;
+    }
+    select option { background-color: var(--bg-color); color: var(--text-primary); font-weight: 600; }
+    body.light-mode select option { background-color: #ffffff; color: #000; }
+
+    textarea { min-height: 45px; resize: none; font-size: 0.8rem; }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); background: rgba(128,128,128,0.2); }
+
+    .required-field { border-color: var(--error) !important; background: rgba(255, 68, 68, 0.05) !important; }
+    .required-label { color: var(--error) !important; }
+
+    .result-box { text-align: center; padding: 10px; border-radius: 6px; margin-top: 8px; transition: 0.3s; }
+    .status-ok { background: rgba(45, 212, 191, 0.1); border: 1px solid var(--ok); color: var(--ok); }
+    .status-error { background: rgba(255, 68, 68, 0.1); border: 1px solid var(--error); color: var(--error); }
+    .status-neutral { background: rgba(128, 128, 128, 0.1); border: 1px solid var(--glass-border); color: var(--text-muted); }
+
+    .btn-confirm { width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 8px; font-weight: 800; font-size: 0.85rem; cursor: pointer; transition: 0.3s; color: #000; }
+    body.light-mode .btn-confirm { color: white; }
+    .btn-confirm:disabled { background: #333; color: #666; cursor: not-allowed; }
+    .hidden { display: none; }
+
+    .gastos-container { margin-top: 6px; background: rgba(255,68,68,0.05); border-radius: 6px; padding: 6px; border: 1px dashed var(--error); }
+    .gastos-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
+    .gastos-table td { padding: 2px 0; color: var(--text-muted); border-bottom: 1px solid rgba(128,128,128,0.2); }
+    .gastos-table td:last-child { text-align: right; font-weight: 700; color: var(--error); }
+
+    #toast-container { position: fixed; bottom: 15px; right: 15px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+    .toast { padding: 10px 14px; border-radius: 6px; color: #fff; font-weight: 600; box-shadow: 0 5px 15px rgba(0,0,0,0.5); border: 1px solid var(--glass-border); opacity: 0; transform: translateY(15px); transition: 0.3s; font-size: 0.75rem; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { background: rgba(255, 68, 68, 0.9); }
+    .toast.success { background: rgba(45, 212, 191, 0.9); }
+    .toast.info { background: rgba(255, 215, 0, 0.9); color: #000; }
+
+    .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--glass); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: 0.3s; backdrop-filter: blur(5px); }
+    .loading-overlay.active { opacity: 1; visibility: visible; }
+    .spinner { width: 35px; height: 35px; border: 3px solid rgba(128,128,128,0.2); border-left-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
+    .spinner.success-mode { border-left-color: var(--ok); }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .loading-text { color: var(--accent); font-size: 0.8rem; font-weight: 800; letter-spacing: 1px; }
+    .loading-text.success-mode { color: var(--ok); }
+  </style>
+</head>
+<body>
+
+  <script>
+    if (localStorage.getItem('vm_theme') === 'light') {
+      document.body.classList.add('light-mode');
+    }
+  </script>
+  <button class="theme-toggle" onclick="window.toggleTheme()" id="btnTheme">🌙</button>
+
+  <div id="toast-container"></div>
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner" id="loaderSpinner"></div>
+    <div class="loading-text" id="loaderText">CARGANDO...</div>
+  </div>
+
+  <div class="header">
+    <h1>ARQUEO DE CAJA</h1>
+    <div class="header-buttons">
+      <button class="btn-action btn-volver" id="btnBack">VOLVER</button>
+    </div>
+  </div>
+
+  <div class="container hidden" id="mainUI">
+
+    <div class="card full-width">
+      <div class="card-title">1. Seleccionar Chofer / Operador <span id="periodoInfo"></span></div>
+
+      <div class="period-row">
+        <label for="selPeriodo">Período</label>
+        <select id="selPeriodo">
+          <option value="7">Últimos 7 días</option>
+          <option value="30" selected>Últimos 30 días</option>
+          <option value="90">Últimos 90 días</option>
+          <option value="180">Últimos 180 días</option>
+        </select>
+      </div>
+
+      <select id="selChofer">
+        <option value="">Cargando movimientos pendientes...</option>
+      </select>
+
+      <div id="diasContainer" class="dias-container hidden"></div>
+      <div id="emptyState" class="empty-state hidden"></div>
+    </div>
+
+    <div class="led-alert full-width" id="alertTransf">
+      ⚠️ ATENCIÓN: Consultar TRANSFERENCIAS pagadas en efectivo.
+    </div>
+
+    <div class="card" id="cardSistema">
+      <div class="card-title">Consolidado del Sistema <span>TEÓRICO</span></div>
+      <div id="monitorSistema" style="opacity: 0.4; transition: 0.3s;">
+
+        <div class="data-row">
+          <span class="data-label">Ventas en Efectivo (+)</span>
+          <span class="data-value" id="sisEfectivo">$ 0</span>
+        </div>
+
+        <div class="data-row">
+          <span class="data-label">Gastos Declarados (-)</span>
+          <span class="data-value" id="sisGastos" style="color:var(--error)">$ 0</span>
+        </div>
+
+        <div id="divDetalleGastos" class="gastos-container" style="display:none;"></div>
+
+        <div class="data-row data-total">
+          <span class="data-label" style="color:var(--accent); font-size: 0.8rem; padding-top: 4px;">Efectivo Físico Esperado</span>
+          <div style="text-align:right;">
+            <div class="data-value" id="sisTotal" style="font-size: 1.2rem;">$ 0</div>
+            <div id="alertRuta" style="display:none; font-size:0.6rem; color:var(--accent);">⚠️ CONTIENE VIAJE EN RUTA</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed rgba(128,128,128,0.2);">
+          <div class="data-row">
+            <span class="data-label">Suma Transferencias (Banco)</span>
+            <span class="data-value" id="sisTransf" style="color:var(--ok)">$ 0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Arqueo Manual <span>FÍSICO</span></div>
+
+      <div class="input-group">
+        <label>Efectivo Real (Billetes contados de los días elegidos)</label>
+        <input type="number" id="realEfectivo" placeholder="0.00" step="0.01" min="0" style="font-size: 1.3rem; text-align: center; color: var(--accent);">
+      </div>
+
+      <div id="resultBox" class="result-box status-neutral">
+        <span id="resultMsg" style="font-size: 0.75rem;">Ingrese efectivo para comparar</span>
+        <div id="resultDiff" style="font-size: 1.2rem; font-weight: 800; margin-top: 4px;">$ 0.00</div>
+      </div>
+
+      <div class="input-group" style="margin-top: 8px;">
+        <label id="lblObs">Observaciones / Justificación</label>
+        <textarea id="obsArqueo" placeholder="Requerido si hay diferencia..."></textarea>
+      </div>
+    </div>
+
+    <div class="full-width">
+      <button class="btn-confirm" id="btnCerrarCaja" disabled>REGISTRAR CIERRE Y GUARDAR</button>
+    </div>
+
+  </div>
+
+<div id="capaMantenimiento" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,10,16,0.98); z-index:99999; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#fff; font-family:'Inter', sans-serif;">
+  <div style="font-size:40px; margin-bottom:20px;">🛠️</div>
+  <h2 style="color:var(--accent); letter-spacing:2px;">VENTANA DE MANTENIMIENTO</h2>
+  <p style="max-width:400px; color:var(--text-muted); font-family:'Inter', sans-serif; margin-top:10px;">
+    Estamos procesando los cierres y auditorías del día. <br>
+    El sistema volverá a estar operativo a las <b>00:06 AM</b>.
+  </p>
+  <div style="margin-top:30px; padding:10px 20px; border:1px solid var(--glass-border); border-radius:4px; font-size:12px; color:var(--accent);">
+    AGUARDE UN MOMENTO...
+  </div>
+</div>
+
+<script type="module">
+// ============================================================
+// ARQUEO DE CAJA - VMGAS2 (Firestore directo)
+// Colecciones:
+//   lectura : tokens, usuarios, movimientos, ccarga
+//   escritura: arqueos, confinanzas, alarmas
+//   update   : movimientos.{ARQUEO_ID, ARQUEO_FECHA, ARQUEO_TS}
+// ============================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getFirestore, doc, getDoc, getDocs, collection, query, where, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
+    authDomain: "vmgaslr.firebaseapp.com",
+    projectId: "vmgaslr",
+    storageBucket: "vmgaslr.firebasestorage.app",
+    messagingSenderId: "75859850089",
+    appId: "1:75859850089:web:fc551c770bbf4ae25803f8"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const TIMEOUT_SESION = 14400000; // 4 horas de inactividad
+const MAX_OPERACIONES_BATCH = 450;
+
+// ---------------- Utilidades ----------------
+const $ = (id) => document.getElementById(id);
+
+function num(v) {
+    if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+    if (v === null || v === undefined || v === '') return 0;
+
+    // Acepta números y también textos tipo "$ 1.234,56" (datos viejos).
+    let s = String(v).trim().replace(/\s/g, '').replace(/[^\d,.\-]/g, '');
+    if (!s) return 0;
+
+    const lastComma = s.lastIndexOf(',');
+    const lastDot = s.lastIndexOf('.');
+    if (lastComma > -1 && lastDot > -1) {
+        s = lastComma > lastDot
+            ? s.replace(/\./g, '').replace(',', '.')
+            : s.replace(/,/g, '');
+    } else if (lastComma > -1) {
+        s = s.replace(',', '.');
+    }
+
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+}
+
+function money(n, dec = 0) {
+    return num(n).toLocaleString('es-AR', {
+        style: 'currency', currency: 'ARS',
+        minimumFractionDigits: dec, maximumFractionDigits: dec
+    });
+}
+
+function round2(n) { return Math.round(num(n) * 100) / 100; }
+
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+}[c]));
+
+// Para textos que luego se muestran con innerHTML en otras pantallas.
+const plain = (s) => String(s ?? '').replace(/[<>]/g, '');
+
+const norm = (s) => String(s ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+
+function parseFecha(d) {
+    const p = String(d || '').split('/');
+    if (p.length !== 3) return 0;
+    const t = new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0])).getTime();
+    return Number.isFinite(t) ? t : 0;
+}
+
+function ultimasFechas(dias) {
+    const out = [];
+    const d = new Date();
+    d.setHours(12, 0, 0, 0);
+    for (let i = 0; i < dias; i++) {
+        out.push(d.toLocaleDateString('es-AR'));
+        d.setDate(d.getDate() - 1);
+    }
+    return out;
+}
+
+// ---------------- UI base ----------------
+window.toggleTheme = function () {
+    const isLight = document.body.classList.toggle('light-mode');
+    const btn = $('btnTheme');
+    if (isLight) {
+        localStorage.setItem('vm_theme', 'light');
+        btn.textContent = '☀️';
+    } else {
+        localStorage.setItem('vm_theme', 'dark');
+        btn.textContent = '🌙';
+    }
+};
+$('btnTheme').textContent = document.body.classList.contains('light-mode') ? '☀️' : '🌙';
+
+function showToast(msg, type = 'info') {
+    const container = $('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3500);
+}
+
+function toggleLoader(show, text = 'CARGANDO...', isSuccess = false) {
+    const overlay = $('loadingOverlay');
+    const loaderText = $('loaderText');
+    const spinner = $('loaderSpinner');
+    loaderText.textContent = text;
+    if (isSuccess) {
+        spinner.classList.add('success-mode');
+        loaderText.classList.add('success-mode');
+    } else {
+        spinner.classList.remove('success-mode');
+        loaderText.classList.remove('success-mode');
+    }
+    if (show) overlay.classList.add('active'); else overlay.classList.remove('active');
+}
+
+// ---------------- Sesión ----------------
+const params = new URLSearchParams(window.location.search);
+const k = params.get('k') || params.get('token') || sessionStorage.getItem('vm_token');
+
+function expulsar() {
+    sessionStorage.clear();
+    window.location.replace('index.html');
+}
+
+window.volver = () => window.location.replace(`administrativo.html?k=${k}`);
+
+if (!k) {
+    expulsar();
+} else {
+    if (window.history.replaceState) window.history.replaceState({}, document.title, window.location.pathname);
+    validarSesion();
+}
+
+let tIdle;
+function resetTimer() {
+    clearTimeout(tIdle);
+    tIdle = setTimeout(() => {
+        showToast('⏱️ Sesión expirada por inactividad.', 'info');
+        setTimeout(expulsar, 1200);
+    }, TIMEOUT_SESION);
+}
+['click', 'mousemove', 'keydown', 'touchstart', 'scroll'].forEach(evt => document.addEventListener(evt, resetTimer, { passive: true }));
+resetTimer();
+
+$('btnBack').onclick = () => window.volver();
+
+async function validarSesion() {
+    try {
+        document.body.style.opacity = 1;
+        toggleLoader(true, 'VERIFICANDO SESIÓN...');
+
+        const snap = await getDoc(doc(db, 'tokens', k));
+        if (!snap.exists()) throw new Error('Sesión inválida en base de datos.');
+
+        const data = snap.data();
+        if (data.expira && Date.now() > data.expira) throw new Error('La sesión ha expirado.');
+
+        sessionStorage.setItem('usuarioActivo', data.usuario || 'SISTEMA');
+        sessionStorage.setItem('vm_token', k);
+
+        await cargarDatos();
+    } catch (e) {
+        console.error(e);
+        expulsar();
+    }
+}
+
+// ---------------- Estado ----------------
+let grupos = [];
+let gruposPorChofer = new Map();
+let choferActual = '';
+let seleccionados = new Set();
+let sisData = { efectivo: 0, transf: 0, gastos: 0, total: 0, listaGastos: [], enRuta: false, dias: 0 };
+let hayDiferencia = false;
+let activeDrivers = new Set();
+
+function resetUI() {
+    grupos = [];
+    gruposPorChofer = new Map();
+    choferActual = '';
+    seleccionados.clear();
+    sisData = { efectivo: 0, transf: 0, gastos: 0, total: 0, listaGastos: [], enRuta: false, dias: 0 };
+    hayDiferencia = false;
+
+    $('diasContainer').innerHTML = '';
+    $('diasContainer').classList.add('hidden');
+    $('emptyState').classList.add('hidden');
+    $('emptyState').textContent = '';
+    $('selChofer').innerHTML = '<option value="">Cargando movimientos pendientes...</option>';
+    $('selChofer').disabled = true;
+    $('realEfectivo').value = '';
+    $('obsArqueo').value = '';
+    $('divDetalleGastos').style.display = 'none';
+    $('divDetalleGastos').innerHTML = '';
+    $('alertTransf').classList.remove('active');
+    $('monitorSistema').style.opacity = '0.4';
+    $('cardSistema').style.borderColor = '';
+    $('alertRuta').style.display = 'none';
+    $('resultBox').className = 'result-box status-neutral';
+    $('resultBox').style.borderColor = '';
+    $('resultBox').style.color = '';
+    $('resultMsg').textContent = 'Ingrese efectivo para comparar';
+    $('resultDiff').textContent = money(0, 2);
+    $('lblObs').classList.remove('required-label');
+    $('obsArqueo').classList.remove('required-field');
+    $('obsArqueo').placeholder = 'Requerido si hay diferencia...';
+    $('btnCerrarCaja').disabled = true;
+    $('btnCerrarCaja').textContent = 'REGISTRAR CIERRE Y GUARDAR';
+    $('periodoInfo').textContent = '';
+}
+
+// ---------------- Carga de datos ----------------
+async function cargarDatos() {
+    resetUI();
+    toggleLoader(true, 'BUSCANDO DEUDAS Y VIAJES...');
+
+    try {
+        if (!navigator.onLine) throw new Error('Sin conexión a internet.');
+
+        const dias = Number($('selPeriodo').value) || 30;
+        $('periodoInfo').textContent = `${dias} días`;
+
+        const fechas = ultimasFechas(dias);
+        const chunks = [];
+        for (let i = 0; i < fechas.length; i += 30) chunks.push(fechas.slice(i, i + 30));
+
+        const [snapUsers, snapViajes, ...snapsMov] = await Promise.all([
+            getDocs(collection(db, 'usuarios')),
+            getDocs(query(collection(db, 'ccarga'), where('estado', 'in', ['EN_RUTA', 'COMPRA_EN_RUTA']))),
+            ...chunks.map(ch => getDocs(query(collection(db, 'movimientos'), where('FECHA', 'in', ch))))
+        ]);
+
+        // Nombres visibles de usuarios y alias (usuario / nombre)
+        const nombres = new Map();
+        const aliasUsuario = new Map();
+        snapUsers.forEach(d => {
+            const u = d.data();
+            const display = u.nombre_mostrar || u.nombre_completo || d.id;
+            const canonical = norm(u.usuario || d.id) || norm(d.id);
+            [d.id, u.usuario, u.nombre_mostrar, u.nombre_completo].forEach(v => {
+                const n = norm(v);
+                if (!n) return;
+                nombres.set(n, display);
+                aliasUsuario.set(n, canonical);
+            });
+        });
+
+        // Choferes con viaje abierto
+        activeDrivers = new Set();
+        snapViajes.forEach(d => {
+            const v = d.data();
+            if (!v.chofer) return;
+            const n = norm(v.chofer);
+            activeDrivers.add(n);
+            const alias = aliasUsuario.get(n);
+            if (alias) activeDrivers.add(alias);
+        });
+
+        // Agrupar movimientos pendientes por USUARIO + FECHA
+        const map = new Map();
+        snapsMov.forEach(snap => {
+            snap.forEach(d => {
+                const m = d.data();
+                if (m.ARQUEO_ID) return;
+
+                const fecha = String(m.FECHA || '').trim();
+                const usuarioRaw = String(m.USUARIO || '').trim();
+                if (!fecha || !usuarioRaw) return;
+
+                const usuarioKey = aliasUsuario.get(norm(usuarioRaw)) || norm(usuarioRaw) || usuarioRaw.toLowerCase();
+                const key = `${usuarioKey}|${fecha}`;
+                let g = map.get(key);
+                if (!g) {
+                    g = {
+                        key,
+                        usuario: usuarioRaw,
+                        usuarioKey,
+                        fecha,
+                        nombre: nombres.get(norm(usuarioRaw)) || usuarioRaw.toUpperCase(),
+                        movs: [],
+                        efectivo: 0,
+                        transf: 0,
+                        gastos: 0,
+                        listaGastos: []
+                    };
+                    map.set(key, g);
+                }
+
+                const calc = calcularMovimiento(m);
+                g.efectivo += calc.efectivo;
+                g.transf += calc.transf;
+                g.gastos += calc.gastos;
+                if (calc.gastos > 0) g.listaGastos.push(calc.gastoDetalle);
+                g.movs.push(d.id);
+            });
+        });
+
+        grupos = [...map.values()].filter(g => g.movs.length > 0);
+
+        // Agrupar por chofer
+        gruposPorChofer = new Map();
+        grupos.forEach(g => {
+            if (!gruposPorChofer.has(g.usuarioKey)) {
+                gruposPorChofer.set(g.usuarioKey, {
+                    nombre: g.nombre,
+                    usuarioKey: g.usuarioKey,
+                    grupos: [],
+                    efectivo: 0,
+                    transf: 0,
+                    gastos: 0
+                });
+            }
+            const c = gruposPorChofer.get(g.usuarioKey);
+            c.grupos.push(g);
+            c.efectivo += g.efectivo;
+            c.transf += g.transf;
+            c.gastos += g.gastos;
+        });
+
+        renderChoferes();
+        $('mainUI').classList.remove('hidden');
+        toggleLoader(false);
+    } catch (e) {
+        console.error(e);
+        toggleLoader(false);
+        showToast('Error cargando datos: ' + (e.message || 'conexión'), 'error');
+        $('selChofer').innerHTML = '<option value="">Error de conexión</option>';
+        $('mainUI').classList.remove('hidden');
+    }
+}
+
+function calcularMovimiento(m) {
+    const tipo = String(m.TIPO || '').toUpperCase();
+    const e = num(m['E$']);
+    const t = num(m['T$']);
+    const total = num(m.TOTAL);
+    const gastoDeclarado = num(m.GASTO_TOTAL);
+
+    let efectivo = 0;
+    let transf = 0;
+    let gastos = 0;
+    let gastoDetalle = null;
+
+    if (tipo.includes('GAST') || tipo.includes('EGRESO')) {
+        // En datos viejos el gasto suele venir en negativo (TOTAL).
+        // En VMGAS2 el monto real está en GASTO_TOTAL.
+        gastos = Math.abs(gastoDeclarado > 0 ? gastoDeclarado : total);
+
+        // Si la operación mezcló cobro + gasto, E$/T$ siguen siendo caja.
+        if (e > 0) efectivo = e;
+        if (t > 0) transf = t;
+
+        if (gastos > 0) {
+            gastoDetalle = { motivo: m.G || m.C || 'Gasto sin detalle', monto: gastos };
+        }
+    } else {
+        efectivo = e;
+        transf = t;
+
+        // Tolerancia a registros viejos que sólo tienen TOTAL
+        if (efectivo === 0 && transf === 0 && total > 0) efectivo = total;
+
+        if (gastoDeclarado > 0) {
+            gastos += Math.abs(gastoDeclarado);
+            gastoDetalle = { motivo: m.G || 'Gasto declarado', monto: Math.abs(gastoDeclarado) };
+        }
+    }
+
+    return { efectivo, transf, gastos, gastoDetalle };
+}
+
+function renderChoferes() {
+    const sel = $('selChofer');
+
+    if (gruposPorChofer.size === 0) {
+        sel.innerHTML = '<option value="">✅ Todo al día (sin movimientos pendientes)</option>';
+        sel.disabled = true;
+        $('emptyState').textContent = '✅ No hay movimientos pendientes de arqueo en el período seleccionado.';
+        $('emptyState').classList.remove('hidden');
+        return;
+    }
+
+    const opciones = [...gruposPorChofer.entries()].sort((a, b) =>
+        String(a[1].nombre).localeCompare(String(b[1].nombre), 'es')
+    );
+
+    sel.innerHTML = '<option value="">Seleccione el chofer...</option>';
+    opciones.forEach(([key, c]) => {
+        const o = document.createElement('option');
+        o.value = key;
+        const saldo = c.efectivo - c.gastos;
+        o.textContent = `👤 ${c.nombre} — ${c.grupos.length} día(s) — ${money(saldo)}`;
+        sel.appendChild(o);
+    });
+    sel.disabled = false;
+}
+
+$('selChofer').onchange = (e) => seleccionarChofer(e.target.value);
+
+function seleccionarChofer(key) {
+    choferActual = key;
+    seleccionados.clear();
+    $('realEfectivo').value = '';
+    $('obsArqueo').value = '';
+
+    const cont = $('diasContainer');
+    cont.innerHTML = '';
+    $('emptyState').classList.add('hidden');
+
+    const c = gruposPorChofer.get(key);
+    if (!c) {
+        cont.classList.add('hidden');
+        $('alertTransf').classList.remove('active');
+        $('monitorSistema').style.opacity = '0.4';
+        recalcular();
+        return;
+    }
+
+    const ordered = [...c.grupos].sort((a, b) => parseFecha(b.fecha) - parseFecha(a.fecha));
+
+    ordered.forEach(g => {
+        seleccionados.add(g.key);
+
+        const label = document.createElement('label');
+        label.className = 'dia-item';
+
+        const info = document.createElement('div');
+        info.className = 'dia-info';
+        info.innerHTML = `
+            <span>📅</span>
+            <div>
+                <div class="dia-fecha">${esc(g.fecha)}</div>
+                <div class="dia-meta">${g.movs.length} movimiento(s) | ${money(g.efectivo - g.gastos)}</div>
+            </div>`;
+
+        const chk = document.createElement('input');
+        chk.type = 'checkbox';
+        chk.checked = true;
+        chk.addEventListener('change', () => {
+            if (chk.checked) seleccionados.add(g.key);
+            else seleccionados.delete(g.key);
+            label.classList.toggle('disabled', !chk.checked);
+            recalcular();
+        });
+
+        label.appendChild(info);
+        label.appendChild(chk);
+        cont.appendChild(label);
+    });
+
+    cont.classList.remove('hidden');
+    $('alertTransf').classList.add('active');
+    $('monitorSistema').style.opacity = '1';
+    recalcular();
+}
+
+// ---------------- Cálculos ----------------
+function recalcular() {
+    sisData = { efectivo: 0, transf: 0, gastos: 0, total: 0, listaGastos: [], enRuta: false, dias: 0 };
+
+    const c = gruposPorChofer.get(choferActual);
+    if (c) {
+        c.grupos.forEach(g => {
+            if (!seleccionados.has(g.key)) return;
+            sisData.efectivo += g.efectivo;
+            sisData.transf += g.transf;
+            sisData.gastos += g.gastos;
+            sisData.dias++;
+            if (g.listaGastos.length) sisData.listaGastos.push(...g.listaGastos);
+        });
+        sisData.enRuta = activeDrivers.has(c.usuarioKey);
+    }
+
+    sisData.total = sisData.efectivo - sisData.gastos;
+
+    $('sisEfectivo').textContent = money(sisData.efectivo);
+    $('sisTransf').textContent = money(sisData.transf);
+    $('sisGastos').textContent = `- ${money(sisData.gastos)}`;
+    $('sisTotal').textContent = money(sisData.total);
+
+    const cardSis = $('cardSistema');
+    const alertTag = $('alertRuta');
+    if (sisData.enRuta) {
+        cardSis.style.borderColor = 'var(--accent)';
+        alertTag.style.display = 'block';
+    } else {
+        cardSis.style.borderColor = '';
+        alertTag.style.display = 'none';
+    }
+
+    const divGastos = $('divDetalleGastos');
+    if (sisData.listaGastos.length > 0) {
+        let html = '<table class="gastos-table">';
+        sisData.listaGastos.forEach(g => {
+            html += `<tr><td>${esc(g.motivo)}</td><td>- ${money(g.monto)}</td></tr>`;
+        });
+        html += '</table>';
+        divGastos.innerHTML = html;
+        divGastos.style.display = 'block';
+    } else {
+        divGastos.style.display = 'none';
+        divGastos.innerHTML = '';
+    }
+
+    actualizarDiferencia();
+}
+
+function actualizarDiferencia() {
+    const realRaw = $('realEfectivo').value;
+    const real = realRaw === '' ? 0 : num(realRaw);
+    const diff = real - sisData.total;
+
+    const box = $('resultBox');
+    const msg = $('resultMsg');
+    const val = $('resultDiff');
+
+    box.style.borderColor = '';
+    box.style.color = '';
+    val.textContent = money(diff, 2);
+
+    if (realRaw === '') {
+        box.className = 'result-box status-neutral';
+        msg.textContent = 'Ingrese efectivo para comparar';
+        hayDiferencia = false;
+    } else if (Math.abs(diff) <= 50) {
+        box.className = 'result-box status-ok';
+        msg.textContent = '✅ CAJA BALANCEADA';
+        hayDiferencia = false;
+    } else if (diff < 0) {
+        box.className = 'result-box status-error';
+        msg.textContent = '🛑 FALTANTE DE DINERO';
+        hayDiferencia = true;
+    } else {
+        box.className = 'result-box status-error';
+        box.style.borderColor = 'var(--accent)';
+        box.style.color = 'var(--accent)';
+        msg.textContent = '⚠️ SOBRANTE DE DINERO';
+        hayDiferencia = true;
+    }
+
+    validarCierre();
+}
+
+function validarCierre() {
+    const btn = $('btnCerrarCaja');
+    const obs = $('obsArqueo').value.trim();
+    const cant = seleccionados.size;
+
+    if (!choferActual || cant === 0) {
+        btn.disabled = true;
+        btn.textContent = 'DEBE SELECCIONAR AL MENOS UN DÍA';
+        return;
+    }
+
+    if ($('realEfectivo').value === '') {
+        btn.disabled = true;
+        btn.textContent = 'INGRESE EL EFECTIVO REAL';
+        return;
+    }
+
+    if (hayDiferencia) {
+        $('lblObs').classList.add('required-label');
+        $('obsArqueo').classList.add('required-field');
+        $('obsArqueo').placeholder = '⚠️ EXISTE UNA DIFERENCIA. DEBE JUSTIFICAR EL MOTIVO AQUÍ.';
+
+        if (obs.length < 5) {
+            btn.disabled = true;
+            btn.textContent = 'JUSTIFIQUE LA DIFERENCIA';
+            return;
+        }
+        btn.disabled = false;
+        btn.textContent = `REGISTRAR CIERRE CON DIFERENCIA (${cant} DÍA${cant > 1 ? 'S' : ''})`;
+    } else {
+        $('lblObs').classList.remove('required-label');
+        $('obsArqueo').classList.remove('required-field');
+        $('obsArqueo').placeholder = 'Observaciones (Opcional)';
+        btn.disabled = false;
+        btn.textContent = `REGISTRAR CIERRE Y GUARDAR (${cant} DÍA${cant > 1 ? 'S' : ''})`;
+    }
+}
+
+$('realEfectivo').oninput = actualizarDiferencia;
+$('obsArqueo').oninput = validarCierre;
+
+$('selPeriodo').onchange = () => {
+    if (choferActual) {
+        choferActual = '';
+        seleccionados.clear();
+        $('realEfectivo').value = '';
+        $('obsArqueo').value = '';
+    }
+    cargarDatos();
+};
+
+// ---------------- Guardado ----------------
+$('btnCerrarCaja').onclick = async () => {
+    const c = gruposPorChofer.get(choferActual);
+    if (!c) return showToast('Seleccione un chofer.', 'error');
+
+    const seleccion = c.grupos
+        .filter(g => seleccionados.has(g.key))
+        .sort((a, b) => parseFecha(a.fecha) - parseFecha(b.fecha));
+
+    if (seleccion.length === 0) return showToast('Seleccione al menos un día.', 'error');
+
+    const realRaw = $('realEfectivo').value;
+    if (realRaw === '') return showToast('Ingrese el efectivo real.', 'error');
+
+    const realTotal = num(realRaw);
+    const obs = $('obsArqueo').value.trim();
+    const difTotal = realTotal - sisData.total;
+
+    if (realTotal < 0) return showToast('El efectivo real no puede ser negativo.', 'error');
+
+    if (Math.abs(difTotal) > 50 && obs.length < 5) {
+        return showToast('Debe justificar la diferencia (mínimo 5 caracteres).', 'error');
+    }
+
+    if (!navigator.onLine) return showToast('⛔ Necesitás internet para registrar el cierre.', 'error');
+
+    const totalOps = seleccion.length + seleccion.reduce((a, g) => a + g.movs.length, 0) + 2;
+    if (totalOps > MAX_OPERACIONES_BATCH) {
+        return showToast('Hay demasiados movimientos para un solo cierre. Seleccione menos días.', 'error');
+    }
+
+    if (!confirm(`¿Confirmar cierre para ${c.nombre} (${seleccion.length} día/s seleccionados)?`)) return;
+
+    const btn = $('btnCerrarCaja');
+    btn.disabled = true;
+    toggleLoader(true, 'PROCESANDO CIERRE...');
+
+    try {
+        const ahora = new Date();
+        const fechaISO = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+        const hora = ahora.toLocaleTimeString('es-AR', { hour12: false });
+        const idCierre = `ARQ-${ahora.getFullYear()}${String(ahora.getMonth() + 1).padStart(2, '0')}${String(ahora.getDate()).padStart(2, '0')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+        const auditor = sessionStorage.getItem('usuarioActivo') || 'SISTEMA';
+
+        const batch = writeBatch(db);
+        let restante = realTotal;
+
+        seleccion.forEach((g, i) => {
+            const teorico = round2(g.efectivo - g.gastos);
+            const esUltimo = i === seleccion.length - 1;
+            const realDia = esUltimo ? round2(restante) : teorico;
+            const difDia = round2(realDia - teorico);
+            if (!esUltimo) restante -= realDia;
+
+            batch.set(doc(collection(db, 'arqueos')), {
+                idCierre,
+                fecha: g.fecha,
+                hora,
+                chofer: g.nombre,
+                choferUsuario: g.usuario,
+                auditor,
+                sisEfectivo: round2(g.efectivo),
+                sisTransf: round2(g.transf),
+                sisGastos: round2(g.gastos),
+                sisTotal: teorico,
+                realEfectivo: realDia,
+                realTransf: round2(g.transf),
+                diferencia: difDia,
+                observaciones: obs,
+                cantidadMovimientos: g.movs.length,
+                movimientos: g.movs,
+                gastosDetalle: g.listaGastos,
+                origen: 'ARQUEO',
+                creado: serverTimestamp(),
+                timestampMs: Date.now()
+            });
+
+            g.movs.forEach(idMov => {
+                batch.update(doc(db, 'movimientos', idMov), {
+                    ARQUEO_ID: idCierre,
+                    ARQUEO_FECHA: g.fecha,
+                    ARQUEO_TS: Date.now()
+                });
+            });
+        });
+
+        batch.set(doc(db, 'confinanzas', idCierre), {
+            id: idCierre,
+            idCierre,
+            fecha: fechaISO,
+            hora,
+            rubro: 'GAS',
+            subrubro: 'ARQUEO DE VENTA',
+            detalle: `Arqueo consolidado (${seleccion.length} día/s) | Chofer: ${plain(c.nombre)} | Efectivo físico ingresado: ${money(realTotal)} | Transferencias: ${money(sisData.transf)}`,
+            monto: round2(realTotal),
+            chofer: plain(c.nombre),
+            usuario: auditor,
+            tipo: 'INGRESO',
+            origen: 'ARQUEO',
+            referencia: idCierre,
+            timestamp: serverTimestamp(),
+            timestampMs: Date.now()
+        });
+
+        if (Math.abs(difTotal) > 50) {
+            batch.set(doc(collection(db, 'alarmas')), {
+                tipo: difTotal < 0 ? 'FALTANTE_CAJA' : 'SOBRANTE_CAJA',
+                descripcion: `Arqueo ${idCierre}. Chofer: ${plain(c.nombre)}. Diferencia: ${money(difTotal)}. Obs: ${plain(obs)}`,
+                usuario: auditor,
+                pendiente: true,
+                fecha_hora: serverTimestamp()
+            });
+        }
+
+        await batch.commit();
+
+        toggleLoader(true, '¡CIERRE REGISTRADO EXITOSAMENTE!', true);
+        setTimeout(() => window.location.replace(`administrativo.html?k=${k}`), 1600);
+    } catch (e) {
+        console.error(e);
+        toggleLoader(false);
+        showToast('Error al guardar el cierre: ' + (e.message || 'intente nuevamente'), 'error');
+        btn.disabled = false;
+    }
+};
+
+// ---------------- Patovica ----------------
+function controlPatovica() {
+    const ahora = new Date();
+    const hora = ahora.getHours();
+    const min = ahora.getMinutes();
+    const capa = $('capaMantenimiento');
+
+    const estaEnBloqueo = (hora === 23 && min >= 45) || (hora === 0 && min <= 5);
+
+    if (estaEnBloqueo) {
+        capa.style.display = 'flex';
+        document.onkeydown = function (e) { return false; };
+    } else {
+        capa.style.display = 'none';
+        document.onkeydown = null;
+    }
+}
+controlPatovica();
+setInterval(controlPatovica, 300000);
+</script>
+</body>
+</html>
