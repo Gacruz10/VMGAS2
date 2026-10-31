@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<title>Control de Remitos</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050510;
+    --panel: rgba(255,255,255,0.035);
+    --panel-strong: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.10);
+    --text: #ffffff;
+    --muted: #9ca3af;
+    --accent: #a855f7;
+    --accent-soft: rgba(168,85,247,0.14);
+    --ok: #2dd4bf;
+    --ok-soft: rgba(45,212,191,0.12);
+    --warn: #f59e0b;
+    --warn-soft: rgba(245,158,11,0.12);
+    --danger: #ff4757;
+    --danger-soft: rgba(255,71,87,0.12);
+    --shadow: 0 10px 40px rgba(0,0,0,0.35);
+  }
+  body.light-mode {
+    --bg: #eef2f7;
+    --panel: #ffffff;
+    --panel-strong: #f8fafc;
+    --border: #d7dee8;
+    --text: #111827;
+    --muted: #64748b;
+    --accent: #7c3aed;
+    --accent-soft: rgba(124,58,237,0.10);
+    --ok: #0f766e;
+    --ok-soft: rgba(15,118,110,0.10);
+    --warn: #b45309;
+    --warn-soft: rgba(180,83,9,0.10);
+    --danger: #dc2626;
+    --danger-soft: rgba(220,38,38,0.08);
+    --shadow: 0 10px 30px rgba(15,23,42,0.10);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    padding-bottom: 40px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--bg);
+    background-image: radial-gradient(circle at 10% 20%, rgba(76,29,149,0.18), transparent 38%),
+                      radial-gradient(circle at 90% 10%, rgba(168,85,247,0.08), transparent 34%);
+    background-attachment: fixed;
+    opacity: 0;
+    transition: opacity .35s, background-color .25s;
+  }
+  body.light-mode { background-image: none; }
+  .fixed-header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(5,5,16,0.94);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(14px);
+    padding: 8px 14px;
+  }
+  body.light-mode .fixed-header { background: rgba(255,255,255,0.94); }
+  .header-top {
+    max-width: 1060px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .page-title {
+    margin: 0; font-size: .98rem; font-weight: 800; letter-spacing: .8px;
+    text-transform: uppercase;
+    background: linear-gradient(to right, var(--text), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    text-align: center; flex: 1;
+  }
+  .btn-icon {
+    width: 34px; height: 34px; border-radius: 9px;
+    border: 1px solid var(--border); background: var(--panel);
+    color: var(--text); cursor: pointer; font-size: 15px;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: .2s;
+  }
+  .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 14px; }
+  .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+  .kpi {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 9px 11px; text-align: center;
+  }
+  .kpi label { display: block; color: var(--muted); font-size: 9px; letter-spacing: .6px; text-transform: uppercase; font-weight: 700; margin-bottom: 3px; }
+  .kpi .v { font-size: 1.05rem; font-weight: 800; }
+  .kpi .v.ok { color: var(--ok); }
+  .kpi .v.warn { color: var(--warn); }
+  .kpi .v.accent { color: var(--accent); }
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    justify-content: space-between; margin-bottom: 10px;
+  }
+  .tabs { display: flex; gap: 3px; background: rgba(0,0,0,0.25); border: 1px solid var(--border); border-radius: 9px; padding: 3px; }
+  body.light-mode .tabs { background: #e2e8f0; }
+  .tab {
+    border: 0; background: transparent; color: var(--muted); cursor: pointer;
+    padding: 6px 13px; border-radius: 7px; font-size: 10px; font-weight: 800; letter-spacing: .5px;
+  }
+  .tab.active { background: var(--accent); color: #fff; }
+  .btn {
+    border: 1px solid var(--border); background: var(--panel); color: var(--text);
+    border-radius: 8px; padding: 8px 12px; font-family: inherit; font-size: 10px;
+    font-weight: 800; letter-spacing: .4px; cursor: pointer; transition: .2s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { filter: brightness(1.08); color: #fff; }
+  .btn.ok { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
+  .btn.danger { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .search-row { display: flex; gap: 7px; margin-bottom: 12px; }
+  .search-row input {
+    flex: 1; background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    border-radius: 9px; padding: 9px 11px; font-family: inherit; font-size: 12px;
+  }
+  .search-row input::placeholder { color: var(--muted); }
+  .card {
+    border: 1px solid var(--border); border-radius: 11px; background: var(--panel);
+    margin-bottom: 10px; overflow: hidden;
+  }
+  .card.pending { border-left: 3px solid var(--warn); }
+  .card.done { border-left: 3px solid var(--ok); }
+  .card-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; }
+  .card-who { flex: 1; min-width: 0; }
+  .card-title { font-weight: 800; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-sub { color: var(--muted); font-size: 10px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-amount { font-weight: 800; font-size: 13px; color: var(--accent); white-space: nowrap; }
+  .badge {
+    display: inline-block; padding: 2px 7px; border-radius: 999px;
+    font-size: 9px; font-weight: 800; letter-spacing: .3px;
+  }
+  .badge.pending { background: var(--warn-soft); color: var(--warn); }
+  .badge.done { background: var(--ok-soft); color: var(--ok); }
+  .badge.danger { background: var(--danger-soft); color: var(--danger); }
+  .badge.info { background: var(--accent-soft); color: var(--accent); }
+  .card-body { padding: 0 12px 11px; }
+  .grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+    border-top: 1px dashed var(--border); padding-top: 8px;
+  }
+  .grid > div { min-width: 0; }
+  .grid span { display: block; color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .4px; font-weight: 700; }
+  .grid b { display: block; font-size: 11px; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .chip {
+    background: var(--panel-strong); border: 1px solid var(--border);
+    border-radius: 7px; padding: 4px 7px; font-size: 10px; color: var(--text);
+  }
+  .chip b { color: var(--accent); }
+  .note {
+    margin-top: 8px; padding: 7px 9px; border-radius: 7px;
+    background: var(--warn-soft); border: 1px solid rgba(245,158,11,.28);
+    font-size: 10px; color: var(--text); line-height: 1.5;
+  }
+  .ok-note {
+    margin-top: 8px; padding: 7px 9px; border-radius: 7px;
+    background: var(--ok-soft); border: 1px solid rgba(45,212,191,.28);
+    font-size: 10px; color: var(--text); line-height: 1.5;
+  }
+  .actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
+  .actions .btn { padding: 6px 10px; font-size: 9px; }
+  .empty {
+    text-align: center; padding: 44px 18px; color: var(--muted);
+    border: 1px dashed var(--border); border-radius: 11px; font-size: 12px;
+  }
+  .modal {
+    display: none; position: fixed; inset: 0; z-index: 300;
+    background: rgba(0,0,0,0.68); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 12px;
+  }
+  .modal-box {
+    width: min(720px, 100%); max-height: 94vh; overflow: auto;
+    background: #0d0d1a; border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: var(--shadow);
+  }
+  body.light-mode .modal-box { background: #fff; }
+  .modal-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 14px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: inherit; z-index: 2;
+  }
+  .modal-head h3 { margin: 0; font-size: 13px; letter-spacing: .4px; text-transform: uppercase; }
+  .modal-body { padding: 13px 14px; }
+  .modal-actions {
+    display: flex; gap: 8px; justify-content: flex-end; padding: 0 14px 14px;
+    position: sticky; bottom: 0; background: inherit; z-index: 2;
+  }
+  .form-row { display: grid; gap: 5px; margin-bottom: 10px; }
+  .form-row label { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+  .form-row input, .form-row textarea, .form-row select {
+    width: 100%; background: var(--panel); border: 1px solid var(--border);
+    color: var(--text); border-radius: 8px; padding: 9px 10px;
+    font-family: inherit; font-size: 12px; outline: none;
+  }
+  .form-row textarea { min-height: 62px; resize: vertical; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+  .summary-box {
+    background: var(--panel-strong); border: 1px solid var(--border);
+    border-radius: 9px; padding: 10px; margin-bottom: 12px;
+    font-size: 11px; line-height: 1.65;
+  }
+  .summary-box b { color: var(--text); }
+  .qty-head, .qty-row {
+    display: grid; grid-template-columns: 62px 1fr 1.1fr 1fr 1.1fr 92px;
+    gap: 5px; align-items: center;
+  }
+  .qty-head {
+    color: var(--muted); font-size: 9px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .4px; padding: 0 2px 5px;
+  }
+  .qty-row { margin-bottom: 6px; }
+  .qty-kg {
+    font-weight: 800; font-size: 11px; color: var(--accent);
+    background: var(--accent-soft); border: 1px solid rgba(168,85,247,.28);
+    border-radius: 7px; padding: 7px 4px; text-align: center;
+  }
+  .qty-row input {
+    width: 100%; min-width: 0; background: var(--panel); border: 1px solid var(--border);
+    color: var(--text); border-radius: 7px; padding: 7px 8px;
+    font-family: inherit; font-size: 11px;
+  }
+  .qty-sub {
+    font-size: 10px; font-weight: 800; text-align: right; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .pay-head {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 8px; margin-bottom: 6px;
+  }
+  .pay-head label { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+  .pay-list { display: grid; gap: 6px; }
+  .pay-row-editor {
+    display: grid; grid-template-columns: 120px 1fr 1.2fr 30px; gap: 5px; align-items: center;
+  }
+  .pay-row-editor select, .pay-row-editor input {
+    width: 100%; min-width: 0; background: var(--panel); border: 1px solid var(--border);
+    color: var(--text); border-radius: 7px; padding: 7px 8px;
+    font-family: inherit; font-size: 11px;
+  }
+  .pay-row-editor button {
+    width: 30px; height: 31px; border-radius: 7px; border: 1px solid var(--danger);
+    background: var(--danger-soft); color: var(--danger); cursor: pointer; font-weight: 800;
+  }
+  .add-pay-row { display: flex; gap: 6px; margin-top: 6px; }
+  .total-line {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 0; font-size: 11px; color: var(--muted);
+  }
+  .total-line b { color: var(--text); font-size: 12px; }
+  .total-line.big { border-top: 1px dashed var(--border); margin-top: 5px; padding-top: 8px; }
+  .total-line.big b { font-size: 15px; color: var(--accent); }
+  .total-line.bad b { color: var(--danger); }
+  .total-line.good b { color: var(--ok); }
+  .detail-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 10px;
+  }
+  .detail-grid div {
+    background: var(--panel-strong); border: 1px solid var(--border);
+    border-radius: 7px; padding: 7px 9px;
+  }
+  .detail-grid span { display: block; color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .4px; font-weight: 700; }
+  .detail-grid b { display: block; font-size: 11px; margin-top: 2px; }
+  .detail-table { width: 100%; border-collapse: collapse; margin: 8px 0 10px; font-size: 10px; }
+  .detail-table th, .detail-table td { padding: 5px 6px; border-bottom: 1px solid var(--border); text-align: right; }
+  .detail-table th:first-child, .detail-table td:first-child { text-align: left; }
+  .detail-table th { color: var(--muted); font-size: 9px; text-transform: uppercase; }
+  .audit-box {
+    margin-top: 8px; padding: 8px 9px; border-radius: 7px;
+    background: var(--panel-strong); border: 1px dashed var(--border);
+    font-size: 10px; color: var(--muted); line-height: 1.55;
+  }
+  .warning-box {
+    display: none; margin: 8px 0 10px; padding: 8px 10px; border-radius: 7px;
+    background: var(--warn-soft); border: 1px solid rgba(245,158,11,.35);
+    color: var(--text); font-size: 10px; line-height: 1.5;
+  }
+  .warning-box.show { display: block; }
+  .toast-container { position: fixed; bottom: 20px; right: 16px; z-index: 500; display: grid; gap: 7px; }
+  .toast {
+    background: #111827; color: #fff; border: 1px solid var(--border);
+    border-left: 3px solid var(--accent); border-radius: 9px;
+    padding: 10px 13px; font-size: 11px; max-width: 340px;
+    box-shadow: var(--shadow); opacity: 0; transform: translateY(8px);
+    transition: .22s;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { border-left-color: var(--danger); }
+  .toast.success { border-left-color: var(--ok); }
+  .loading-overlay {
+    display: none; position: fixed; inset: 0; z-index: 600;
+    background: rgba(0,0,0,0.62); backdrop-filter: blur(3px);
+    align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+    color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .6px;
+  }
+  .loading-overlay.active { display: flex; }
+  .loader {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.16); border-top-color: var(--accent);
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (max-width: 700px) {
+    .dashboard { grid-template-columns: repeat(2, 1fr); }
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .form-grid, .form-grid.three { grid-template-columns: 1fr; }
+    .qty-head { display: none; }
+    .qty-row { grid-template-columns: 46px 1fr 1fr; }
+    .qty-row .qty-sub { grid-column: 1 / 4; text-align: right; }
+    .pay-row-editor { grid-template-columns: 1fr 1fr 30px; }
+    .pay-row-editor input[data-pay-field="referencia"] { grid-column: 1 / 3; }
+    .page-title { font-size: .82rem; }
+  }
+</style>
+</head>
+<body>
+<header class="fixed-header">
+  <div class="header-top">
+    <button class="btn-icon" id="btnVolver" title="Volver">←</button>
+    <h1 class="page-title">Control de Remitos</h1>
+    <button class="btn-icon" id="btnTheme" title="Tema">🌙</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="dashboard">
+    <div class="kpi"><label>Pendientes</label><div class="v warn" id="kpiPend">0</div></div>
+    <div class="kpi"><label>Cargas a facturar</label><div class="v accent" id="kpiCargas">0</div></div>
+    <div class="kpi"><label>Envases comprados</label><div class="v accent" id="kpiEnvases">0</div></div>
+    <div class="kpi"><label>Conciliadas</label><div class="v ok" id="kpiHist">0</div></div>
+  </section>
+
+  <section class="toolbar">
+    <div class="tabs">
+      <button class="tab active" data-tab="PENDIENTES">PENDIENTES</button>
+      <button class="tab" data-tab="HISTORIAL">HISTORIAL</button>
+    </div>
+  </section>
+
+  <div class="search-row">
+    <input id="search" type="text" placeholder="Buscar chofer, remito, factura, viaje o proveedor...">
+  </div>
+
+  <div id="list"></div>
+</main>
+
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="modalTitle">—</h3>
+      <button class="btn-icon" id="modalClose" title="Cerrar">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="btn" id="modalCancel">CANCELAR</button>
+      <button class="btn primary" id="modalConfirm">CONFIRMAR</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loader"></div>
+  <div id="loaderText">CARGANDO...</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import {
+  getFirestore, doc, getDoc, getDocs, collection, query, where, orderBy, limit,
+  runTransaction, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
+  authDomain: "vmgaslr.firebaseapp.com",
+  projectId: "vmgaslr",
+  storageBucket: "vmgaslr.firebasestorage.app",
+  messagingSenderId: "75859850089",
+  appId: "1:75859850089:web:fc551c770bbf4ae25803f8"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const TIMEOUT_SESION = 14400000; // 4 horas
+const MAX_HISTORIAL = 100;
+const MAX_COMPRAS_FALLBACK = 400;
+
+const $ = (id) => document.getElementById(id);
+const pad2 = (n) => String(n).padStart(2, "0");
+
+function num(v) {
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  if (v === null || v === undefined || v === "") return 0;
+  let s = String(v).trim().replace(/\s/g, "").replace(/[^\d,.\-]/g, "");
+  if (!s) return 0;
+  const lastComma = s.lastIndexOf(",");
+  const lastDot = s.lastIndexOf(".");
+  if (lastComma > -1 && lastDot > -1) {
+    s = lastComma > lastDot ? s.replace(/\./g, "").replace(",", ".") : s.replace(/,/g, "");
+  } else if (lastComma > -1) {
+    s = s.replace(",", ".");
+  }
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+}
+
+const round2 = (n) => Math.round(num(n) * 100) / 100;
+
+function fmtMoney(n) {
+  return Math.abs(num(n)).toLocaleString("es-AR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+}[c]));
+
+function normText(v) {
+  return String(v ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+const upper = (v) => String(v ?? "").trim().toUpperCase();
+
+function isoFromDate(d) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function normFecha(v) {
+  if (!v) return "";
+  if (v instanceof Date) return isoFromDate(v);
+  if (typeof v === "object") {
+    if (typeof v.toDate === "function") return isoFromDate(v.toDate());
+    if (typeof v.seconds === "number") return isoFromDate(new Date(v.seconds * 1000));
+  }
+  const s = String(v).trim();
+  if (!s) return "";
+  let m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (m) return `${m[1]}-${pad2(m[2])}-${pad2(m[3])}`;
+  m = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (m) return `${m[3]}-${pad2(m[2])}-${pad2(m[1])}`;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? "" : isoFromDate(d);
+}
+
+function fechaVisual(v) {
+  const iso = normFecha(v);
+  if (!iso) return String(v ?? "—");
+  const p = iso.split("-");
+  return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : iso;
+}
+
+function toMs(v) {
+  if (!v) return 0;
+  if (v instanceof Date) return v.getTime();
+  if (typeof v === "number") return v;
+  if (typeof v.toDate === "function") return v.toDate().getTime();
+  if (typeof v.seconds === "number") return v.seconds * 1000;
+  if (typeof v === "string") {
+    const n = Number(v);
+    if (Number.isFinite(n) && n > 0) return n;
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+  }
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function fmtTs(v) {
+  const ms = toMs(v);
+  if (!ms) return "—";
+  return new Date(ms).toLocaleString("es-AR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit"
+  });
+}
+
+function showToast(msg, type = "info", ms = 4500) {
+  const c = $("toast-container");
+  if (!c) return;
+  const t = document.createElement("div");
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  requestAnimationFrame(() => t.classList.add("show"));
+  setTimeout(() => {
+    t.classList.remove("show");
+    setTimeout(() => t.remove(), 250);
+  }, ms);
+}
+
+function setLoading(show, text = "CARGANDO...") {
+  const o = $("loadingOverlay");
+  if (!o) return;
+  if (text) $("loaderText").textContent = text;
+  o.classList.toggle("active", !!show);
+}
+
+// ---------------- Sesión ----------------
+const params = new URLSearchParams(window.location.search);
+const k = params.get("k") || params.get("token") || sessionStorage.getItem("k") || sessionStorage.getItem("vm_token");
+
+function expulsar() {
+  sessionStorage.clear();
+  window.location.replace("index.html");
+}
+
+window.volver = () => window.location.replace(`administrativo.html?k=${encodeURIComponent(k || "")}`);
+
+let usuarioActivo = "SISTEMA";
+let permisosUsuario = { CONFINANZAS: false, FINANZAS: false };
+
+function permisoActivo(nombre) {
+  return permisosUsuario[String(nombre || "").toUpperCase()] === true;
+}
+
+let tIdle;
+function resetTimer() {
+  clearTimeout(tIdle);
+  tIdle = setTimeout(() => {
+    showToast("Sesión expirada por inactividad.", "info");
+    setTimeout(expulsar, 1200);
+  }, TIMEOUT_SESION);
+}
+["click", "mousemove", "keydown", "touchstart", "scroll"].forEach((evt) =>
+  document.addEventListener(evt, resetTimer, { passive: true })
+);
+resetTimer();
+
+async function validarSesion() {
+  try {
+    document.body.style.opacity = 1;
+    setLoading(true, "VERIFICANDO SESIÓN...");
+
+    const snap = await getDoc(doc(db, "tokens", k));
+    if (!snap.exists()) throw new Error("Sesión inválida.");
+    const data = snap.data();
+    const exp = toMs(data.expira);
+    if (exp && Date.now() > exp) throw new Error("La sesión expiró.");
+    if (!data.usuario) throw new Error("El token no tiene un usuario asociado.");
+
+    usuarioActivo = data.usuario || data.nombre_mostrar || "SISTEMA";
+    sessionStorage.setItem("usuarioActivo", usuarioActivo);
+
+    const userSnap = await getDoc(doc(db, "usuarios", data.usuario));
+    if (!userSnap.exists()) throw new Error("Usuario no encontrado.");
+    const u = userSnap.data();
+    permisosUsuario = {
+      CONFINANZAS: u.CONFINANZAS === true || u.CONFINANZAS === "true",
+      FINANZAS: u.FINANZAS === true || u.FINANZAS === "true"
+    };
+    if (!permisoActivo("CONFINANZAS") && !permisoActivo("FINANZAS")) {
+      throw new Error("No tenés permiso para Control de Remitos.");
+    }
+
+    if (params.get("k") || params.get("token")) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    await init();
+  } catch (e) {
+    console.error(e);
+    showToast("⛔ " + (e.message || "Acceso denegado."), "error", 5500);
+    setTimeout(expulsar, 1700);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ---------------- Estado ----------------
+let currentTab = "PENDIENTES";
+let compras = [];
+let historial = [];
+let defaults = {
+  precios: { p10: 0, p15: 0, p45: 0 },
+  preciosEnvase: { pe10: 0, pe15: 0, pe45: 0 },
+  ivaPorc: 21,
+  percPorc: 1.75,
+  retencionPorTransf: 0
+};
+let editor = null;
+let modalAction = null;
+let loadSeq = 0;
+
+function normalizarCompra(id, d) {
+  const tipoViaje = upper(d.tipoViaje ?? d.TIPO_VIAJE);
+  const estado = upper(d.estado ?? d.ESTADO);
+  const conciliadoRaw = d.conciliado ?? d.CONCILIADO;
+  const conciliado = conciliadoRaw === true || upper(conciliadoRaw) === "SI" || !!upper(d.factura ?? d.FACTURA);
+
+  return {
+    id,
+    idViaje: String(d.idViaje ?? id).trim() || id,
+    tipoViaje: tipoViaje || "COMPRA",
+    estado,
+    chofer: String(d.chofer ?? d.CHOFER ?? "").trim(),
+    fechaLlegada: String(d.fechaLlegada ?? d.FECHA_LLEGADA ?? d.FECHA_SAL ?? d.fechaSalida ?? "").trim(),
+    horaLlegada: String(d.horaLlegada ?? d.HORA_LLEGADA ?? d.HORA_SAL ?? d.horaSalida ?? "").trim(),
+    remito: String(d.remito ?? d.REMITO ?? "").trim(),
+    motivo: String(d.motivo ?? d.MOTIVO ?? "").trim(),
+    diferencia: upper(d.diferencia ?? d.DIFERENCIA) === "SI",
+    conciliado,
+    factura: String(d.factura ?? d.FACTURA ?? "").trim(),
+    lL10: num(d.lL10 ?? d.L_L10), lL15: num(d.lL15 ?? d.L_L15), lL45: num(d.lL45 ?? d.L_L45),
+    lV10: num(d.lV10 ?? d.L_V10), lV15: num(d.lV15 ?? d.L_V15), lV45: num(d.lV45 ?? d.L_V45),
+    sL10: num(d.sL10 ?? d.S_L10), sL15: num(d.sL15 ?? d.S_L15), sL45: num(d.sL45 ?? d.S_L45),
+    sV10: num(d.sV10 ?? d.S_V10), sV15: num(d.sV15 ?? d.S_V15), sV45: num(d.sV45 ?? d.S_V45),
+    compraEnv10: num(d.compraEnv10 ?? d.COMPRA_ENV10),
+    compraEnv15: num(d.compraEnv15 ?? d.COMPRA_ENV15),
+    compraEnv45: num(d.compraEnv45 ?? d.COMPRA_ENV45),
+    timestampLlegadaMs: toMs(d.timestampLlegadaMs ?? d.TIMESTAMPLLEGADAMS) || toMs(d.timestampMs ?? d.TIMESTAMPMs),
+    raw: d
+  };
+}
+
+function esCompraPendiente(c) {
+  if (c.tipoViaje !== "COMPRA") return false;
+  if (c.conciliado) return false;
+  const estados = ["COMPRA_FINALIZADA", "FINALIZADO", "CON_DIFERENCIA"];
+  return estados.includes(c.estado);
+}
+
+function normalizarConciliacion(id, d) {
+  const cargas = d.cargas || {};
+  const envases = d.envasesComprados || {};
+  const precios = d.precios || {};
+  const preciosEnvase = d.preciosEnvase || {};
+  const pagos = Array.isArray(d.pagos) ? d.pagos : [];
+
+  return {
+    id: String(d.idViaje ?? id).trim() || id,
+    idViaje: String(d.idViaje ?? id).trim() || id,
+    chofer: String(d.chofer ?? "").trim(),
+    fechaLlegada: String(d.fechaLlegada ?? "").trim(),
+    horaLlegada: String(d.horaLlegada ?? "").trim(),
+    proveedor: String(d.proveedor ?? "").trim(),
+    remito: String(d.remito ?? "").trim(),
+    factura: String(d.factura ?? "").trim(),
+    fechaFactura: normFecha(d.fechaFactura) || String(d.fechaFactura ?? ""),
+    vencimiento: normFecha(d.vencimiento) || String(d.vencimiento ?? ""),
+    cargas: {
+      l10: num(cargas.l10), l15: num(cargas.l15), l45: num(cargas.l45)
+    },
+    envasesComprados: {
+      e10: num(envases.e10), e15: num(envases.e15), e45: num(envases.e45)
+    },
+    precios: {
+      p10: num(precios.p10), p15: num(precios.p15), p45: num(precios.p45)
+    },
+    preciosEnvase: {
+      pe10: num(preciosEnvase.pe10), pe15: num(preciosEnvase.pe15), pe45: num(preciosEnvase.pe45)
+    },
+    ivaPorc: num(d.ivaPorc),
+    percPorc: num(d.percPorc),
+    retencionPorTransf: num(d.retencionPorTransf),
+    subtotalCargas: num(d.subtotalCargas),
+    subtotalEnvases: num(d.subtotalEnvases),
+    iva: num(d.iva),
+    percepcion: num(d.percepcion),
+    retencion: num(d.retencion),
+    total: num(d.total),
+    pagos,
+    totalPagos: num(d.totalPagos),
+    saldo: num(d.saldo),
+    estado: upper(d.estado) || "CONCILIADO",
+    observacion: String(d.observacion ?? "").trim(),
+    usuarioConciliacion: String(d.usuarioConciliacion ?? "").trim(),
+    fechaConciliacion: String(d.fechaConciliacion ?? "").trim(),
+    timestampMs: toMs(d.timestampMs),
+    finIds: Array.isArray(d.finIds) ? d.finIds.map(String) : [],
+    historial: Array.isArray(d.historial) ? d.historial : [],
+    ccargaAntes: d.ccargaAntes || null,
+    ccargaDespues: d.ccargaDespues || null,
+    raw: d
+  };
+}
+
+async function fetchCompras() {
+  try {
+    const snap = await getDocs(query(collection(db, "ccarga"), where("tipoViaje", "==", "COMPRA")));
+    return snap.docs.map((x) => normalizarCompra(x.id, x.data()));
+  } catch (e) {
+    console.warn("Consulta de compras con filtro falló, se usa fallback:", e);
+    const snap = await getDocs(query(collection(db, "ccarga"), limit(MAX_COMPRAS_FALLBACK)));
+    return snap.docs.map((x) => normalizarCompra(x.id, x.data())).filter((c) => c.tipoViaje === "COMPRA");
+  }
+}
+
+async function fetchHistorial() {
+  try {
+    const snap = await getDocs(query(
+      collection(db, "compras_conciliaciones"),
+      orderBy("timestampMs", "desc"),
+      limit(MAX_HISTORIAL)
+    ));
+    return snap.docs.map((x) => normalizarConciliacion(x.id, x.data()));
+  } catch (e) {
+    console.warn("Consulta de conciliaciones ordenada falló, se usa fallback:", e);
+    const snap = await getDocs(query(collection(db, "compras_conciliaciones"), limit(MAX_HISTORIAL)));
+    return snap.docs.map((x) => normalizarConciliacion(x.id, x.data()))
+      .sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0));
+  }
+}
+
+async function cargar() {
+  const seq = ++loadSeq;
+  setLoading(true, "LEYENDO COMPRAS Y CONCILIACIONES...");
+  try {
+    const [cs, hs] = await Promise.all([fetchCompras(), fetchHistorial()]);
+    if (seq !== loadSeq) return;
+
+    compras = cs
+      .filter(esCompraPendiente)
+      .sort((a, b) => (b.timestampLlegadaMs || 0) - (a.timestampLlegadaMs || 0));
+    historial = hs.sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0));
+
+    const ultima = historial[0];
+    if (ultima) {
+      defaults = {
+        precios: { ...ultima.precios },
+        preciosEnvase: { ...ultima.preciosEnvase },
+        ivaPorc: ultima.ivaPorc,
+        percPorc: ultima.percPorc,
+        retencionPorTransf: ultima.retencionPorTransf
+      };
+    }
+
+    render();
+  } catch (e) {
+    console.error(e);
+    if (seq === loadSeq) {
+      showToast("Error al cargar: " + (e.message || e.code || "desconocido"), "error", 6500);
+    }
+  } finally {
+    if (seq === loadSeq) setLoading(false);
+  }
+}
+
+function updateKPIs() {
+  const cargas = compras.reduce((a, c) => a + c.lL10 + c.lL15 + c.lL45, 0);
+  const envases = compras.reduce((a, c) => a + c.compraEnv10 + c.compraEnv15 + c.compraEnv45, 0);
+  $("kpiPend").textContent = String(compras.length);
+  $("kpiCargas").textContent = String(cargas);
+  $("kpiEnvases").textContent = String(envases);
+  $("kpiHist").textContent = String(historial.length);
+}
+
+function render() {
+  updateKPIs();
+  const q = normText($("search").value);
+
+  if (currentTab === "PENDIENTES") {
+    const list = q
+      ? compras.filter((c) => normText([
+          c.chofer, c.remito, c.idViaje, c.fechaLlegada, c.motivo
+        ].join(" ")).includes(q))
+      : compras;
+    renderPendientes(list);
+  } else {
+    const list = q
+      ? historial.filter((h) => normText([
+          h.chofer || "", h.remito, h.factura, h.proveedor, h.idViaje,
+          h.usuarioConciliacion, h.estado
+        ].join(" ")).includes(q))
+      : historial;
+    renderHistorial(list);
+  }
+}
+
+function badgeEstado(estado) {
+  const e = upper(estado);
+  if (e === "CONCILIADO") return `<span class="badge done">CONCILIADO</span>`;
+  if (e === "CON_DIFERENCIA") return `<span class="badge danger">CON DIFERENCIA</span>`;
+  return `<span class="badge info">${esc(e || "—")}</span>`;
+}
+
+function renderPendientes(list) {
+  const cont = $("list");
+  if (!list.length) {
+    cont.innerHTML = `<div class="empty">✅ No hay compras pendientes de conciliar.</div>`;
+    return;
+  }
+
+  cont.innerHTML = list.map((c) => {
+    const cargas = c.lL10 + c.lL15 + c.lL45;
+    const envases = c.compraEnv10 + c.compraEnv15 + c.compraEnv45;
+    const diff = c.diferencia
+      ? `<div class="note">⚠️ La llegada se registró con diferencia${c.motivo ? `: ${esc(c.motivo)}` : "."}</div>`
+      : "";
+
+    return `<div class="card pending">
+      <div class="card-head">
+        <div class="card-who">
+          <div class="card-title">🏭 ${esc(c.chofer || "S/D")} · Remito ${esc(c.remito || "S/N")}</div>
+          <div class="card-sub">📅 ${esc(fechaVisual(c.fechaLlegada) || "—")} ${esc(c.horaLlegada || "")} · 🚚 ${esc(c.idViaje)}</div>
+        </div>
+        <span class="badge pending">PENDIENTE</span>
+      </div>
+      <div class="card-body">
+        <div class="grid">
+          <div><span>Cargas (llenos)</span><b>${c.lL10} · ${c.lL15} · ${c.lL45}</b></div>
+          <div><span>Vacíos retornados</span><b>${c.lV10} · ${c.lV15} · ${c.lV45}</b></div>
+          <div><span>Envases comprados</span><b>${c.compraEnv10} · ${c.compraEnv15} · ${c.compraEnv45}</b></div>
+          <div><span>Total unidades</span><b>${cargas + envases}</b></div>
+        </div>
+        <div class="chips">
+          <span class="chip">10 kg: <b>${c.lL10}</b> cargas / <b>${c.compraEnv10}</b> env.</span>
+          <span class="chip">15 kg: <b>${c.lL15}</b> cargas / <b>${c.compraEnv15}</b> env.</span>
+          <span class="chip">45 kg: <b>${c.lL45}</b> cargas / <b>${c.compraEnv45}</b> env.</span>
+        </div>
+        ${diff}
+        <div class="actions">
+          <button class="btn primary" data-action="conciliar" data-id="${esc(c.id)}">CONCILIAR FACTURA</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderHistorial(list) {
+  const cont = $("list");
+  if (!list.length) {
+    cont.innerHTML = `<div class="empty">Todavía no hay compras conciliadas.</div>`;
+    return;
+  }
+
+  cont.innerHTML = list.map((h) => {
+    const saldo = round2(h.saldo);
+    const saldoTxt = Math.abs(saldo) <= 0.01
+      ? `<span class="badge done">PAGO EXACTO</span>`
+      : (saldo < 0
+        ? `<span class="badge danger">DEUDA $ ${fmtMoney(saldo)}</span>`
+        : `<span class="badge info">A FAVOR $ ${fmtMoney(saldo)}</span>`);
+
+    return `<div class="card done">
+      <div class="card-head">
+        <div class="card-who">
+          <div class="card-title">🧾 Factura ${esc(h.factura || "S/N")} · Remito ${esc(h.remito || "S/N")}</div>
+          <div class="card-sub">${esc(h.chofer || "S/D")} · ${esc(h.proveedor || "Proveedor S/D")} · ${esc(fechaVisual(h.fechaFactura) || "—")} · ${esc(h.idViaje)}</div>
+        </div>
+        <div class="card-amount">$ ${fmtMoney(h.total)}</div>
+      </div>
+      <div class="card-body">
+        <div class="grid">
+          <div><span>Cargas</span><b>${h.cargas.l10} · ${h.cargas.l15} · ${h.cargas.l45}</b></div>
+          <div><span>Envases</span><b>${h.envasesComprados.e10} · ${h.envasesComprados.e15} · ${h.envasesComprados.e45}</b></div>
+          <div><span>Pagos</span><b>$ ${fmtMoney(h.totalPagos)}</b></div>
+          <div><span>Estado</span><b>${badgeEstado(h.estado)} ${saldoTxt}</b></div>
+        </div>
+        <div class="chips">
+          <span class="chip">IVA: <b>$ ${fmtMoney(h.iva)}</b></span>
+          <span class="chip">Perc.: <b>$ ${fmtMoney(h.percepcion)}</b></span>
+          <span class="chip">Retención: <b>$ ${fmtMoney(h.retencion)}</b></span>
+          <span class="chip">Por: <b>${esc(h.usuarioConciliacion || "—")}</b></span>
+        </div>
+        <div class="actions">
+          <button class="btn" data-action="detalle" data-id="${esc(h.id)}">VER DETALLE</button>
+          <button class="btn danger" data-action="rectificar" data-id="${esc(h.id)}">RECTIFICAR</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ---------------- Cálculos ----------------
+function calcular(data) {
+  const sc = round2(
+    data.cargas.l10 * data.precios.p10 +
+    data.cargas.l15 * data.precios.p15 +
+    data.cargas.l45 * data.precios.p45
+  );
+  const se = round2(
+    data.envasesComprados.e10 * data.preciosEnvase.pe10 +
+    data.envasesComprados.e15 * data.preciosEnvase.pe15 +
+    data.envasesComprados.e45 * data.preciosEnvase.pe45
+  );
+  const base = round2(sc + se);
+  const iva = round2(base * data.ivaPorc / 100);
+  const percepcion = round2(base * data.percPorc / 100);
+  const total = round2(base + iva + percepcion);
+  const totalPagos = round2(data.pagos.reduce((a, p) => a + num(p.monto), 0));
+  const saldo = round2(totalPagos - total);
+  const cantTransf = data.pagos.filter((p) => p.tipo === "TRANSFERENCIA").length;
+  const retencion = round2(data.retencionPorTransf * cantTransf);
+
+  return {
+    subtotalCargas: sc,
+    subtotalEnvases: se,
+    base,
+    iva,
+    percepcion,
+    total,
+    totalPagos,
+    saldo,
+    cantTransf,
+    retencion,
+    estado: Math.abs(saldo) <= 0.01 ? "CONCILIADO" : "CON_DIFERENCIA"
+  };
+}
+
+function leerEditor() {
+  const data = {
+    idViaje: editor.idViaje,
+    proveedor: $("edProveedor").value.trim() || "PLANTA",
+    factura: $("edFactura").value.trim(),
+    fechaFactura: $("edFechaFactura").value,
+    vencimiento: $("edVencimiento").value,
+    observacion: $("edObservacion").value.trim(),
+    cargas: {
+      l10: num($("edQ10").value),
+      l15: num($("edQ15").value),
+      l45: num($("edQ45").value)
+    },
+    envasesComprados: {
+      e10: num($("edE10").value),
+      e15: num($("edE15").value),
+      e45: num($("edE45").value)
+    },
+    precios: {
+      p10: num($("edP10").value),
+      p15: num($("edP15").value),
+      p45: num($("edP45").value)
+    },
+    preciosEnvase: {
+      pe10: num($("edPE10").value),
+      pe15: num($("edPE15").value),
+      pe45: num($("edPE45").value)
+    },
+    ivaPorc: num($("edIva").value),
+    percPorc: num($("edPerc").value),
+    retencionPorTransf: num($("edRetencion").value),
+    pagos: editor.pagos
+      .map((p) => ({
+        tipo: upper(p.tipo) === "TRANSFERENCIA" ? "TRANSFERENCIA" : "DEPOSITO",
+        monto: round2(num(p.monto)),
+        referencia: String(p.referencia || "").trim() || "S/N"
+      }))
+      .filter((p) => p.monto > 0)
+  };
+  return data;
+}
+
+function validarEditor(data, calc) {
+  if (!data.factura) throw new Error("Ingresá el número de factura.");
+  if (!data.fechaFactura) throw new Error("Ingresá la fecha de factura.");
+  if (data.ivaPorc < 0 || data.ivaPorc > 100) throw new Error("El IVA debe estar entre 0 y 100 %.");
+  if (data.percPorc < 0 || data.percPorc > 100) throw new Error("La percepción debe estar entre 0 y 100 %.");
+  if (data.retencionPorTransf < 0) throw new Error("La retención no puede ser negativa.");
+
+  for (const [k, v] of Object.entries(data.cargas)) {
+    if (v < 0) throw new Error(`La cantidad de cargas ${k} no puede ser negativa.`);
+  }
+  for (const [k, v] of Object.entries(data.envasesComprados)) {
+    if (v < 0) throw new Error(`La cantidad de envases ${k} no puede ser negativa.`);
+  }
+  for (const [k, v] of Object.entries(data.precios)) {
+    if (v < 0) throw new Error(`El precio ${k} no puede ser negativo.`);
+  }
+  for (const [k, v] of Object.entries(data.preciosEnvase)) {
+    if (v < 0) throw new Error(`El precio de envase ${k} no puede ser negativo.`);
+  }
+
+  if (calc.total <= 0) throw new Error("La factura no tiene cargas ni envases con precio. Revisá cantidades y precios.");
+  if (!data.pagos.length) throw new Error("Ingresá al menos un medio de pago.");
+
+  const cambiosCantidad = cantidadesCambiaron(data);
+  if ((Math.abs(calc.saldo) > 0.01 || cambiosCantidad) && !data.observacion) {
+    throw new Error("Indicá una observación: hay diferencia de pago o cambios de cantidad.");
+  }
+  if (editor.rectificar && !data.observacion) {
+    throw new Error("Indicá el motivo de la rectificación.");
+  }
+}
+
+function cantidadesCambiaron(data) {
+  if (!editor) return false;
+  const b = editor.base;
+  return (
+    round2(data.cargas.l10) !== round2(b.lL10) ||
+    round2(data.cargas.l15) !== round2(b.lL15) ||
+    round2(data.cargas.l45) !== round2(b.lL45) ||
+    round2(data.envasesComprados.e10) !== round2(b.compraEnv10) ||
+    round2(data.envasesComprados.e15) !== round2(b.compraEnv15) ||
+    round2(data.envasesComprados.e45) !== round2(b.compraEnv45)
+  );
+}
+
+// ---------------- Editor ----------------
+function openEditor(id, rectificar = false) {
+  const compra = compras.find((c) => c.id === id);
+  const conc = historial.find((h) => h.id === id);
+
+  if (!rectificar && !compra) return showToast("No se encontró la compra pendiente.", "error");
+  if (rectificar && !conc) return showToast("No se encontró la conciliación.", "error");
+
+  const base = rectificar
+    ? {
+        lL10: num(conc.ccargaDespues?.lL10 ?? conc.cargas.l10),
+        lL15: num(conc.ccargaDespues?.lL15 ?? conc.cargas.l15),
+        lL45: num(conc.ccargaDespues?.lL45 ?? conc.cargas.l45),
+        compraEnv10: num(conc.ccargaDespues?.compraEnv10 ?? conc.envasesComprados.e10),
+        compraEnv15: num(conc.ccargaDespues?.compraEnv15 ?? conc.envasesComprados.e15),
+        compraEnv45: num(conc.ccargaDespues?.compraEnv45 ?? conc.envasesComprados.e45)
+      }
+    : {
+        lL10: compra.lL10,
+        lL15: compra.lL15,
+        lL45: compra.lL45,
+        compraEnv10: compra.compraEnv10,
+        compraEnv15: compra.compraEnv15,
+        compraEnv45: compra.compraEnv45
+      };
+
+  const src = rectificar ? conc : compra;
+  const precios = rectificar ? conc.precios : defaults.precios;
+  const preciosEnvase = rectificar ? conc.preciosEnvase : defaults.preciosEnvase;
+  const ivaPorc = rectificar ? conc.ivaPorc : defaults.ivaPorc;
+  const percPorc = rectificar ? conc.percPorc : defaults.percPorc;
+  const retencionPorTransf = rectificar ? conc.retencionPorTransf : defaults.retencionPorTransf;
+  const pagos = rectificar
+    ? conc.pagos.map((p) => ({ tipo: upper(p.tipo) || "DEPOSITO", monto: num(p.monto), referencia: String(p.referencia || "") }))
+    : [{ tipo: "TRANSFERENCIA", monto: 0, referencia: "" }];
+
+  editor = {
+    idViaje: id,
+    rectificar,
+    base,
+    compra,
+    conc,
+    concTs: rectificar ? num(conc.timestampMs) : 0,
+    pagos
+  };
+
+  const cantCargas = base.lL10 + base.lL15 + base.lL45;
+  const cantEnvases = base.compraEnv10 + base.compraEnv15 + base.compraEnv45;
+
+  const body = `
+    <div class="summary-box">
+      <b>${esc(src.chofer || "S/D")}</b> · Remito <b>${esc(src.remito || "S/N")}</b> · Viaje <b>${esc(id)}</b><br>
+      Llegada: <b>${esc(fechaVisual(src.fechaLlegada) || "—")} ${esc(src.horaLlegada || "")}</b><br>
+      Remito registrado: <b>${cantCargas}</b> carga(s) · <b>${cantEnvases}</b> envase(s) comprado(s)
+      ${rectificar ? `<br>Rectificando una conciliación existente. Se reemplazarán los asientos de finanzas.` : ""}
+    </div>
+
+    <div class="form-grid">
+      <div class="form-row">
+        <label>Proveedor</label>
+        <input type="text" id="edProveedor" value="${esc(rectificar ? conc.proveedor : "PLANTA")}" placeholder="Planta / proveedor">
+      </div>
+      <div class="form-row">
+        <label>Factura Nº</label>
+        <input type="text" id="edFactura" value="${esc(rectificar ? conc.factura : "")}" placeholder="Nº de factura">
+      </div>
+      <div class="form-row">
+        <label>Fecha de factura</label>
+        <input type="date" id="edFechaFactura" value="${esc(rectificar ? conc.fechaFactura : isoFromDate(new Date()))}">
+      </div>
+      <div class="form-row">
+        <label>Vencimiento (opcional)</label>
+        <input type="date" id="edVencimiento" value="${esc(rectificar ? conc.vencimiento : "")}">
+      </div>
+    </div>
+
+    <div class="form-row" style="margin-bottom:6px">
+      <label>Cantidades y precios facturados</label>
+      <div class="qty-head">
+        <span>Kg</span><span>Cargas</span><span>Precio carga</span><span>Envases</span><span>Precio envase</span><span>Subtotal</span>
+      </div>
+      <div class="qty-row">
+        <div class="qty-kg">10</div>
+        <input type="number" min="0" step="1" id="edQ10" value="${rectificar ? conc.cargas.l10 : base.lL10}">
+        <input type="number" min="0" step="0.01" id="edP10" value="${rectificar ? conc.precios.p10 : precios.p10}">
+        <input type="number" min="0" step="1" id="edE10" value="${rectificar ? conc.envasesComprados.e10 : base.compraEnv10}">
+        <input type="number" min="0" step="0.01" id="edPE10" value="${rectificar ? conc.preciosEnvase.pe10 : preciosEnvase.pe10}">
+        <div class="qty-sub" id="edSub10">$ 0,00</div>
+      </div>
+      <div class="qty-row">
+        <div class="qty-kg">15</div>
+        <input type="number" min="0" step="1" id="edQ15" value="${rectificar ? conc.cargas.l15 : base.lL15}">
+        <input type="number" min="0" step="0.01" id="edP15" value="${rectificar ? conc.precios.p15 : precios.p15}">
+        <input type="number" min="0" step="1" id="edE15" value="${rectificar ? conc.envasesComprados.e15 : base.compraEnv15}">
+        <input type="number" min="0" step="0.01" id="edPE15" value="${rectificar ? conc.preciosEnvase.pe15 : preciosEnvase.pe15}">
+        <div class="qty-sub" id="edSub15">$ 0,00</div>
+      </div>
+      <div class="qty-row">
+        <div class="qty-kg">45</div>
+        <input type="number" min="0" step="1" id="edQ45" value="${rectificar ? conc.cargas.l45 : base.lL45}">
+        <input type="number" min="0" step="0.01" id="edP45" value="${rectificar ? conc.precios.p45 : precios.p45}">
+        <input type="number" min="0" step="1" id="edE45" value="${rectificar ? conc.envasesComprados.e45 : base.compraEnv45}">
+        <input type="number" min="0" step="0.01" id="edPE45" value="${rectificar ? conc.preciosEnvase.pe45 : preciosEnvase.pe45}">
+        <div class="qty-sub" id="edSub45">$ 0,00</div>
+      </div>
+    </div>
+
+    <div class="warning-box" id="edQtyWarning">
+      ⚠️ Las cantidades no coinciden con el remito de <b>controlcarga</b>. Al guardar se actualizarán
+      las cantidades en <b>ccarga</b> y quedará el antes/después en la auditoría.
+    </div>
+
+    <div class="form-grid">
+      <div class="form-row">
+        <label>IVA inscripto (%)</label>
+        <input type="number" min="0" max="100" step="0.01" id="edIva" value="${ivaPorc}">
+      </div>
+      <div class="form-row">
+        <label>Percepción IVA (%)</label>
+        <input type="number" min="0" max="100" step="0.01" id="edPerc" value="${percPorc}">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="pay-head">
+        <label>Medios de pago</label>
+        <div class="add-pay-row">
+          <button type="button" class="btn" data-add-pay="DEPOSITO">+ DEPÓSITO</button>
+          <button type="button" class="btn" data-add-pay="TRANSFERENCIA">+ TRANSFERENCIA</button>
+        </div>
+      </div>
+      <div class="pay-list" id="payList"></div>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-row">
+        <label>Retención por transferencia ($)</label>
+        <input type="number" min="0" step="0.01" id="edRetencion" value="${retencionPorTransf}">
+      </div>
+      <div class="form-row">
+        <label>Observación / diferencia</label>
+        <textarea id="edObservacion" placeholder="Obligatoria si hay diferencia de pago, cambio de cantidades o rectificación.">${esc(rectificar ? conc.observacion : "")}</textarea>
+      </div>
+    </div>
+
+    <div class="summary-box" style="margin-bottom:0">
+      <div class="total-line"><span>Subtotal cargas</span><b id="edSubCargas">$ 0,00</b></div>
+      <div class="total-line"><span>Subtotal envases</span><b id="edSubEnvases">$ 0,00</b></div>
+      <div class="total-line"><span>IVA</span><b id="edIvaMonto">$ 0,00</b></div>
+      <div class="total-line"><span>Percepción IVA</span><b id="edPercMonto">$ 0,00</b></div>
+      <div class="total-line big"><span>Total factura</span><b id="edTotal">$ 0,00</b></div>
+      <div class="total-line"><span>Pagos ingresados</span><b id="edPagos">$ 0,00</b></div>
+      <div class="total-line" id="edSaldoLine"><span>Saldo</span><b id="edSaldo">$ 0,00</b></div>
+      <div class="total-line"><span>Retención transferencias</span><b id="edRetMonto">$ 0,00</b></div>
+    </div>
+  `;
+
+  openModal(
+    rectificar ? "Rectificar conciliación" : "Conciliar compra",
+    body,
+    rectificar ? "GUARDAR RECTIFICACIÓN" : "CONCILIAR Y REGISTRAR",
+    () => guardarConciliacion()
+  );
+
+  renderPagos();
+  updateEditorTotals();
+}
+
+function renderPagos() {
+  const cont = $("payList");
+  if (!cont) return;
+  cont.innerHTML = editor.pagos.map((p, i) => `
+    <div class="pay-row-editor">
+      <select data-pay-field="tipo" data-pay-index="${i}">
+        <option value="DEPOSITO" ${upper(p.tipo) === "DEPOSITO" ? "selected" : ""}>DEPÓSITO</option>
+        <option value="TRANSFERENCIA" ${upper(p.tipo) === "TRANSFERENCIA" ? "selected" : ""}>TRANSFERENCIA</option>
+      </select>
+      <input type="number" min="0" step="0.01" placeholder="Monto" value="${p.monto > 0 ? p.monto : ""}" data-pay-field="monto" data-pay-index="${i}">
+      <input type="text" placeholder="Nº operación / referencia" value="${esc(p.referencia || "")}" data-pay-field="referencia" data-pay-index="${i}">
+      <button type="button" data-remove-pay="${i}" title="Quitar">×</button>
+    </div>
+  `).join("");
+  updateEditorTotals();
+}
+
+function updateEditorTotals() {
+  if (!editor) return;
+  const data = leerEditor();
+  const c = calcular(data);
+
+  const set = (id, val) => { const el = $(id); if (el) el.textContent = "$ " + fmtMoney(val); };
+  set("edSubCargas", c.subtotalCargas);
+  set("edSubEnvases", c.subtotalEnvases);
+  set("edIvaMonto", c.iva);
+  set("edPercMonto", c.percepcion);
+  set("edTotal", c.total);
+  set("edPagos", c.totalPagos);
+  set("edSaldo", c.saldo);
+  set("edRetMonto", c.retencion);
+
+  const sub10 = $(`edSub10`);
+  if (sub10) sub10.textContent = "$ " + fmtMoney(data.cargas.l10 * data.precios.p10 + data.envasesComprados.e10 * data.preciosEnvase.pe10);
+  const sub15 = $(`edSub15`);
+  if (sub15) sub15.textContent = "$ " + fmtMoney(data.cargas.l15 * data.precios.p15 + data.envasesComprados.e15 * data.preciosEnvase.pe15);
+  const sub45 = $(`edSub45`);
+  if (sub45) sub45.textContent = "$ " + fmtMoney(data.cargas.l45 * data.precios.p45 + data.envasesComprados.e45 * data.preciosEnvase.pe45);
+
+  const line = $("edSaldoLine");
+  if (line) {
+    line.classList.toggle("bad", c.saldo < -0.01);
+    line.classList.toggle("good", c.saldo > 0.01);
+  }
+
+  const warning = $("edQtyWarning");
+  if (warning) warning.classList.toggle("show", cantidadesCambiaron(data));
+}
+
+// ---------------- Guardado ----------------
+async function guardarConciliacion() {
+  const data = leerEditor();
+  const c = calcular(data);
+  validarEditor(data, c);
+
+  const id = editor.idViaje;
+  const rectificar = editor.rectificar;
+  const base = editor.base;
+  const concTs = editor.concTs;
+
+  setLoading(true, rectificar ? "RECTIFICANDO CONCILIACIÓN..." : "CONCILIANDO COMPRA...");
+  try {
+    let resultado = null;
+
+    await runTransaction(db, async (tx) => {
+      const ccargaRef = doc(db, "ccarga", id);
+      const concRef = doc(db, "compras_conciliaciones", id);
+      const ccargaSnap = await tx.get(ccargaRef);
+      if (!ccargaSnap.exists()) throw new Error("El remito de compra ya no existe.");
+      const cc = ccargaSnap.data();
+
+      if (upper(cc.tipoViaje) !== "COMPRA") throw new Error("El viaje no es una compra.");
+
+      const concSnap = await tx.get(concRef);
+      const old = concSnap.exists() ? concSnap.data() : null;
+
+      if (rectificar && !old) throw new Error("La conciliación que querés rectificar ya no existe.");
+      if (!rectificar && old) throw new Error("Este remito ya fue conciliado por otro usuario. Recargá la lista.");
+      if (rectificar && num(old.timestampMs) !== num(concTs)) {
+        throw new Error("La conciliación cambió desde que la abriste. Cerrá y recargá el historial.");
+      }
+
+      const actual = {
+        lL10: num(cc.lL10), lL15: num(cc.lL15), lL45: num(cc.lL45),
+        compraEnv10: num(cc.compraEnv10), compraEnv15: num(cc.compraEnv15), compraEnv45: num(cc.compraEnv45)
+      };
+      for (const key of Object.keys(base)) {
+        if (round2(actual[key]) !== round2(base[key])) {
+          throw new Error("Las cantidades del remito cambiaron desde que abriste la conciliación. Cerrá y recargá.");
+        }
+      }
+
+      const ts = Date.now();
+      const fechaHora = new Date(ts).toLocaleString("es-AR");
+      const remito = String(cc.remito ?? "").trim() || "S/N";
+      const proveedor = data.proveedor;
+      const detallePagos = data.pagos.length
+        ? data.pagos.map((p) => `${p.tipo === "DEPOSITO" ? "Depósito" : "Transf."} $${fmtMoney(p.monto)} (Op:${p.referencia})`).join(" | ")
+        : "Sin pagos";
+      const detalleBase = `Remito: ${remito} | Fac: ${data.factura} | ${proveedor} | ` +
+        `Cargas 10kg ${data.cargas.l10} x $${fmtMoney(data.precios.p10)} · 15kg ${data.cargas.l15} x $${fmtMoney(data.precios.p15)} · 45kg ${data.cargas.l45} x $${fmtMoney(data.precios.p45)} | ` +
+        `Envases 10kg ${data.envasesComprados.e10} x $${fmtMoney(data.preciosEnvase.pe10)} · 15kg ${data.envasesComprados.e15} x $${fmtMoney(data.preciosEnvase.pe15)} · 45kg ${data.envasesComprados.e45} x $${fmtMoney(data.preciosEnvase.pe45)} | ` +
+        `Pagos: ${detallePagos} | Saldo: $${fmtMoney(c.saldo)}`;
+
+      const finDocs = [];
+      const nuevoFin = (sufijo, rubro, subrubro, monto, detalle) => {
+        const finId = `CMP-${id}-${sufijo}`;
+        finDocs.push([finId, {
+          id: finId,
+          fecha: data.fechaFactura,
+          rubro,
+          subrubro,
+          detalle,
+          monto: round2(monto),
+          usuario: usuarioActivo,
+          tipo: "EGRESO",
+          origen: "COMPRA",
+          referencia: id,
+          conciliacionId: id,
+          proveedor,
+          remito,
+          factura: data.factura,
+          timestamp: serverTimestamp(),
+          timestampMs: ts
+        }]);
+      };
+
+      if (c.subtotalCargas > 0) {
+        nuevoFin("GAS", "GAS", "COMPRA GAS", c.subtotalCargas, detalleBase);
+      }
+      if (c.subtotalEnvases > 0) {
+        nuevoFin(
+          "ENV", "GAS", "COMPRA ENVASES", c.subtotalEnvases,
+          `Remito: ${remito} | Fac: ${data.factura} | ${proveedor} | Envases comprados 10kg: ${data.envasesComprados.e10} · 15kg: ${data.envasesComprados.e15} · 45kg: ${data.envasesComprados.e45} | Pagos: ${detallePagos}`
+        );
+      }
+      if (c.iva > 0) {
+        nuevoFin(
+          "IVA", "IMPUESTOS", "IVA INSCRIPTO", c.iva,
+          `Remito: ${remito} | Fac: ${data.factura} | IVA ${data.ivaPorc}% sobre $${fmtMoney(c.subtotalCargas + c.subtotalEnvases)} | Total Fac: $${fmtMoney(c.total)}`
+        );
+      }
+      if (c.percepcion > 0) {
+        nuevoFin(
+          "PER", "IMPUESTOS", "PERCEPCION IVA", c.percepcion,
+          `Remito: ${remito} | Fac: ${data.factura} | Percepción ${data.percPorc}% sobre $${fmtMoney(c.subtotalCargas + c.subtotalEnvases)} | Total Fac: $${fmtMoney(c.total)}`
+        );
+      }
+      if (c.retencion > 0) {
+        const refs = data.pagos.filter((p) => p.tipo === "TRANSFERENCIA").map((p) => p.referencia).join(", ");
+        nuevoFin(
+          "RET", "CUENTA BANCARIA", "RETENCION TRANSFERENCIA", c.retencion,
+          `Remito: ${remito} | Fac: ${data.factura} | Retención $${fmtMoney(data.retencionPorTransf)} x ${c.cantTransf} transferencia(s) (${refs || "S/R"})`
+        );
+      }
+
+      const nuevos = new Set(finDocs.map((x) => x[0]));
+      const posibles = new Set([
+        ...(Array.isArray(old?.finIds) ? old.finIds.map(String) : []),
+        ...["GAS", "ENV", "IVA", "PER", "RET"].map((s) => `CMP-${id}-${s}`)
+      ]);
+      for (const finId of posibles) {
+        if (!nuevos.has(finId)) tx.delete(doc(db, "confinanzas", finId));
+      }
+      for (const [finId, payload] of finDocs) {
+        tx.set(doc(db, "confinanzas", finId), payload);
+      }
+
+      const historial = Array.isArray(old?.historial) ? old.historial.slice() : [];
+      const snapshotAntes = old ? {
+        cargas: old.cargas || null,
+        envasesComprados: old.envasesComprados || null,
+        precios: old.precios || null,
+        preciosEnvase: old.preciosEnvase || null,
+        ivaPorc: old.ivaPorc ?? null,
+        percPorc: old.percPorc ?? null,
+        retencion: old.retencion ?? null,
+        total: old.total ?? null,
+        pagos: old.pagos || [],
+        factura: old.factura || "",
+        estado: old.estado || ""
+      } : null;
+      const snapshotDespues = {
+        cargas: data.cargas,
+        envasesComprados: data.envasesComprados,
+        precios: data.precios,
+        preciosEnvase: data.preciosEnvase,
+        ivaPorc: data.ivaPorc,
+        percPorc: data.percPorc,
+        retencion: c.retencion,
+        total: c.total,
+        pagos: data.pagos,
+        factura: data.factura,
+        estado: c.estado
+      };
+      historial.push({
+        accion: rectificar ? "RECTIFICAR" : "CONCILIAR",
+        usuario: usuarioActivo,
+        ts,
+        antes: snapshotAntes,
+        despues: snapshotDespues,
+        motivo: data.observacion
+      });
+
+      const finIds = finDocs.map((x) => x[0]);
+      tx.set(concRef, {
+        idViaje: id,
+        chofer: String(cc.chofer ?? "").trim(),
+        fechaLlegada: String(cc.fechaLlegada ?? cc.FECHA_LLEGADA ?? "").trim(),
+        horaLlegada: String(cc.horaLlegada ?? cc.HORA_LLEGADA ?? "").trim(),
+        proveedor,
+        remito,
+        factura: data.factura,
+        fechaFactura: data.fechaFactura,
+        vencimiento: data.vencimiento,
+        cargas: data.cargas,
+        envasesComprados: data.envasesComprados,
+        precios: data.precios,
+        preciosEnvase: data.preciosEnvase,
+        ivaPorc: data.ivaPorc,
+        percPorc: data.percPorc,
+        retencionPorTransf: data.retencionPorTransf,
+        subtotalCargas: c.subtotalCargas,
+        subtotalEnvases: c.subtotalEnvases,
+        iva: c.iva,
+        percepcion: c.percepcion,
+        retencion: c.retencion,
+        total: c.total,
+        pagos: data.pagos,
+        totalPagos: c.totalPagos,
+        saldo: c.saldo,
+        estado: c.estado,
+        observacion: data.observacion,
+        usuarioConciliacion: usuarioActivo,
+        fechaConciliacion: fechaHora,
+        creado: old?.creado || serverTimestamp(),
+        creadoPor: old?.creadoPor || usuarioActivo,
+        actualizadoPor: usuarioActivo,
+        actualizadoTs: ts,
+        timestampMs: ts,
+        finIds,
+        ccargaAntes: {
+          lL10: base.lL10, lL15: base.lL15, lL45: base.lL45,
+          compraEnv10: base.compraEnv10, compraEnv15: base.compraEnv15, compraEnv45: base.compraEnv45,
+          lV10: num(cc.lV10), lV15: num(cc.lV15), lV45: num(cc.lV45)
+        },
+        ccargaDespues: {
+          lL10: data.cargas.l10, lL15: data.cargas.l15, lL45: data.cargas.l45,
+          compraEnv10: data.envasesComprados.e10, compraEnv15: data.envasesComprados.e15, compraEnv45: data.envasesComprados.e45,
+          lV10: num(cc.lV10), lV15: num(cc.lV15), lV45: num(cc.lV45)
+        },
+        historial
+      });
+
+      const pagosDepo = data.pagos.filter((p) => p.tipo === "DEPOSITO");
+      const pagosTransf = data.pagos.filter((p) => p.tipo === "TRANSFERENCIA");
+
+      tx.update(ccargaRef, {
+        conciliado: true,
+        estadoConciliacion: c.estado,
+        factura: data.factura,
+        proveedor,
+        fechaFactura: data.fechaFactura,
+        vencimiento: data.vencimiento,
+        precio10: data.precios.p10,
+        precio15: data.precios.p15,
+        precio45: data.precios.p45,
+        precioEnv10: data.preciosEnvase.pe10,
+        precioEnv15: data.preciosEnvase.pe15,
+        precioEnv45: data.preciosEnvase.pe45,
+        ivaPorc: data.ivaPorc,
+        percPorc: data.percPorc,
+        retencionPorTransf: data.retencionPorTransf,
+        retencion: c.retencion,
+        pagoDeposito: round2(pagosDepo.reduce((a, p) => a + p.monto, 0)),
+        pagoTransf: round2(pagosTransf.reduce((a, p) => a + p.monto, 0)),
+        opDepo: pagosDepo.map((p) => `D:$${fmtMoney(p.monto)}(${p.referencia})`).join(" | "),
+        opTransf: pagosTransf.map((p) => `T:$${fmtMoney(p.monto)}(${p.referencia})`).join(" | "),
+        usuarioConciliacion: usuarioActivo,
+        fechaConciliacion: fechaHora,
+        conciliacionId: id,
+        compraTotal: c.total,
+        compraSaldo: c.saldo,
+        compraEstado: c.estado,
+        lL10: data.cargas.l10,
+        lL15: data.cargas.l15,
+        lL45: data.cargas.l45,
+        compraEnv10: data.envasesComprados.e10,
+        compraEnv15: data.envasesComprados.e15,
+        compraEnv45: data.envasesComprados.e45,
+        conciliacionTs: ts
+      });
+
+      tx.set(doc(collection(db, "auditoria")), {
+        tipo: rectificar ? "RECTIFICAR_COMPRA" : "CONCILIAR_COMPRA",
+        idViaje: id,
+        usuario: usuarioActivo,
+        antes: snapshotAntes,
+        despues: snapshotDespues,
+        finIds,
+        fecha_hora: serverTimestamp()
+      });
+
+      if (Math.abs(c.saldo) > 0.01) {
+        tx.set(doc(collection(db, "alarmas")), {
+          tipo: "COMPRA_CON_DIFERENCIA",
+          descripcion: `Compra ${id} / Factura ${data.factura}. Saldo ${c.saldo < 0 ? "deudor" : "a favor"}: $${fmtMoney(c.saldo)}. ${data.observacion}`,
+          usuario: usuarioActivo,
+          pendiente: true,
+          fecha_hora: serverTimestamp()
+        });
+      }
+
+      resultado = { id, estado: c.estado, saldo: c.saldo, total: c.total };
+    });
+
+    closeModal();
+    showToast(
+      `✅ Compra conciliada. Factura $${fmtMoney(resultado.total)} · estado ${resultado.estado}.`,
+      "success",
+      5500
+    );
+    await cargar();
+  } catch (e) {
+    console.error(e);
+    showToast("⛔ " + (e.message || e.code || "No se pudo conciliar la compra."), "error", 7000);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ---------------- Detalle ----------------
+function openDetalle(id) {
+  const h = historial.find((x) => x.id === id);
+  if (!h) return showToast("No se encontró la conciliación.", "error");
+
+  const pagos = h.pagos.length
+    ? h.pagos.map((p) => `<div class="total-line"><span>${esc(p.tipo === "DEPOSITO" ? "Depósito" : "Transferencia")} · ${esc(p.referencia || "S/N")}</span><b>$ ${fmtMoney(p.monto)}</b></div>`).join("")
+    : `<div class="total-line"><span>Sin pagos registrados</span><b>$ 0,00</b></div>`;
+
+  const hist = h.historial.length
+    ? h.historial.slice().reverse().map((x) => `
+        <div>${esc(fmtTs(x.ts))} · <b>${esc(x.usuario || "—")}</b> · ${esc(x.accion || x.estado || "—")}${x.motivo ? ` · ${esc(x.motivo)}` : ""}</div>
+      `).join("")
+    : "Sin movimientos de auditoría.";
+
+  const saldoTexto = Math.abs(h.saldo) <= 0.01
+    ? "PAGO EXACTO"
+    : (h.saldo < 0 ? `DEUDA $ ${fmtMoney(h.saldo)}` : `A FAVOR $ ${fmtMoney(h.saldo)}`);
+
+  const body = `
+    <div class="summary-box">
+      <b>${esc(h.chofer || "S/D")}</b> · ${esc(h.proveedor || "Proveedor S/D")} · Factura <b>${esc(h.factura || "S/N")}</b> · Remito <b>${esc(h.remito || "S/N")}</b><br>
+      Viaje: <b>${esc(h.idViaje)}</b> · Fecha factura: <b>${esc(fechaVisual(h.fechaFactura) || "—")}</b> · Vencimiento: <b>${esc(fechaVisual(h.vencimiento) || "—")}</b><br>
+      Conciliada por <b>${esc(h.usuarioConciliacion || "—")}</b>${h.fechaConciliacion ? ` · ${esc(h.fechaConciliacion)}` : ""}
+    </div>
+
+    <div class="detail-grid">
+      <div><span>Total factura</span><b>$ ${fmtMoney(h.total)}</b></div>
+      <div><span>Estado</span><b>${badgeEstado(h.estado)}</b></div>
+      <div><span>Pagos</span><b>$ ${fmtMoney(h.totalPagos)}</b></div>
+      <div><span>Saldo</span><b style="color:${Math.abs(h.saldo) <= 0.01 ? "var(--ok)" : "var(--danger)"}">${saldoTexto}</b></div>
+    </div>
+
+    <table class="detail-table">
+      <thead><tr><th>Kg</th><th>Cargas</th><th>P. carga</th><th>Envases</th><th>P. envase</th><th>Subtotal</th></tr></thead>
+      <tbody>
+        ${[10, 15, 45].map((kg) => {
+          const q = h.cargas[`l${kg}`];
+          const p = h.precios[`p${kg}`];
+          const e = h.envasesComprados[`e${kg}`];
+          const pe = h.preciosEnvase[`pe${kg}`];
+          return `<tr><td>${kg}</td><td>${q}</td><td>$ ${fmtMoney(p)}</td><td>${e}</td><td>$ ${fmtMoney(pe)}</td><td>$ ${fmtMoney(q * p + e * pe)}</td></tr>`;
+        }).join("")}
+      </tbody>
+    </table>
+
+    <div class="summary-box">
+      <div class="total-line"><span>Subtotal cargas</span><b>$ ${fmtMoney(h.subtotalCargas)}</b></div>
+      <div class="total-line"><span>Subtotal envases</span><b>$ ${fmtMoney(h.subtotalEnvases)}</b></div>
+      <div class="total-line"><span>IVA (${h.ivaPorc}%)</span><b>$ ${fmtMoney(h.iva)}</b></div>
+      <div class="total-line"><span>Percepción (${h.percPorc}%)</span><b>$ ${fmtMoney(h.percepcion)}</b></div>
+      <div class="total-line big"><span>Total</span><b>$ ${fmtMoney(h.total)}</b></div>
+      <div class="total-line"><span>Retención transferencias</span><b>$ ${fmtMoney(h.retencion)}</b></div>
+    </div>
+
+    <div class="summary-box">
+      <b>Pagos</b>
+      ${pagos}
+    </div>
+
+    ${h.observacion ? `<div class="note">📝 ${esc(h.observacion)}</div>` : ""}
+
+    <div class="audit-box">
+      <b>Asientos en finanzas:</b> ${h.finIds.length ? esc(h.finIds.join(" · ")) : "—"}<br>
+      <b>Auditoría:</b><br>${hist}
+    </div>
+  `;
+
+  openModal("Detalle de conciliación", body, "RECTIFICAR", () => {
+    closeModal();
+    // Se abre en el siguiente tick para que el botón del modal anterior
+    // no pise el texto del nuevo modal al terminar la acción.
+    setTimeout(() => openEditor(id, true), 0);
+  });
+}
+
+// ---------------- Modal ----------------
+function openModal(title, bodyHtml, confirmLabel, onConfirm) {
+  $("modalTitle").textContent = title;
+  $("modalBody").innerHTML = bodyHtml;
+  $("modalConfirm").textContent = confirmLabel;
+  $("modalConfirm").disabled = false;
+  $("modalConfirm").className = "btn primary";
+  $("modalCancel").textContent = "CANCELAR";
+  $("modal").style.display = "flex";
+  modalAction = onConfirm;
+}
+
+function closeModal() {
+  $("modal").style.display = "none";
+  $("modalBody").innerHTML = "";
+  modalAction = null;
+  editor = null;
+}
+
+// ---------------- UI ----------------
+function wireUI() {
+  $("btnVolver").onclick = () => window.volver();
+  $("btnTheme").onclick = () => {
+    const light = document.body.classList.toggle("light-mode");
+    localStorage.setItem("vm_theme", light ? "light" : "dark");
+    $("btnTheme").textContent = light ? "☀️" : "🌙";
+  };
+
+  document.querySelectorAll(".tab").forEach((btn) => {
+    btn.onclick = () => {
+      currentTab = btn.dataset.tab;
+      document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b === btn));
+      render();
+    };
+  });
+
+  $("search").addEventListener("input", () => render());
+
+  $("list").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-action]");
+    if (!btn) return;
+    const id = btn.dataset.id;
+    if (btn.dataset.action === "conciliar") openEditor(id, false);
+    else if (btn.dataset.action === "detalle") openDetalle(id);
+    else if (btn.dataset.action === "rectificar") openEditor(id, true);
+  });
+
+  $("modalClose").onclick = closeModal;
+  $("modalCancel").onclick = closeModal;
+  $("modal").addEventListener("click", (e) => {
+    if (e.target.id === "modal") closeModal();
+  });
+
+  $("modalBody").addEventListener("input", (e) => {
+    const pay = e.target.closest("[data-pay-field]");
+    if (pay && editor) {
+      const i = Number(pay.dataset.payIndex);
+      const field = pay.dataset.payField;
+      if (editor.pagos[i]) {
+        editor.pagos[i][field] = field === "monto" ? num(pay.value) : pay.value;
+      }
+    }
+    updateEditorTotals();
+  });
+
+  $("modalBody").addEventListener("change", (e) => {
+    const pay = e.target.closest("[data-pay-field]");
+    if (pay && editor) {
+      const i = Number(pay.dataset.payIndex);
+      const field = pay.dataset.payField;
+      if (editor.pagos[i]) {
+        editor.pagos[i][field] = field === "monto" ? num(pay.value) : pay.value;
+      }
+    }
+    updateEditorTotals();
+  });
+
+  $("modalBody").addEventListener("click", (e) => {
+    const add = e.target.closest("[data-add-pay]");
+    if (add && editor) {
+      editor.pagos.push({ tipo: add.dataset.addPay, monto: 0, referencia: "" });
+      renderPagos();
+      return;
+    }
+    const rm = e.target.closest("[data-remove-pay]");
+    if (rm && editor) {
+      const i = Number(rm.dataset.removePay);
+      editor.pagos.splice(i, 1);
+      if (!editor.pagos.length) editor.pagos.push({ tipo: "TRANSFERENCIA", monto: 0, referencia: "" });
+      renderPagos();
+    }
+  });
+
+  $("modalConfirm").onclick = async () => {
+    if (!modalAction) return;
+    const btn = $("modalConfirm");
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "PROCESANDO...";
+    try {
+      await modalAction();
+    } catch (e) {
+      console.error(e);
+      showToast("⛔ " + (e.message || e.code || "No se pudo completar la operación."), "error", 6500);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  };
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && $("modal").style.display === "flex") closeModal();
+  });
+
+  $("btnTheme").textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
+}
+
+async function init() {
+  if (localStorage.getItem("vm_theme") === "light") {
+    document.body.classList.add("light-mode");
+  }
+  wireUI();
+  await cargar();
+}
+
+if (!k) {
+  expulsar();
+} else {
+  sessionStorage.setItem("k", k);
+  sessionStorage.setItem("vm_token", k);
+  if (window.history.replaceState) window.history.replaceState({}, document.title, window.location.pathname);
+  validarSesion();
+}
+</script>
+</body>
+</html>

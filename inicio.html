@@ -218,9 +218,7 @@
   }
   .tile.finance { border-color: rgba(50, 205, 50, 0.3); } 
   .tile.audit { border-color: rgba(138, 43, 226, 0.3); }   
-  .tile.flotantes { border-color: rgba(76, 175, 80, 0.3); }
   .tile.treeview { border-color: rgba(255, 165, 0, 0.3); } 
-  .tile.micaja { border-color: rgba(45, 212, 191, 0.4); } 
   
   .badge {
     position: absolute; top: -8px; right: -8px;
@@ -306,11 +304,6 @@
           <span class="material-symbols-rounded tile-icon">receipt_long</span>
           <span class="title">Formulario<br>de Venta</span>
       </a>
-      <a class="tile micaja" id="tileMiCaja" onclick="window.navegar('micaja.html')" style="display:none">
-          <span class="material-symbols-rounded tile-icon">wallet</span>
-          <span class="title">Mi Caja</span>
-      </a>
-      
       <a class="tile" id="tileClientes"   onclick="window.navegar('clientes.html')" style="display:none">
           <span class="material-symbols-rounded tile-icon">group</span>
           <span class="title">Clientes</span>
@@ -330,11 +323,6 @@
           <span class="material-symbols-rounded tile-icon">notifications_active</span>
           <span class="title">Alarmas</span>
           <span class="badge" id="alarmBadge" style="display:none"></span>
-      </a>
-      
-      <a class="tile" id="tileTablero"    onclick="window.navegar('tablero.html')" style="display:none">
-          <span class="material-symbols-rounded tile-icon">dashboard</span>
-          <span class="title">Tablero</span>
       </a>
       
       <a class="tile" id="tileStock"      onclick="window.navegar('controlstock.html')" style="display:none">
@@ -359,10 +347,6 @@
       <a class="tile treeview" id="tileTreeView" onclick="window.navegar('treeview.html')" style="display:none">
           <span class="material-symbols-rounded tile-icon">account_tree</span>
           <span class="title">Control<br>Movimientos</span>
-      </a>
-      <a class="tile flotantes" id="tileFlotantes" onclick="window.navegar('index_recepcion.html')" style="display:none">
-          <span class="material-symbols-rounded tile-icon">move_to_inbox</span>
-          <span class="title">Recepción<br>Flotantes</span>
       </a>
       <a class="tile logout" onclick="window.logout()" style="border-color: rgba(255,55,95,0.3);">
           <span class="material-symbols-rounded tile-icon">logout</span>
@@ -650,18 +634,15 @@ function renderizarInterfaz(nombre, p) {
     
     // VISIBILIDAD DE LOS MÓDULOS SEGÚN PERMISOS
     show('tileFormulario',  p.formulario !== false); 
-    show('tileMiCaja',      p.formulario !== false); 
     show('tileClientes',    p.clientes);
     show('tilePrecios',     p.precios);
     show('tileUsuarios',    p.usuarios);
     show('tileAlarmas',     p.alarmas);
-    show('tileTablero',     p.tablero);
     show('tileStock',       p.stock);
     show('tileCarga',       p.carga);
-    show('tileFinanzas',    p.finanzas);
+    show('tileFinanzas',    p.finanzas || p.confinanzas);
     show('tileConFinanzas', p.confinanzas);
     show('tileTreeView',    p.gastos); 
-    show('tileFlotantes',   p.flotantes);
     
     initHoverEffects();
     

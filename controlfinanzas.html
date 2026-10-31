@@ -163,10 +163,84 @@
 
   .val-pos { color: var(--success-light) !important; }
   .val-neg { color: var(--danger) !important; }
-  
+
+  /* ORIGEN DE LOS REGISTROS */
+  .badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    font-family: 'Outfit', sans-serif; font-size: 8px; font-weight: 800;
+    letter-spacing: .06em; text-transform: uppercase;
+    padding: 2px 5px; border-radius: 4px; margin-right: 5px; vertical-align: middle;
+    border: 1px solid transparent; white-space: nowrap;
+  }
+  .badge-arqueo { color: #8a5a00; background: rgba(255,215,0,.16); border-color: rgba(255,215,0,.45); }
+  body.light-mode .badge-arqueo { color: #7a4a00; background: #fff4cc; border-color: #e0b84d; }
+  .badge-impuesto { color: #9a9aa8; background: rgba(160,160,176,.12); border-color: rgba(160,160,176,.3); }
+  body.light-mode .badge-impuesto { color: #5a5a6a; background: #f1f5f9; border-color: #cbd5e1; }
+  .badge-transferencia { color: #0f766e; background: rgba(45,212,191,.14); border-color: rgba(45,212,191,.4); }
+  body.light-mode .badge-transferencia { color: #0f766e; background: #ccfbf1; border-color: #5eead4; }
+  .badge-compra { color: #7c3aed; background: rgba(124,58,237,.14); border-color: rgba(124,58,237,.4); }
+  body.light-mode .badge-compra { color: #6d28d9; background: #ede9fe; border-color: #c4b5fd; }
+  .badge-link { cursor: pointer; font-family: inherit; }
+  .badge-link:hover { filter: brightness(1.2); }
+  .hidden { display: none !important; }
+  tr.row-highlight { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+  /* CONCILIACIÓN DE ARQUEOS */
+  #arqueo-view { margin-top: 4px; }
+  .arqueo-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+  .arqueo-kpi { background: var(--card-gradient); border: 1px solid var(--glass-border); border-radius: 8px; padding: 10px 12px; }
+  .arqueo-kpi .k { display:block; font-size: 8px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-sec); font-weight: 700; margin-bottom: 4px; }
+  .arqueo-kpi .v { display:block; font-size: 15px; font-weight: 800; font-family: monospace; }
+  .arqueo-kpi .s { display:block; margin-top: 3px; font-size: 9px; color: var(--text-sec); }
+  .arqueo-head { display:flex; justify-content:space-between; align-items:flex-end; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+  .arqueo-title { font-size: 15px; font-weight: 800; color: var(--accent); letter-spacing: .02em; }
+  .arqueo-sub { margin-top: 3px; font-size: 10px; color: var(--text-sec); }
+  .arqueo-head-actions { display:flex; gap:6px; flex-wrap:wrap; }
+  .arqueo-meta { margin-top: 2px; font-size: 9px; color: var(--text-sec); }
+  .arqueo-modal-label { margin: 12px 0 5px; font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-sec); font-weight: 800; }
+  .arqueo-movs { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; max-height:110px; overflow:auto; }
+  .arqueo-movs span { font-family: monospace; font-size: 9px; color: var(--text-sec); border:1px solid var(--glass-border); border-radius:4px; padding:2px 5px; }
+  .arqueo-warning { margin-bottom: 10px; padding: 8px 10px; border-radius: 6px; font-size: 10px; font-weight: 600; border: 1px solid rgba(255,145,0,.45); background: rgba(255,145,0,.08); color: var(--accent-edit); }
+  .arqueo-table-wrap { overflow-x: auto; border: 1px solid var(--glass-border); border-radius: 8px; background: rgba(255,255,255,.02); }
+  body.light-mode .arqueo-table-wrap { background: #fff; border-color: #cbd5e1; }
+  table.arqueo-table { width: 100%; border-collapse: collapse; font-size: 11px; min-width: 760px; }
+  .arqueo-table thead th { background: rgba(0,0,0,.35); color: var(--text-sec); font-size: 9px; letter-spacing: .05em; text-transform: uppercase; padding: 8px 9px; text-align: left; white-space: nowrap; }
+  body.light-mode .arqueo-table thead th { background: #f1f5f9; color: #334155; }
+  .arqueo-table tbody td { padding: 8px 9px; border-bottom: 1px solid rgba(255,255,255,.05); vertical-align: middle; color: var(--text-main); }
+  body.light-mode .arqueo-table tbody td { border-bottom-color: #e2e8f0; }
+  .arqueo-table tbody tr:hover { background: rgba(255,215,0,.05); }
+  .arqueo-table .num { text-align: right; white-space: nowrap; font-family: monospace; }
+  .arqueo-table .cierre-id { font-family: monospace; font-size: 9px; color: var(--text-sec); }
+  .status-pill { display:inline-block; font-size: 8px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; padding: 3px 6px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap; }
+  .status-ok { color: #0f766e; background: rgba(45,212,191,.12); border-color: rgba(45,212,191,.45); }
+  body.light-mode .status-ok { color: #0b5f58; background: #ccfbf1; border-color: #5eead4; }
+  .status-dif { color: #b45309; background: rgba(255,145,0,.12); border-color: rgba(255,145,0,.45); }
+  body.light-mode .status-dif { color: #92400e; background: #fef3c7; border-color: #fbbf24; }
+  .status-missing { color: #b91c1c; background: rgba(255,71,87,.12); border-color: rgba(255,71,87,.45); }
+  body.light-mode .status-missing { color: #991b1b; background: #fee2e2; border-color: #fca5a5; }
+  .status-nodetail { color: #6b7280; background: rgba(107,114,128,.12); border-color: rgba(107,114,128,.35); }
+  body.light-mode .status-nodetail { color: #475569; background: #f1f5f9; border-color: #cbd5e1; }
+  .arqueo-actions { display: flex; gap: 4px; justify-content: flex-end; }
+  .btn-micro { background: rgba(255,255,255,.06); border: 1px solid var(--glass-border); color: var(--text-sec); border-radius: 4px; padding: 3px 7px; font-size: 9px; font-weight: 700; cursor: pointer; white-space: nowrap; display:inline-flex; align-items:center; text-decoration:none; }
+  .btn-micro:hover { border-color: var(--accent); color: var(--accent); }
+  body.light-mode .btn-micro { background: #f8fafc; border-color: #cbd5e1; color: #334155; }
+  .arqueo-detail-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+  .arqueo-detail-grid .item { background: rgba(255,255,255,.03); border: 1px solid var(--glass-border); border-radius: 6px; padding: 8px 10px; }
+  body.light-mode .arqueo-detail-grid .item { background: #f8fafc; border-color: #cbd5e1; }
+  .arqueo-detail-grid .item .k { display:block; font-size: 8px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-sec); font-weight: 700; margin-bottom: 3px; }
+  .arqueo-detail-grid .item .v { display:block; font-size: 12px; font-weight: 800; }
+  .arqueo-detail-days { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 4px; }
+  .arqueo-detail-days th, .arqueo-detail-days td { padding: 5px 6px; border-bottom: 1px solid var(--glass-border); text-align: left; }
+  .arqueo-detail-days th { color: var(--text-sec); font-size: 8px; text-transform: uppercase; }
+  .arqueo-detail-days td.num { text-align: right; font-family: monospace; }
+  .arqueo-detail-obs { margin-top: 10px; padding: 9px 11px; border-left: 3px solid var(--accent); background: rgba(255,215,0,.06); font-size: 10px; line-height: 1.5; }
+  .arqueo-modal-content { max-width: 760px; text-align: left; }
+  .arqueo-modal-content h3 { font-size: 15px; margin: 0 0 4px; color: var(--accent); }
+  .arqueo-modal-content .sub { color: var(--text-sec); font-size: 10px; margin-bottom: 8px; }
+
   /* FAB & MODALS */
   .fab-add { width: 45px; height: 45px; font-size: 24px; bottom: 20px; right: 20px; background: var(--accent); color: #000; border-radius: 50%; display: grid; place-items: center; position: fixed; box-shadow: 0 4px 15px var(--accent-glow); cursor: pointer; z-index: 200; transition: 0.3s; border: none; }
-  #modal, #pinModal { backdrop-filter: blur(15px); background: rgba(0,0,0,0.6); display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 300; align-items: center; justify-content: center; }
+  #modal, #pinModal, #arqueoModal { backdrop-filter: blur(15px); background: rgba(0,0,0,0.6); display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 300; align-items: center; justify-content: center; }
   .modal-content { background: rgba(10, 10, 20, 0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 25px; width: 90%; max-width: 420px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); text-align: center; border-top: 4px solid var(--accent); max-height: 90vh; overflow-y: auto;}
   body.light-mode .modal-content { background: #ffffff; border-color: #cbd5e1; }
 
@@ -216,6 +290,13 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .loading-text { color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: 1px; }
   body.light-mode .loading-overlay { background: rgba(240,244,248,.88); }
+
+  @media (max-width: 680px) {
+    .arqueo-kpis { grid-template-columns: 1fr 1fr; }
+    .arqueo-detail-grid { grid-template-columns: 1fr 1fr; }
+    .modal-content.arqueo-modal-content { padding: 18px; }
+    .arqueo-table { min-width: 700px; }
+  }
 </style>
 </head>
 <body>
@@ -274,6 +355,7 @@
                       <button class="btn-view" data-view="L1" onclick="window.setTreeView('L1')">Cuentas</button>
                       <button class="btn-view" data-view="L2" onclick="window.setTreeView('L2')">Subcuentas</button>
                       <button class="btn-view" data-view="ALL" onclick="window.setTreeView('ALL')">Detalle</button>
+                      <button class="btn-view" data-view="ARQ" onclick="window.setTreeView('ARQ')">Arqueos</button>
                       <div class="divider-view"></div>
                       <button class="btn-view" onclick="window.marcarTodo(true)" style="color: var(--success-light);">☑ Marcar Todo</button>
                       <button class="btn-view" onclick="window.marcarTodo(false)" style="color: var(--danger);">☐ Desmarcar</button>
@@ -287,6 +369,7 @@
                       <div style="margin-bottom:5px; font-size:16px;">⚡</div>Cargando Balance...
                   </div>
               </div>
+              <div id="arqueo-view" class="hidden"></div>
           </div>
       </div>
   </div>
@@ -358,11 +441,21 @@
 
   <div id="pinModal">
       <div class="modal-content" style="border-top-color: var(--accent);">
-          <h3 style="color:var(--text-main); margin-bottom:15px;">Cambio de PIN Maestro</h3>
+          <h3 id="pin-title" style="color:var(--text-main); margin-bottom:15px;">Cambio de PIN Maestro</h3>
+          <div id="pin-hint" style="color:var(--text-sec); font-size:10px; line-height:1.4; margin:-6px 0 10px; text-align:center;"></div>
           <input type="password" id="old-pin" class="form-control" placeholder="PIN Actual" style="text-align:center">
-          <input type="password" id="new-pin" class="form-control" placeholder="Nuevo PIN (4 dígitos)" maxlength="4" style="text-align:center">
-          <button type="button" class="btn-save" style="background:var(--text-main); color:var(--bg-dark);" onclick="window.submitPinChange()">ACTUALIZAR LLAVE</button>
+          <input type="password" id="new-pin" class="form-control" placeholder="Nuevo PIN (4 dígitos)" maxlength="4" inputmode="numeric" style="text-align:center">
+          <button type="button" id="btn-pin-save" class="btn-save" style="background:var(--text-main); color:var(--bg-dark);" onclick="window.submitPinChange()">ACTUALIZAR LLAVE</button>
           <button type="button" class="btn-cancel" onclick="document.getElementById('pinModal').style.display='none'">CANCELAR</button>
+      </div>
+  </div>
+
+  <div id="arqueoModal">
+      <div class="modal-content arqueo-modal-content" style="border-top-color: var(--accent);">
+          <h3 id="arqueo-modal-title">Detalle del Arqueo</h3>
+          <div class="sub" id="arqueo-modal-sub"></div>
+          <div id="arqueo-modal-body"></div>
+          <button type="button" class="btn-cancel" onclick="window.closeArqueoModal()">CERRAR</button>
       </div>
   </div>
 
@@ -377,7 +470,7 @@
 // ============================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import {
-    getFirestore, doc, getDoc, getDocs, collection,
+    getFirestore, doc, getDoc, getDocs, collection, query, where,
     writeBatch, runTransaction, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
@@ -531,6 +624,7 @@ function setBtn(btn, busy, busyText, normalText) {
 // ---------------- Sesión ----------------
 const params = new URLSearchParams(window.location.search);
 const k = params.get('k') || params.get('token') || sessionStorage.getItem('k') || sessionStorage.getItem('vm_token');
+const deepArqueo = String(params.get('arqueo') || params.get('idCierre') || '').trim();
 
 function expulsar() {
     sessionStorage.clear();
@@ -562,15 +656,31 @@ function resetTimer() {
 resetTimer();
 
 function expiraMs(v) {
+    return toMs(v);
+}
+
+function toMs(v) {
     if (!v) return 0;
+    if (v instanceof Date) return v.getTime();
     if (typeof v === 'number') return v;
     if (typeof v.toDate === 'function') return v.toDate().getTime();
     if (typeof v.seconds === 'number') return v.seconds * 1000;
+    if (typeof v === 'string') {
+        const n = Number(v);
+        if (Number.isFinite(n) && n > 0) return n;
+        const d = new Date(v);
+        return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+    }
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
 }
 
 let usuarioActivo = 'SISTEMA';
+let permisosUsuario = { CONFINANZAS: false, FINANZAS: false, USUARIOS: false };
+
+function permisoActivo(nombre) {
+    return permisosUsuario[String(nombre || '').toUpperCase()] === true;
+}
 
 async function validarSesion() {
     try {
@@ -594,8 +704,13 @@ async function validarSesion() {
             if (!userSnap.exists()) throw new Error('Usuario no encontrado.');
 
             const u = userSnap.data();
-            const puede = u.CONFINANZAS === true || u.CONFINANZAS === 'true';
-            if (!puede) {
+            permisosUsuario = {
+                CONFINANZAS: u.CONFINANZAS === true || u.CONFINANZAS === 'true',
+                FINANZAS: u.FINANZAS === true || u.FINANZAS === 'true',
+                USUARIOS: u.USUARIOS === true || u.USUARIOS === 'true'
+            };
+
+            if (!permisosUsuario.CONFINANZAS) {
                 showToast('⛔ No tenés permiso para Control de Finanzas.', 'error');
                 setTimeout(expulsar, 1800);
                 return;
@@ -622,6 +737,11 @@ let deleteRequested = false;
 let currentEditId = '';
 let payIndex = 0;
 
+let allArqueos = [];
+let arqueosPorCierre = new Map();
+let arqueosOrphans = [];
+let arqueosError = null;
+
 // ---------------- Arranque ----------------
 async function iniciarApp() {
     const hoy = new Date();
@@ -638,6 +758,21 @@ async function iniciarApp() {
 
     wireUI();
     await cargarDatos();
+
+    if (deepArqueo) {
+        ampliarFiltroParaArqueo(deepArqueo);
+        aplicarFiltro();
+        setTreeView('ARQ');
+        setTimeout(() => {
+            window.openArqueoModal(deepArqueo);
+            const fila = [...document.querySelectorAll('tr[data-cierre]')]
+                .find(tr => tr.dataset.cierre === deepArqueo);
+            if (fila) {
+                fila.classList.add('row-highlight');
+                fila.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }
+        }, 80);
+    }
 }
 
 function wireUI() {
@@ -664,6 +799,16 @@ function wireUI() {
         }
     });
 
+    $('arqueoModal').addEventListener('click', (e) => {
+        if (e.target.id === 'arqueoModal') window.closeArqueoModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && $('arqueoModal').style.display === 'flex') {
+            window.closeArqueoModal();
+        }
+    });
+
     $('btnTheme').textContent = document.body.classList.contains('light-mode') ? '☀️' : '🌙';
 }
 
@@ -678,6 +823,32 @@ function esDeArqueo(raw) {
     return String((raw && (raw.origen ?? raw.ORIGEN)) || '').trim().toUpperCase() === 'ARQUEO';
 }
 
+function esDeImpuesto(raw) {
+    return String((raw && (raw.origen ?? raw.ORIGEN)) || '').trim().toUpperCase() === 'IMPUESTO';
+}
+
+function esDeTransferencia(raw) {
+    return String((raw && (raw.origen ?? raw.ORIGEN)) || '').trim().toUpperCase() === 'TRANSFERENCIA';
+}
+
+function esDeCompra(raw) {
+    return String((raw && (raw.origen ?? raw.ORIGEN)) || '').trim().toUpperCase() === 'COMPRA';
+}
+
+function esAutomatico(raw) {
+    return esDeImpuesto(raw) || esDeTransferencia(raw) || esDeCompra(raw);
+}
+
+function avisoAutomatico(raw) {
+    if (esDeTransferencia(raw)) {
+        return '⛔ Los asientos de transferencias se administran desde Control de Transferencias y no se pueden editar ni eliminar acá.';
+    }
+    if (esDeCompra(raw)) {
+        return '⛔ Los asientos de compras se administran desde Control de Remitos y no se pueden editar ni eliminar acá.';
+    }
+    return '⛔ Los registros de impuesto son automáticos y no se pueden editar ni eliminar.';
+}
+
 function normalizarDoc(id, d) {
     const fecha = fechaDeDoc(d);
     if (!fecha) return null;
@@ -690,6 +861,13 @@ function normalizarDoc(id, d) {
     const subrubro = String(d.subrubro ?? d.SUBRUBRO ?? d.categoria ?? 'General').trim() || 'General';
     const detalle = String(d.detalle ?? d.DETALLE ?? d.descripcion ?? '').trim();
 
+    const arqueoId = String(d.idCierre ?? d.ID_CIERRE ?? d.IDCIERRE ?? '').trim();
+    const origenRaw = String(d.origen ?? d.ORIGEN ?? '').trim().toUpperCase();
+    const origen = origenRaw || (arqueoId ? 'ARQUEO' : 'MANUAL');
+    const referencia = String(
+        d.referencia ?? d.REFERENCIA ?? d.idCierre ?? d.ID_CIERRE ?? d.IDCIERRE ?? ''
+    ).trim();
+
     return {
         id,
         fecha,
@@ -698,26 +876,218 @@ function normalizarDoc(id, d) {
         detalle,
         monto: esEgreso ? -Math.abs(montoRaw) : Math.abs(montoRaw),
         tipo: esEgreso ? 'EGRESO' : 'INGRESO',
+        origen,
+        referencia,
+        arqueoId,
+        pagos: d.pagos ?? d.PAGOS ?? null,
         orden: ordenDeDoc(d, fecha),
         raw: d
     };
 }
 
+function normalizarArqueo(id, d) {
+    const fechaISO = normFecha(d.fecha ?? d.FECHA);
+    if (!fechaISO) return null;
+
+    const idCierre = String(d.idCierre ?? d.ID_CIERRE ?? d.IDCIERRE ?? id ?? '').trim() || id;
+    const sisEfectivo = round2(num(d.sisEfectivo ?? d.SIS_EFECTIVO ?? d.sis_efectivo ?? 0));
+    const sisGastos = round2(num(d.sisGastos ?? d.SIS_GASTOS ?? d.sis_gastos ?? 0));
+    const sisTotalRaw = d.sisTotal ?? d.SIS_TOTAL ?? d.sis_total;
+    const sisTotal = round2(sisTotalRaw != null ? num(sisTotalRaw) : (sisEfectivo - sisGastos));
+    const realEfectivo = round2(num(d.realEfectivo ?? d.REAL_EFECTIVO ?? d.real_efectivo ?? 0));
+    const difRaw = d.diferencia ?? d.DIFERENCIA;
+    const diferencia = round2(difRaw != null ? num(difRaw) : (realEfectivo - sisTotal));
+
+    const movsRaw = Array.isArray(d.movimientos) ? d.movimientos
+        : Array.isArray(d.MOVIMIENTOS) ? d.MOVIMIENTOS : [];
+    const movs = movsRaw.map(x => String(x)).filter(Boolean);
+
+    const gastosRaw = Array.isArray(d.gastosDetalle) ? d.gastosDetalle
+        : Array.isArray(d.GASTOS_DETALLE) ? d.GASTOS_DETALLE : [];
+    const gastosDetalle = gastosRaw.map(g => ({
+        motivo: String(g?.motivo ?? g?.MOTIVO ?? g ?? '').trim(),
+        monto: round2(num(g?.monto ?? g?.MONTO ?? 0))
+    })).filter(g => g.motivo || g.monto > 0);
+
+    const cantidadRaw = d.cantidadMovimientos ?? d.CANTIDAD_MOVIMIENTOS ?? d.cant_movimientos;
+    const cantidadMovimientos = Number.isFinite(Number(cantidadRaw)) && Number(cantidadRaw) >= 0
+        ? Number(cantidadRaw)
+        : movs.length;
+
+    return {
+        id,
+        idCierre,
+        fecha: fechaISO,
+        hora: String(d.hora ?? d.HORA ?? '').trim(),
+        chofer: String(d.chofer ?? d.CHOFER ?? d.usuarioChofer ?? '').trim(),
+        choferUsuario: String(d.choferUsuario ?? d.CHOFER_USUARIO ?? '').trim(),
+        auditor: String(d.auditor ?? d.AUDITOR ?? '').trim(),
+        sisEfectivo,
+        sisTransf: round2(num(d.sisTransf ?? d.SIS_TRANSF ?? d.sis_transf ?? 0)),
+        sisGastos,
+        sisTotal,
+        realEfectivo,
+        realTransf: round2(num(d.realTransf ?? d.REAL_TRANSF ?? d.real_transf ?? 0)),
+        diferencia,
+        observaciones: String(d.observaciones ?? d.OBSERVACIONES ?? d.obs ?? '').trim(),
+        cantidadMovimientos,
+        movimientos: movs,
+        gastosDetalle,
+        origen: String(d.origen ?? d.ORIGEN ?? 'ARQUEO').trim().toUpperCase() || 'ARQUEO',
+        orden: toMs(d.creado ?? d.CREADO) || toMs(d.timestampMs ?? d.TIMESTAMPMS) || fechaMs(fechaISO),
+        raw: d
+    };
+}
+
+function esFinDeArqueo(r) {
+    return r.origen === 'ARQUEO' || !!r.arqueoId || /^ARQ-/i.test(String(r.referencia || ''));
+}
+
+function unicos(valores) {
+    return [...new Set(valores.map(v => String(v ?? '').trim()).filter(Boolean))];
+}
+
+function finalizarGrupoArqueo(g) {
+    g.dias.sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+    g.fechas = [...new Set(g.dias.map(d => d.fecha))].sort();
+    g.fechaMin = g.fechas[0] || '';
+    g.fechaMax = g.fechas[g.fechas.length - 1] || '';
+    g.realTotal = round2(g.dias.reduce((a, d) => a + d.realEfectivo, 0));
+    g.sisEfectivo = round2(g.dias.reduce((a, d) => a + d.sisEfectivo, 0));
+    g.sisTransf = round2(g.dias.reduce((a, d) => a + d.sisTransf, 0));
+    g.sisGastos = round2(g.dias.reduce((a, d) => a + d.sisGastos, 0));
+    g.sisTotal = round2(g.dias.reduce((a, d) => a + d.sisTotal, 0));
+    g.difCaja = round2(g.dias.reduce((a, d) => a + d.diferencia, 0));
+    g.movsCount = g.dias.reduce((a, d) => a + (d.cantidadMovimientos || d.movimientos.length || 0), 0);
+    g.chofer = unicos(g.dias.map(d => d.chofer)).join(' / ') || '—';
+    g.choferUsuario = unicos(g.dias.map(d => d.choferUsuario)).join(' / ');
+    g.auditor = unicos(g.dias.map(d => d.auditor)).join(' / ') || '—';
+    g.hora = unicos(g.dias.map(d => d.hora)).join(' / ');
+    g.observaciones = unicos(g.dias.map(d => d.observaciones)).join(' | ');
+    g.gastosDetalle = g.dias.flatMap(d => d.gastosDetalle.map(x => ({ ...x, fecha: d.fecha })));
+    g.orden = Math.max(...g.dias.map(d => d.orden || 0), 0);
+    g.fin = null;
+    g.finMonto = 0;
+    g.conciliacion = null;
+    g.estado = 'SIN_FINANZAS';
+    return g;
+}
+
+function reconstruirArqueos() {
+    const grupos = new Map();
+
+    allArqueos.forEach(a => {
+        let g = grupos.get(a.idCierre);
+        if (!g) {
+            g = { idCierre: a.idCierre, dias: [] };
+            grupos.set(a.idCierre, g);
+        }
+        g.dias.push(a);
+    });
+
+    const lista = [...grupos.values()].map(finalizarGrupoArqueo);
+
+    const finMap = new Map();
+    allRows.forEach(r => {
+        const claves = new Set([r.id]);
+        if (esFinDeArqueo(r)) {
+            if (r.arqueoId) claves.add(r.arqueoId);
+            if (r.referencia) claves.add(r.referencia);
+        }
+        claves.forEach(c => {
+            if (c && !finMap.has(c)) finMap.set(c, r);
+        });
+    });
+
+    const usados = new Set();
+
+    lista.forEach(g => {
+        g.fin = finMap.get(g.idCierre) || null;
+        if (g.fin) {
+            usados.add(g.fin.id);
+            g.finMonto = Math.abs(num(g.fin.monto));
+            g.conciliacion = round2(g.finMonto - g.realTotal);
+            g.estado = Math.abs(g.conciliacion) > 0.01 ? 'DIF' : 'OK';
+        } else {
+            g.finMonto = 0;
+            g.conciliacion = null;
+            g.estado = 'SIN_FINANZAS';
+        }
+    });
+
+    arqueosPorCierre = new Map(lista.map(g => [g.idCierre, g]));
+
+    arqueosOrphans = allRows
+        .filter(r => esFinDeArqueo(r) && !usados.has(r.id))
+        .map(r => ({
+            idCierre: r.id,
+            esSinDetalle: true,
+            fin: r,
+            finMonto: Math.abs(num(r.monto)),
+            realTotal: 0,
+            conciliacion: null,
+            difCaja: 0,
+            fechas: [r.fecha],
+            fechaMin: r.fecha,
+            fechaMax: r.fecha,
+            chofer: String(r.raw?.chofer ?? r.raw?.CHOFER ?? '').trim() || '—',
+            choferUsuario: '',
+            auditor: String(r.raw?.usuario ?? r.raw?.USUARIO ?? '').trim() || '—',
+            hora: String(r.raw?.hora ?? r.raw?.HORA ?? '').trim(),
+            dias: [],
+            movsCount: 0,
+            sisEfectivo: 0,
+            sisTransf: 0,
+            sisGastos: 0,
+            sisTotal: 0,
+            observaciones: '',
+            gastosDetalle: [],
+            estado: 'SIN_DETALLE',
+            orden: r.orden || fechaMs(r.fecha),
+            raw: r.raw
+        }))
+        .sort((a, b) => (b.orden || 0) - (a.orden || 0));
+}
+
 async function cargarDatos() {
     toggleLoader(true, 'LEYENDO FINANZAS...');
     $('tree-root').innerHTML = '<div class="empty-state">Actualizando balance...</div>';
+    arqueosError = null;
 
     try {
-        const snap = await getDocs(collection(db, 'confinanzas'));
+        const [finRes, arqRes] = await Promise.allSettled([
+            getDocs(collection(db, 'confinanzas')),
+            getDocs(collection(db, 'arqueos'))
+        ]);
+
+        if (finRes.status === 'rejected') throw finRes.reason;
+
         allRows = [];
-        snap.forEach(d => {
+        finRes.value.forEach(d => {
             const r = normalizarDoc(d.id, d.data());
             if (r) allRows.push(r);
         });
 
+        if (arqRes.status === 'fulfilled') {
+            allArqueos = [];
+            arqRes.value.forEach(d => {
+                const r = normalizarArqueo(d.id, d.data());
+                if (r) allArqueos.push(r);
+            });
+        } else {
+            console.error(arqRes.reason);
+            allArqueos = [];
+            arqueosError = arqRes.reason;
+        }
+
+        reconstruirArqueos();
         aplicarFiltro();
     } catch (e) {
         console.error(e);
+        allRows = [];
+        allArqueos = [];
+        arqueosPorCierre = new Map();
+        arqueosOrphans = [];
         $('tree-root').innerHTML = `<div class="empty-state error-state">
             No se pudo leer <b>confinanzas</b>.<br>
             <span class="muted">${esc(e.code || e.message || 'Error de conexión')}</span><br>
@@ -858,12 +1228,24 @@ function renderTree(tree) {
                 const colorClass = esEgreso ? 'val-neg' : 'val-pos';
                 const icon = esEgreso ? '▼' : '▲';
 
+                let badge = '';
+                if (r.origen === 'ARQUEO' || r.arqueoId) {
+                    const arqId = r.arqueoId || r.referencia || r.id;
+                    badge = `<button type="button" class="badge badge-arqueo badge-link" data-arqueo="${escAttr(arqId)}" title="Ver arqueo ${escAttr(arqId)}">ARQUEO</button>`;
+                } else if (r.origen === 'IMPUESTO') {
+                    badge = `<span class="badge badge-impuesto" title="Impuesto automático${r.referencia ? ` de ${escAttr(r.referencia)}` : ''}">IMPUESTO</span>`;
+                } else if (r.origen === 'TRANSFERENCIA') {
+                    badge = `<span class="badge badge-transferencia" title="Acreditado desde Control de Transferencias${r.referencia ? ` · ${escAttr(r.referencia)}` : ''}">TRANSFERENCIA</span>`;
+                } else if (r.origen === 'COMPRA') {
+                    badge = `<span class="badge badge-compra" title="Registrado desde Control de Remitos${r.referencia ? ` · ${escAttr(r.referencia)}` : ''}">COMPRA</span>`;
+                }
+
                 html += `<tr class="${rowClass}" data-id="${escAttr(r.id)}">
                     <td width="30" style="text-align:center">
                         <input type="checkbox" class="item-check" value="${r.monto}" aria-label="Seleccionar registro">
                     </td>
                     <td width="76" class="col-fecha">${esc(fechaVisual(r.fecha))}</td>
-                    <td class="col-desc">${esc(r.detalle || '—')}</td>
+                    <td class="col-desc">${badge}${esc(r.detalle || '—')}</td>
                     <td class="col-monto ${colorClass}">${icon} $ ${fmtMoney(r.monto)}</td>
                 </tr>`;
             });
@@ -892,6 +1274,14 @@ function wireTree() {
     root.querySelectorAll('tr[data-id]').forEach(tr => {
         tr.addEventListener('dblclick', () => window.openModal('edit', tr.dataset.id));
     });
+
+    root.querySelectorAll('button[data-arqueo]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.openArqueoModal(btn.dataset.arqueo);
+        });
+        btn.addEventListener('dblclick', (e) => e.stopPropagation());
+    });
 }
 
 function paintTotal(span, value) {
@@ -907,6 +1297,16 @@ window.setTreeView = function (mode) {
     document.querySelectorAll('.btn-view[data-view]').forEach(b => {
         b.classList.toggle('active', b.dataset.view === currentView);
     });
+
+    if (currentView === 'ARQ') {
+        $('tree-root').classList.add('hidden');
+        $('arqueo-view').classList.remove('hidden');
+        renderArqueos();
+        return;
+    }
+
+    $('tree-root').classList.remove('hidden');
+    $('arqueo-view').classList.add('hidden');
 
     const l1Details = document.querySelectorAll('.l1-details');
     const l2Details = document.querySelectorAll('.l2-details');
@@ -924,10 +1324,292 @@ window.setTreeView = function (mode) {
 };
 
 window.marcarTodo = function (estado) {
+    if (currentView === 'ARQ') {
+        showToast('La vista de arqueos no usa selección de movimientos.', 'info');
+        return;
+    }
     document.querySelectorAll('.item-check').forEach(chk => chk.checked = estado);
     document.querySelectorAll('.parent-check').forEach(chk => chk.checked = estado);
     window.calcSelection();
 };
+
+// ---------------- Conciliación de arqueos ----------------
+function statusArqueoHtml(estado) {
+    const meta = {
+        OK: ['status-ok', 'OK'],
+        DIF: ['status-dif', 'DIF'],
+        SIN_FINANZAS: ['status-missing', 'SIN FINANZAS'],
+        SIN_DETALLE: ['status-nodetail', 'SIN DETALLE']
+    };
+    const [clase, texto] = meta[estado] || ['status-nodetail', estado || '—'];
+    return `<span class="status-pill ${clase}">${texto}</span>`;
+}
+
+function fmtSigned(n) {
+    const v = round2(num(n));
+    if (!v) return '$ 0,00';
+    return `${v > 0 ? '+' : '-'} $ ${fmtMoney(v)}`;
+}
+
+function rangoFechasTexto(g) {
+    if (!g || !g.fechaMin) return '—';
+    if (!g.fechaMax || g.fechaMin === g.fechaMax) return fechaVisual(g.fechaMin);
+    return `${fechaVisual(g.fechaMin)} – ${fechaVisual(g.fechaMax)}`;
+}
+
+function obtenerArqueosVisibles() {
+    const start = $('filter-start-fin').value;
+    const end = $('filter-end-fin').value;
+    const enRango = (f) => !!f && (!start || f >= start) && (!end || f <= end);
+
+    const grupos = [...arqueosPorCierre.values()].filter(g =>
+        g.fechas.some(enRango) || (g.fin && enRango(g.fin.fecha))
+    );
+
+    const huerfanos = arqueosOrphans.filter(o => enRango(o.fin.fecha));
+
+    return [...grupos, ...huerfanos].sort((a, b) =>
+        (b.orden || 0) - (a.orden || 0) || String(b.idCierre).localeCompare(String(a.idCierre))
+    );
+}
+
+function filaArqueoHtml(g) {
+    const esHuerfano = !!g.esSinDetalle;
+    const conciliacion = (g.fin && !esHuerfano && g.conciliacion != null)
+        ? (Math.abs(g.conciliacion) <= 0.01
+            ? '<span class="val-pos">✓ $ 0,00</span>'
+            : `<span class="val-neg">${fmtSigned(g.conciliacion)}</span>`)
+        : '—';
+    const caja = Math.abs(g.difCaja) > 0.01
+        ? `<span class="${g.difCaja > 0 ? 'val-pos' : 'val-neg'}">${fmtSigned(g.difCaja)}</span>`
+        : '—';
+    const meta = esHuerfano
+        ? 'Sin detalle de arqueo'
+        : `${g.dias.length} día(s) · ${g.movsCount} mov.`;
+
+    return `<tr data-cierre="${escAttr(g.idCierre)}">
+        <td>
+            <div class="cierre-id">${esc(g.idCierre)}</div>
+            <div class="arqueo-meta">${esc(rangoFechasTexto(g))}</div>
+        </td>
+        <td>
+            <div>${esc(g.chofer || '—')}</div>
+            <div class="arqueo-meta">${esc(meta)}</div>
+        </td>
+        <td class="num">${esHuerfano ? '—' : `$ ${fmtMoney(g.realTotal)}`}</td>
+        <td class="num">${g.fin ? `$ ${fmtMoney(g.finMonto)}` : '—'}</td>
+        <td class="num">${conciliacion}</td>
+        <td class="num">${caja}</td>
+        <td>${statusArqueoHtml(g.estado)}</td>
+        <td>
+            <div class="arqueo-actions">
+                <button type="button" class="btn-micro" data-arqueo="${escAttr(g.idCierre)}">Ver</button>
+            </div>
+        </td>
+    </tr>`;
+}
+
+function renderArqueos() {
+    const cont = $('arqueo-view');
+    if (!cont) return;
+
+    const filas = obtenerArqueosVisibles();
+    const grupos = filas.filter(f => !f.esSinDetalle);
+    const sinDetalle = filas.filter(f => f.esSinDetalle);
+    const ok = grupos.filter(g => g.estado === 'OK').length;
+    const dif = grupos.filter(g => g.estado === 'DIF').length;
+    const sinFin = grupos.filter(g => g.estado === 'SIN_FINANZAS').length;
+    const conDifCaja = grupos.filter(g => Math.abs(g.difCaja) > 0.01).length;
+    const totalReal = grupos.reduce((a, g) => a + g.realTotal, 0);
+    const totalFin = grupos.reduce((a, g) => a + (g.fin ? g.finMonto : 0), 0);
+    const enlaceArqueo = `arqueo.html?k=${encodeURIComponent(k || '')}`;
+    const txtSinFin = sinFin === 1 ? '1 cierre sin finanzas' : `${sinFin} cierres sin finanzas`;
+    const txtHuerfanos = sinDetalle.length
+        ? ` · ${sinDetalle.length} huérfano${sinDetalle.length === 1 ? '' : 's'}`
+        : '';
+
+    let html = `<div class="arqueo-head">
+        <div>
+            <div class="arqueo-title">Conciliación de Arqueos</div>
+            <div class="arqueo-sub">Real: $ ${fmtMoney(totalReal)} · Finanzas: $ ${fmtMoney(totalFin)} · Dif. de caja: ${fmtSigned(grupos.reduce((a, g) => a + g.difCaja, 0))}</div>
+        </div>
+        <div class="arqueo-head-actions">
+            <a class="btn-micro" href="${enlaceArqueo}" target="_blank" rel="noopener">Ir a Arqueos</a>
+            <button type="button" class="btn-micro" onclick="window.cargarDatos()">Actualizar</button>
+        </div>
+    </div>`;
+
+    if (arqueosError) {
+        html += `<div class="arqueo-warning">No se pudo leer la colección <b>arqueos</b>: ${esc(arqueosError.code || arqueosError.message || 'error de conexión')}. La conciliación puede estar incompleta.</div>`;
+    }
+
+    html += `<div class="arqueo-kpis">
+        <div class="arqueo-kpi"><span class="k">Cierres</span><span class="v">${filas.length}</span><span class="s">${grupos.length} con detalle · ${sinDetalle.length} sin detalle</span></div>
+        <div class="arqueo-kpi"><span class="k">Conciliados</span><span class="v" style="color:var(--success-light)">${ok}</span><span class="s">${ok === 1 ? 'cierre OK' : 'cierres OK'}</span></div>
+        <div class="arqueo-kpi"><span class="k">Con diferencia</span><span class="v" style="color:var(--accent-edit)">${dif}</span><span class="s">${conDifCaja} con dif. de caja</span></div>
+        <div class="arqueo-kpi"><span class="k">Sin finanzas</span><span class="v" style="color:var(--danger)">${sinFin}</span><span class="s">${txtSinFin}${txtHuerfanos}</span></div>
+    </div>`;
+
+    if (sinDetalle.length) {
+        html += `<div class="arqueo-warning">Hay ${sinDetalle.length} registro(s) de <b>confinanzas</b> con origen ARQUEO que no tienen documentos en <b>arqueos</b>. Revisá si el cierre se borró o si el id no coincide.</div>`;
+    }
+
+    if (!filas.length) {
+        html += `<div class="empty-state" style="padding:36px 12px;">
+            No hay arqueos en el período seleccionado.<br>
+            <span class="muted">Cuando registres un cierre en Arqueo de Caja, va a aparecer acá para conciliar contra Finanzas.</span><br>
+            <a class="btn-micro" style="display:inline-flex; margin-top:12px; text-decoration:none;" href="${enlaceArqueo}" target="_blank" rel="noopener">Abrir Arqueo de Caja</a>
+        </div>`;
+        cont.innerHTML = html;
+        return;
+    }
+
+    html += `<div class="arqueo-table-wrap"><table class="arqueo-table">
+        <thead><tr>
+            <th>Cierre</th>
+            <th>Chofer / detalle</th>
+            <th class="num">Real efectivo</th>
+            <th class="num">Finanzas</th>
+            <th class="num">Conciliación</th>
+            <th class="num">Dif. caja</th>
+            <th>Estado</th>
+            <th></th>
+        </tr></thead>
+        <tbody>${filas.map(filaArqueoHtml).join('')}</tbody>
+    </table></div>`;
+
+    cont.innerHTML = html;
+
+    cont.querySelectorAll('button[data-arqueo]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.openArqueoModal(btn.dataset.arqueo);
+        });
+    });
+
+    cont.querySelectorAll('tr[data-cierre]').forEach(tr => {
+        tr.addEventListener('dblclick', () => window.openArqueoModal(tr.dataset.cierre));
+    });
+}
+
+function finanzasDetalleHtml(g) {
+    if (!g.fin) {
+        return `<div class="arqueo-warning">No hay documento en <b>confinanzas</b> con id <b>${esc(g.idCierre)}</b>. El cierre no impactó en finanzas o el registro fue eliminado.</div>`;
+    }
+
+    const f = g.fin;
+    const detalle = String(f.detalle || '').trim();
+
+    return `<div class="arqueo-detail-obs" style="border-left-color:var(--success-light);">
+        <b>Registro en finanzas</b> ${statusArqueoHtml(g.estado)}<br>
+        Monto: <b>$ ${fmtMoney(g.finMonto)}</b> · Fecha: ${esc(fechaVisual(f.fecha))}<br>
+        ${esc(f.rubro)} / ${esc(f.subrubro)} · Usuario: ${esc(f.raw?.usuario ?? f.raw?.USUARIO ?? '—')}
+        ${detalle ? `<div style="margin-top:6px; color:var(--text-sec);">${esc(detalle)}</div>` : ''}
+    </div>`;
+}
+
+function detalleArqueoHtml(g) {
+    if (g.esSinDetalle) {
+        return {
+            sub: `${g.idCierre} · ${fechaVisual(g.fechaMin)} · Sin detalle de arqueo`,
+            body: `<div class="arqueo-warning">Este registro de finanzas tiene origen ARQUEO, pero no existe ningún documento en <b>arqueos</b> con el mismo idCierre. Puede ser un cierre viejo, un registro manual con id de arqueo o un cierre eliminado.</div>
+                <div class="arqueo-detail-grid">
+                    <div class="item"><span class="k">Monto en finanzas</span><span class="v">$ ${fmtMoney(g.finMonto)}</span></div>
+                    <div class="item"><span class="k">Fecha</span><span class="v">${esc(fechaVisual(g.fechaMin))}</span></div>
+                    <div class="item"><span class="k">Estado</span><span class="v">${statusArqueoHtml(g.estado)}</span></div>
+                </div>
+                ${finanzasDetalleHtml(g)}`
+        };
+    }
+
+    const dias = g.dias.map(d => {
+        const dif = round2(d.diferencia);
+        return `<tr>
+            <td>${esc(fechaVisual(d.fecha))}</td>
+            <td class="num">$ ${fmtMoney(d.sisTotal)}</td>
+            <td class="num">$ ${fmtMoney(d.realEfectivo)}</td>
+            <td class="num ${Math.abs(dif) > 0.01 ? (dif < 0 ? 'val-neg' : 'val-pos') : ''}">${Math.abs(dif) > 0.01 ? fmtSigned(dif) : '—'}</td>
+            <td class="num">${d.cantidadMovimientos || d.movimientos.length || 0}</td>
+        </tr>`;
+    }).join('');
+
+    const gastos = g.gastosDetalle.length
+        ? `<div style="margin-top:12px;"><div class="arqueo-modal-label">Gastos declarados</div>
+            <table class="arqueo-detail-days"><thead><tr><th>Fecha</th><th>Motivo</th><th class="num">Monto</th></tr></thead><tbody>
+            ${g.gastosDetalle.map(x => `<tr><td>${esc(fechaVisual(x.fecha))}</td><td>${esc(x.motivo || '—')}</td><td class="num">- $ ${fmtMoney(x.monto)}</td></tr>`).join('')}
+            </tbody></table></div>`
+        : '';
+
+    const obs = g.observaciones
+        ? `<div class="arqueo-detail-obs"><b>Observaciones:</b><br>${esc(g.observaciones)}</div>`
+        : '';
+
+    const movs = g.dias.flatMap(d => d.movimientos);
+    const movsHtml = movs.length
+        ? `<details style="margin-top:10px;"><summary style="cursor:pointer; color:var(--text-sec); font-size:10px; font-weight:700;">Ver IDs de movimientos (${movs.length})</summary>
+            <div class="arqueo-movs">${movs.map(m => `<span>${esc(m)}</span>`).join('')}</div></details>`
+        : '';
+
+    return {
+        sub: `${g.idCierre} · ${rangoFechasTexto(g)} · ${g.chofer}`,
+        body: `<div class="arqueo-detail-grid">
+            <div class="item"><span class="k">Efectivo real</span><span class="v">$ ${fmtMoney(g.realTotal)}</span></div>
+            <div class="item"><span class="k">Finanzas</span><span class="v">${g.fin ? `$ ${fmtMoney(g.finMonto)}` : 'Sin registro'}</span></div>
+            <div class="item"><span class="k">Conciliación</span><span class="v">${g.fin ? (Math.abs(g.conciliacion) <= 0.01 ? '✓ $ 0,00' : fmtSigned(g.conciliacion)) : '—'}</span></div>
+            <div class="item"><span class="k">Diferencia de caja</span><span class="v">${Math.abs(g.difCaja) <= 0.01 ? '—' : fmtSigned(g.difCaja)}</span></div>
+            <div class="item"><span class="k">Días / movimientos</span><span class="v">${g.dias.length} / ${g.movsCount}</span></div>
+            <div class="item"><span class="k">Estado</span><span class="v">${statusArqueoHtml(g.estado)}</span></div>
+        </div>
+        <div class="arqueo-modal-label">Días cerrados</div>
+        <table class="arqueo-detail-days"><thead><tr>
+            <th>Fecha</th><th class="num">Sistema</th><th class="num">Real</th><th class="num">Diferencia</th><th class="num">Movs.</th>
+        </tr></thead><tbody>${dias}</tbody></table>
+        ${gastos}
+        ${obs}
+        ${finanzasDetalleHtml(g)}
+        ${movsHtml}
+        <div style="margin-top:12px; color:var(--text-sec); font-size:9px;">
+            Auditor: ${esc(g.auditor)}${g.hora ? ` · Hora: ${esc(g.hora)}` : ''}
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:12px;">
+            <a class="btn-micro" style="text-decoration:none;" href="arqueo.html?k=${encodeURIComponent(k || '')}" target="_blank" rel="noopener">Abrir módulo de Arqueos</a>
+        </div>`
+    };
+}
+
+window.openArqueoModal = function (idCierre) {
+    const id = String(idCierre || '').trim();
+    const g = arqueosPorCierre.get(id) || arqueosOrphans.find(x => x.idCierre === id);
+    if (!g) {
+        showToast('No se encontró el arqueo ' + id + '.', 'error');
+        return;
+    }
+
+    const detalle = detalleArqueoHtml(g);
+    $('arqueo-modal-title').textContent = g.esSinDetalle ? 'Registro sin detalle de arqueo' : 'Detalle del Arqueo';
+    $('arqueo-modal-sub').textContent = detalle.sub;
+    $('arqueo-modal-body').innerHTML = detalle.body;
+    $('arqueoModal').style.display = 'flex';
+};
+
+window.closeArqueoModal = function () {
+    $('arqueoModal').style.display = 'none';
+    $('arqueo-modal-body').innerHTML = '';
+};
+
+function ampliarFiltroParaArqueo(idCierre) {
+    const id = String(idCierre || '').trim();
+    const g = arqueosPorCierre.get(id) || arqueosOrphans.find(x => x.idCierre === id);
+    if (!g) return;
+
+    const fechas = [g.fechaMin, g.fechaMax, g.fin?.fecha].filter(Boolean).sort();
+    if (!fechas.length) return;
+
+    const ini = fechas[0];
+    const fin = fechas[fechas.length - 1];
+    if (!$('filter-start-fin').value || $('filter-start-fin').value > ini) $('filter-start-fin').value = ini;
+    if (!$('filter-end-fin').value || $('filter-end-fin').value < fin) $('filter-end-fin').value = fin;
+}
 
 window.toggleChildren = function (source) {
     const parent = source.closest('details');
@@ -1167,6 +1849,16 @@ window.openModal = function (mode, id) {
             return;
         }
 
+        if (esAutomatico(r.raw)) {
+            currentEditMode = false;
+            currentEditId = '';
+            $('edit-id').value = '';
+            $('orig-amount').value = '';
+            document.body.classList.remove('edit-mode');
+            showToast(avisoAutomatico(r.raw), 'error', 6000);
+            return;
+        }
+
         document.body.classList.add('edit-mode');
         $('edit-id').value = r.id;
         $('orig-amount').value = r.monto;
@@ -1213,6 +1905,10 @@ window.handleMainAction = function () {
 
 window.reqDelete = function () {
     const r = allRows.find(x => x.id === currentEditId);
+    if (r && esAutomatico(r.raw)) {
+        showToast(avisoAutomatico(r.raw), 'error', 6000);
+        return;
+    }
     if (r && esDeArqueo(r.raw)) {
         if (!confirm('Este registro fue generado por un arqueo. Si lo eliminás, el arqueo quedará sin su ingreso en finanzas. ¿Continuar?')) return;
     }
@@ -1376,6 +2072,39 @@ function nuevoPin() {
     return Math.random().toString(36).substring(2, 6).toLowerCase();
 }
 
+async function cargarImpuestosAsociados(idPrincipal) {
+    const mapa = new Map();
+
+    allRows.forEach(r => {
+        if (r.id !== idPrincipal && r.origen === 'IMPUESTO' && r.referencia === idPrincipal) {
+            mapa.set(r.id, { id: r.id, fecha: r.fecha, monto: r.monto, raw: r.raw });
+        }
+    });
+
+    try {
+        const snap = await getDocs(query(collection(db, 'confinanzas'), where('referencia', '==', idPrincipal)));
+        snap.forEach(d => {
+            if (d.id === idPrincipal) return;
+            const x = d.data();
+            const origen = String(x.origen ?? x.ORIGEN ?? '').trim().toUpperCase();
+            if (origen !== 'IMPUESTO') return;
+            mapa.set(d.id, {
+                id: d.id,
+                fecha: normFecha(x.fecha ?? x.FECHA),
+                monto: num(x.monto ?? x.MONTO),
+                raw: x
+            });
+        });
+    } catch (e) {
+        console.warn('No se pudieron consultar impuestos asociados:', e);
+        if (!mapa.size) {
+            showToast('No se pudieron verificar los impuestos asociados. Se usará la copia local.', 'info', 5000);
+        }
+    }
+
+    return [...mapa.values()];
+}
+
 window.confirmEdit = async function () {
     if (!currentEditId) return showToast('No hay un registro seleccionado.', 'error');
     if (!navigator.onLine) return showToast('⛔ Necesitás internet para modificar.', 'error');
@@ -1385,6 +2114,9 @@ window.confirmEdit = async function () {
 
     const r = allRows.find(x => x.id === currentEditId);
     if (!r) return showToast('No se encontró el registro.', 'error');
+    if (esAutomatico(r.raw)) {
+        return showToast(avisoAutomatico(r.raw), 'error', 6000);
+    }
 
     let fecha = r.fecha;
     let rubro = r.rubro;
@@ -1418,6 +2150,9 @@ window.confirmEdit = async function () {
         const p = String(pin).trim().toLowerCase();
         const pinRef = doc(db, 'seguridad', 'pin');
         const ref = doc(db, 'confinanzas', currentEditId);
+        const impuestosAsociados = (deleteRequested || fecha !== r.fecha)
+            ? await cargarImpuestosAsociados(currentEditId)
+            : [];
 
         // PIN, rotación, cambio y auditoría en una sola transacción:
         // si una escritura falla, el PIN dinámico no se consume.
@@ -1448,18 +2183,23 @@ window.confirmEdit = async function () {
             });
 
             if (deleteRequested) {
+                // El registro principal y sus impuestos automáticos se eliminan
+                // en la misma transacción para no dejar egresos huérfanos.
                 tx.delete(ref);
+                impuestosAsociados.forEach(t => tx.delete(doc(db, 'confinanzas', t.id)));
+
                 tx.set(doc(collection(db, 'auditoria')), {
                     tipo: 'ELIMINAR_FINANZA',
                     finId: currentEditId,
                     usuario: usuarioActivo,
                     pinTipo: tipoUsado,
                     antes: r.raw,
+                    impuestosEliminados: impuestosAsociados.map(t => t.id),
                     fecha_hora: serverTimestamp()
                 });
                 tx.set(doc(collection(db, 'alarmas')), {
                     tipo: 'ELIMINACIÓN',
-                    descripcion: `[${currentEditId}] Eliminado por ${usuarioActivo}: ${r.rubro} / ${r.subrubro} · $${fmtMoney(r.monto)}`,
+                    descripcion: `[${currentEditId}] Eliminado por ${usuarioActivo}: ${r.rubro} / ${r.subrubro} · $${fmtMoney(r.monto)}${impuestosAsociados.length ? ` · impuestos: ${impuestosAsociados.length}` : ''}`,
                     usuario: usuarioActivo,
                     pendiente: true,
                     fecha_hora: serverTimestamp()
@@ -1480,6 +2220,13 @@ window.confirmEdit = async function () {
                 };
 
                 tx.update(ref, despues);
+
+                // Si cambia la fecha del registro principal, los impuestos
+                // asociados deben quedar en la misma fecha contable.
+                if (fecha !== r.fecha) {
+                    impuestosAsociados.forEach(t => tx.update(doc(db, 'confinanzas', t.id), { fecha }));
+                }
+
                 tx.set(doc(collection(db, 'auditoria')), {
                     tipo: 'EDITAR_FINANZA',
                     finId: currentEditId,
@@ -1496,6 +2243,7 @@ window.confirmEdit = async function () {
                         editadoPor: usuarioActivo,
                         editadoMs: Date.now()
                     },
+                    impuestosActualizados: fecha !== r.fecha ? impuestosAsociados.map(t => t.id) : [],
                     fecha_hora: serverTimestamp()
                 });
                 tx.set(doc(collection(db, 'alarmas')), {
@@ -1524,11 +2272,32 @@ window.confirmEdit = async function () {
 };
 
 // ---------------- PIN maestro ----------------
-window.openPinModal = function () {
-    $('old-pin').value = '';
-    $('new-pin').value = '';
-    $('pinModal').style.display = 'flex';
-    setTimeout(() => $('old-pin').focus(), 50);
+window.openPinModal = async function () {
+    try {
+        const snap = await getDoc(doc(db, 'seguridad', 'pin'));
+        const d = snap.exists() ? snap.data() : {};
+        const maestro = String(d.maestro ?? '').trim();
+        const existe = !!maestro;
+
+        if (!existe && !permisoActivo('USUARIOS')) {
+            showToast('⛔ Solo un usuario con permiso USUARIOS puede inicializar el PIN maestro.', 'error', 6500);
+            return;
+        }
+
+        $('pin-title').textContent = existe ? 'Cambio de PIN Maestro' : 'Inicializar PIN Maestro';
+        $('pin-hint').textContent = existe
+            ? 'Ingresá el PIN actual y el nuevo PIN de 4 dígitos.'
+            : 'No hay PIN maestro configurado. Solo un usuario con permiso USUARIOS puede crearlo.';
+        $('old-pin').disabled = !existe;
+        $('old-pin').value = '';
+        $('old-pin').placeholder = existe ? 'PIN Actual' : 'PIN Actual (no configurado)';
+        $('new-pin').value = '';
+        $('pinModal').style.display = 'flex';
+        setTimeout(() => (existe ? $('old-pin') : $('new-pin')).focus(), 50);
+    } catch (e) {
+        console.error(e);
+        showToast('No se pudo leer seguridad/pin: ' + (e.code || e.message || 'conexión'), 'error');
+    }
 };
 
 window.submitPinChange = async function () {
@@ -1537,53 +2306,66 @@ window.submitPinChange = async function () {
     const oldPin = $('old-pin').value.trim();
     const newPin = $('new-pin').value.trim();
 
-    if (newPin.length < 4) return showToast('El nuevo PIN debe tener al menos 4 caracteres.', 'error');
+    if (!/^\d{4}$/.test(newPin)) {
+        return showToast('El nuevo PIN debe tener exactamente 4 dígitos.', 'error');
+    }
 
+    const btn = $('btn-pin-save');
+    setBtn(btn, true, 'ACTUALIZANDO...', 'ACTUALIZAR LLAVE');
     toggleLoader(true, 'ACTUALIZANDO PIN...');
 
     try {
         const pinRef = doc(db, 'seguridad', 'pin');
-        const snap = await getDoc(pinRef);
-        if (!snap.exists()) throw new Error('No existe seguridad/pin.');
 
-        const d = snap.data();
-        const maestro = String(d.maestro ?? '').trim().toLowerCase();
+        const accion = await runTransaction(db, async (tx) => {
+            const snap = await tx.get(pinRef);
+            const d = snap.exists() ? snap.data() : {};
+            const maestro = String(d.maestro ?? '').trim().toLowerCase();
+            const existe = !!maestro;
 
-        if (maestro && oldPin.toLowerCase() !== maestro) {
-            throw new Error('PIN actual incorrecto.');
-        }
+            // Si todavía no hay PIN maestro, solo puede crearlo un usuario
+            // con permiso USUARIOS. Si ya existe, se exige el PIN actual.
+            if (!existe && !permisoActivo('USUARIOS')) {
+                throw new Error('Solo un usuario con permiso USUARIOS puede inicializar el PIN maestro.');
+            }
+            if (existe && oldPin.toLowerCase() !== maestro) {
+                throw new Error('PIN actual incorrecto.');
+            }
 
-        const batch = writeBatch(db);
-        batch.set(pinRef, {
-            maestro: newPin,
-            actualizadoPor: usuarioActivo,
-            actualizadoTs: serverTimestamp()
-        }, { merge: true });
+            tx.set(pinRef, {
+                maestro: newPin,
+                actualizadoPor: usuarioActivo,
+                actualizadoTs: serverTimestamp()
+            }, { merge: true });
 
-        batch.set(doc(collection(db, 'historialPin')), {
-            fecha_hora: serverTimestamp(),
-            usuario: usuarioActivo,
-            accion: 'CAMBIO PIN MAESTRO',
-            tipo: 'MAESTRO'
+            const tipoAccion = existe ? 'CAMBIO PIN MAESTRO' : 'INICIALIZACIÓN PIN MAESTRO';
+
+            tx.set(doc(collection(db, 'historialPin')), {
+                fecha_hora: serverTimestamp(),
+                usuario: usuarioActivo,
+                accion: tipoAccion,
+                tipo: 'MAESTRO'
+            });
+
+            tx.set(doc(collection(db, 'alarmas')), {
+                tipo: 'SEGURIDAD',
+                descripcion: `${tipoAccion} realizado por ${usuarioActivo}.`,
+                usuario: usuarioActivo,
+                pendiente: true,
+                fecha_hora: serverTimestamp()
+            });
+
+            return tipoAccion;
         });
-
-        batch.set(doc(collection(db, 'alarmas')), {
-            tipo: 'SEGURIDAD',
-            descripcion: `Cambio de PIN maestro realizado por ${usuarioActivo}.`,
-            usuario: usuarioActivo,
-            pendiente: true,
-            fecha_hora: serverTimestamp()
-        });
-
-        await batch.commit();
 
         $('pinModal').style.display = 'none';
-        showToast('🔑 PIN maestro actualizado.', 'success');
+        showToast(`🔑 ${accion} correcto.`, 'success');
     } catch (e) {
         console.error(e);
         showToast(e.message || 'Error al cambiar el PIN.', 'error');
     } finally {
         toggleLoader(false);
+        setBtn(btn, false, 'ACTUALIZANDO...', 'ACTUALIZAR LLAVE');
     }
 };
 

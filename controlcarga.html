@@ -643,6 +643,12 @@ async function enviarBatch(payload) {
         } 
         else if (payload.modo === 'LLEGADA') {
             const esC = payload.tipoViaje === 'COMPRA';
+            const datosCompra = esC ? {
+                compraEnv10: payload.compraEnv10 || 0,
+                compraEnv15: payload.compraEnv15 || 0,
+                compraEnv45: payload.compraEnv45 || 0
+            } : {};
+
             batch.update(doc(refCcarga, payload.idViaje), {
                 estado: esC ? 'COMPRA_FINALIZADA' : 'FINALIZADO',
                 fechaLlegada: getFechaStr(),
@@ -653,6 +659,7 @@ async function enviarBatch(payload) {
                 diferencia: hayDiferenciaLlegada ? "SI" : "NO",
                 motivo: payload.motivo || "",
                 remito: payload.remitoPlanta || "",
+                ...datosCompra,
                 timestampLlegadaMs: Date.now()
             });
         } 
@@ -712,7 +719,10 @@ document.getElementById('btnFinalizar').onclick = () => {
     enviarBatch({ 
         modo: 'LLEGADA', idViaje: viajeSeleccionado.idViaje, tipoViaje: viajeSeleccionado.tipoViaje, 
         motivo: motivo, remitoPlanta: remito, 
-        L10: val('LL10'), V10: val('LV10'), L15: val('LL15'), V15: val('LV15'), L45: val('LL45'), V45: val('LV45')
+        L10: val('LL10'), V10: val('LV10'), L15: val('LL15'), V15: val('LV15'), L45: val('LL45'), V45: val('LV45'),
+        compraEnv10: isC ? val('compraEnv10') : 0,
+        compraEnv15: isC ? val('compraEnv15') : 0,
+        compraEnv45: isC ? val('compraEnv45') : 0
     });
 };
 

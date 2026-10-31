@@ -116,11 +116,6 @@
             <span class="menu-title">Control Remitos</span>
             <span class="menu-desc">Compras a planta y envases</span>
         </a>
-        <a href="#" id="linkComisiones" class="menu-btn comisiones">
-            <span class="menu-icon">🤝</span>
-            <span class="menu-title">Comisiones</span>
-            <span class="menu-desc">Liquidación a choferes</span>
-        </a>
         <a href="#" id="linkTransferencias" class="menu-btn transferencias">
             <span class="menu-icon">🏦</span>
             <span class="menu-title">Transferencias</span>
@@ -195,18 +190,35 @@ async function validarSesion() {
         
         const tokenData = docSnap.data();
         if (tokenData.expira && Date.now() > tokenData.expira) throw new Error("Sesión expirada.");
-        
-        sessionStorage.setItem('usuarioActivo', tokenData.usuario || 'SISTEMA');
-        
+
+        const usuario = String(tokenData.usuario || '').trim();
+        if (!usuario) throw new Error("El token no tiene un usuario asociado.");
+        sessionStorage.setItem('usuarioActivo', usuario);
+
+        const userSnap = await getDoc(doc(db, "usuarios", usuario));
+        if (!userSnap.exists()) throw new Error("Usuario no encontrado.");
+        const u = userSnap.data();
+
+        const finanzas = u.FINANZAS === true || u.FINANZAS === "true";
+        const confinanzas = u.CONFINANZAS === true || u.CONFINANZAS === "true";
+        const verRemitos = finanzas || confinanzas;
+
+        document.getElementById('linkArqueo').style.display = finanzas ? '' : 'none';
+        document.getElementById('linkRemitos').style.display = verRemitos ? '' : 'none';
+        document.getElementById('linkTransferencias').style.display = verRemitos ? '' : 'none';
+
+        if (!finanzas && !confinanzas) {
+            throw new Error("No tenés permisos para el área administrativa.");
+        }
+
         // Habilitar la UI y armar links
         document.getElementById('loadingOverlay').classList.remove('active');
         document.getElementById('menuGrid').style.display = 'grid';
-        
-        document.getElementById('btnBack').href = `inicio.html?k=${k}`;
-        document.getElementById('linkArqueo').href = `arqueo.html?k=${k}`;
-        document.getElementById('linkRemitos').href = `controlremitos.html?k=${k}`;
-        document.getElementById('linkComisiones').href = `controlcomisiones.html?k=${k}`;
-        document.getElementById('linkTransferencias').href = `controltransferencias.html?k=${k}`;
+
+        document.getElementById('btnBack').href = `inicio.html?k=${encodeURIComponent(k)}`;
+        document.getElementById('linkArqueo').href = `arqueo.html?k=${encodeURIComponent(k)}`;
+        document.getElementById('linkRemitos').href = `controlremitos.html?k=${encodeURIComponent(k)}`;
+        document.getElementById('linkTransferencias').href = `controltransferencias.html?k=${encodeURIComponent(k)}`;
 
     } catch (e) { 
         console.error(e);
