@@ -51,6 +51,10 @@ details[open]>summary::before{transform:rotate(90deg)}
 .money{font-weight:800;color:var(--green)}
 .money.blue{color:var(--blue)}
 .strip{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 14px;border-top:1px solid var(--line)}
+.stock-grid{display:grid;grid-template-columns:1fr;gap:1px;background:var(--line);border-top:1px solid var(--line)}
+.stock-grid>.strip{border-top:0;background:var(--card)}
+.viaje-stock{display:grid;grid-template-columns:1fr;gap:8px;padding:0 0 8px}
+.viaje-stock>.strip{border:0;padding:0}
 .lbl{font-size:11px;font-weight:800;letter-spacing:.4px;margin-right:4px}
 .l-ini{color:var(--green)}.l-fin{color:var(--orange)}.l-tot{color:var(--blue)}
 .qbox{display:inline-flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 7px;font-size:12px;font-variant-numeric:tabular-nums}
@@ -128,6 +132,14 @@ details>summary{padding:6px 10px;gap:8px}
   .sale{grid-template-columns:52px minmax(0,1fr) auto auto;padding:5px 10px;gap:8px}
   .sale .det{grid-column:auto;justify-self:end;font-size:11px;order:2}
   .sale .tot{min-width:110px;order:3}
+  .stock-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .viaje-stock{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+}
+@media(min-width:1000px){
+  .stock-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .stock-grid>.strip{padding:5px 8px}
+  .stock-grid .qbox{padding:2px 4px;gap:2px}
+  .stock-grid .lbl{margin-right:2px}
 }
 /* ---- Edición en planilla ---- */
 td.editable{cursor:cell;box-shadow:inset 0 0 0 1px var(--line)}
@@ -665,8 +677,10 @@ function viajeHtml(x, vs) {
       <span class="money num">TOT: ${fm(t.tot)}</span>
     </summary>
     <div class="body">
-      <div class="strip" style="border:0;padding:0 0 8px">${stripLV('SALIDA', 'l-ini', { L: x.sL, V: x.sV })}</div>
-      <div class="strip" style="border:0;padding:0 0 10px">${stripLV(etiquetaLlegada, 'l-fin', { L: x.exp.L, V: x.exp.V })}</div>
+      <div class="viaje-stock">
+        <div class="strip">${stripLV('SALIDA', 'l-ini', { L: x.sL, V: x.sV })}</div>
+        <div class="strip">${stripLV(etiquetaLlegada, 'l-fin', { L: x.exp.L, V: x.exp.V })}</div>
+      </div>
       <div class="strip" style="border:0;padding:6px 0 4px">${totalesHtml(t)}</div>
       ${vs.map(ventaHtml).join('') || '<div class="muted" style="padding:10px">Sin ventas en este viaje</div>'}
     </div>
@@ -741,10 +755,12 @@ function turnoHtml(g, viajes, sueltas) {
       cierre = { L: {}, V: {} };
       SIZES.forEach(k => { cierre.L[k] = num(t.fin[`l${k}`]); cierre.V[k] = num(t.fin[`v${k}`]); });
     }
-    stock = `<div class="strip">${stripLV('APERTURA', 'l-ini', aper)}</div>
+    stock = `<div class="stock-grid">
+      <div class="strip">${stripLV('APERTURA', 'l-ini', aper)}</div>
       <div class="strip">${cierre ? stripLV('CIERRE', 'l-fin', cierre) : stripLV('TEÓRICO', 'l-tot', g.stock.tot)}</div>
       <div class="strip">${stripLV('EN CALLE', 'l-tot', g.stock.calle)}</div>
-      <div class="strip">${stripLV('PLATAFORMA', 'l-ini', g.stock.plat)}</div>`;
+      <div class="strip">${stripLV('PLATAFORMA', 'l-ini', g.stock.plat)}</div>
+    </div>`;
   }
 
   const caja = `<div class="strip" style="background:var(--bg)">
