@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<title>Control de Comisiones</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050510;
+    --panel: rgba(255,255,255,0.035);
+    --panel-strong: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.10);
+    --text: #ffffff;
+    --muted: #9ca3af;
+    --accent: #FFD700;
+    --accent-soft: rgba(255,215,0,0.12);
+    --blue: #60a5fa;
+    --blue-soft: rgba(96,165,250,0.12);
+    --ok: #2dd4bf;
+    --ok-soft: rgba(45,212,191,0.12);
+    --warn: #f59e0b;
+    --warn-soft: rgba(245,158,11,0.12);
+    --danger: #ff4757;
+    --danger-soft: rgba(255,71,87,0.12);
+    --shadow: 0 10px 40px rgba(0,0,0,0.35);
+  }
+  body.light-mode {
+    --bg: #eef2f7;
+    --panel: #ffffff;
+    --panel-strong: #f8fafc;
+    --border: #d7dee8;
+    --text: #111827;
+    --muted: #64748b;
+    --accent: #b45309;
+    --accent-soft: rgba(180,83,9,0.10);
+    --blue: #1d4ed8;
+    --blue-soft: rgba(29,78,216,0.09);
+    --ok: #0f766e;
+    --ok-soft: rgba(15,118,110,0.10);
+    --warn: #b45309;
+    --warn-soft: rgba(180,83,9,0.10);
+    --danger: #dc2626;
+    --danger-soft: rgba(220,38,38,0.10);
+    --shadow: 0 10px 30px rgba(15,23,42,0.12);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+    font-family: 'Outfit', sans-serif; opacity: 0; transition: opacity .35s ease, background .25s ease, color .25s ease;
+  }
+  .fixed-header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(5,5,16,0.94);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(14px);
+    padding: 8px 14px;
+  }
+  body.light-mode .fixed-header { background: rgba(255,255,255,0.94); }
+  .header-top {
+    max-width: 1020px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .page-title {
+    margin: 0; font-size: .98rem; font-weight: 800; letter-spacing: .8px;
+    text-transform: uppercase;
+    background: linear-gradient(to right, var(--text), var(--blue));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    text-align: center; flex: 1;
+  }
+  .btn-icon {
+    width: 34px; height: 34px; border-radius: 9px;
+    border: 1px solid var(--border); background: var(--panel);
+    color: var(--text); cursor: pointer; font-size: 15px;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: .2s;
+  }
+  .btn-icon:hover { border-color: var(--blue); color: var(--blue); }
+  .wrap { max-width: 1020px; margin: 0 auto; padding: 14px 14px 46px; }
+
+  .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+  .kpi {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 9px 11px; text-align: center;
+  }
+  .kpi label { display: block; color: var(--muted); font-size: 9px; letter-spacing: .5px; text-transform: uppercase; font-weight: 700; margin-bottom: 3px; }
+  .kpi .v { font-size: 1rem; font-weight: 800; }
+  .kpi .v.blue { color: var(--blue); }
+  .kpi .v.ok { color: var(--ok); }
+  .kpi .v.warn { color: var(--warn); }
+  .kpi .v.accent { color: var(--accent); }
+
+  .toolbar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    justify-content: space-between; margin-bottom: 11px;
+  }
+  .tabs { display: flex; gap: 3px; background: rgba(0,0,0,0.25); border: 1px solid var(--border); border-radius: 9px; padding: 3px; }
+  body.light-mode .tabs { background: #e2e8f0; }
+  .tab {
+    border: 0; background: transparent; color: var(--muted); cursor: pointer;
+    padding: 6px 13px; border-radius: 7px; font-family: inherit; font-size: 10px; font-weight: 800; letter-spacing: .5px;
+  }
+  .tab.active { background: var(--blue); color: #fff; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px; margin-bottom: 12px;
+  }
+  .card-title {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    font-size: 11px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase;
+    margin: 0 0 9px; color: var(--text);
+  }
+  .card-title small { color: var(--muted); font-size: 9px; font-weight: 600; letter-spacing: .2px; text-transform: none; }
+
+  .select-row { display: grid; gap: 6px; }
+  .select-row label { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+  select, input[type="text"], input[type="number"], textarea {
+    width: 100%; background: var(--panel-strong); border: 1px solid var(--border);
+    color: var(--text); border-radius: 8px; padding: 9px 10px;
+    font-family: inherit; font-size: 12px; outline: none;
+  }
+  select:focus, input:focus, textarea:focus { border-color: var(--blue); }
+  textarea { min-height: 58px; resize: vertical; }
+
+  .scales { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .scale-box { border: 1px solid var(--border); border-radius: 9px; overflow: hidden; background: var(--panel-strong); }
+  .scale-head {
+    padding: 7px 9px; font-size: 10px; font-weight: 800; letter-spacing: .4px;
+    background: var(--blue-soft); color: var(--blue); border-bottom: 1px solid var(--border);
+  }
+  .scale-row {
+    display: flex; justify-content: space-between; gap: 8px;
+    padding: 5px 9px; font-size: 10px; border-bottom: 1px dashed var(--border);
+  }
+  .scale-row:last-child { border-bottom: 0; }
+  .scale-row span { color: var(--muted); }
+  .scale-row b { white-space: nowrap; }
+  .scale-empty { padding: 9px; color: var(--muted); font-size: 10px; text-align: center; }
+
+  .notice {
+    display: flex; align-items: flex-start; gap: 7px;
+    background: var(--panel-strong); border: 1px dashed var(--border);
+    border-radius: 9px; padding: 8px 10px; margin-bottom: 12px;
+    color: var(--muted); font-size: 10.5px; line-height: 1.55;
+  }
+
+  .driver-head {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+    border: 1px solid var(--border); border-radius: 10px;
+    background: var(--panel-strong); padding: 10px 11px; margin-bottom: 9px;
+  }
+  .driver-head .who { font-size: 13px; font-weight: 800; }
+  .driver-head .sub { color: var(--muted); font-size: 10px; margin-top: 2px; }
+  .driver-head .amount { color: var(--blue); font-size: 15px; font-weight: 800; white-space: nowrap; }
+
+  .day-card { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; overflow: hidden; background: rgba(0,0,0,0.10); }
+  body.light-mode .day-card { background: #fff; }
+  .day-head {
+    display: flex; align-items: center; gap: 9px; padding: 9px 11px;
+    background: var(--panel-strong); border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .day-head input { width: 16px; height: 16px; accent-color: var(--blue); margin: 0; }
+  .day-date { flex: 1; font-size: 11px; font-weight: 800; }
+  .day-meta { color: var(--muted); font-size: 9.5px; font-weight: 600; }
+  .day-amount { color: var(--blue); font-size: 12px; font-weight: 800; white-space: nowrap; }
+  .day-body { display: grid; gap: 5px; padding: 7px 9px 9px; }
+  .com-item {
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 9px; background: var(--panel);
+  }
+  .com-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .com-client { font-size: 11px; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .com-ref { color: var(--muted); font-size: 9px; margin-top: 2px; }
+  .com-amount { color: var(--ok); font-size: 12px; font-weight: 800; white-space: nowrap; }
+  .com-detail { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .com-chip {
+    background: var(--blue-soft); color: var(--blue); border: 1px solid rgba(96,165,250,.22);
+    border-radius: 999px; padding: 2px 6px; font-size: 8.5px; font-weight: 700;
+  }
+
+  .pay-card {
+    position: sticky; bottom: 8px; z-index: 20;
+    border-color: rgba(96,165,250,.35);
+    box-shadow: var(--shadow);
+    background: rgba(10,10,24,0.97);
+  }
+  body.light-mode .pay-card { background: #fff; }
+  .pay-total {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 8px 0 10px; border-bottom: 1px dashed var(--border); margin-bottom: 10px;
+  }
+  .pay-total span { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+  .pay-total b { color: var(--blue); font-size: 1.35rem; }
+  .pay-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 9px; }
+  .pay-inputs label { display: grid; gap: 4px; color: var(--muted); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
+
+  .result-box {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    border-radius: 9px; padding: 9px 11px; margin-bottom: 9px;
+    border: 1px solid var(--border); background: var(--panel-strong);
+    font-size: 10.5px;
+  }
+  .result-box .msg { color: var(--muted); font-weight: 600; }
+  .result-box .diff { font-size: 12px; font-weight: 800; white-space: nowrap; }
+  .result-box.ok { border-color: rgba(45,212,191,.45); background: var(--ok-soft); }
+  .result-box.ok .msg, .result-box.ok .diff { color: var(--ok); }
+  .result-box.bad { border-color: rgba(255,71,87,.45); background: var(--danger-soft); }
+  .result-box.bad .msg, .result-box.bad .diff { color: var(--danger); }
+
+  .btn {
+    border: 1px solid var(--border); background: var(--panel); color: var(--text);
+    border-radius: 8px; padding: 8px 12px; font-family: inherit; font-size: 10px;
+    font-weight: 800; letter-spacing: .4px; cursor: pointer; transition: .2s;
+  }
+  .btn:hover { border-color: var(--blue); color: var(--blue); }
+  .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; width: 100%; padding: 11px; font-size: 11px; }
+  .btn.primary:hover { filter: brightness(1.08); color: #fff; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.small { padding: 5px 8px; font-size: 9px; }
+
+  .hist-card { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; overflow: hidden; background: var(--panel); }
+  .hist-head { display: flex; align-items: flex-start; gap: 9px; padding: 9px 11px; }
+  .hist-who { flex: 1; min-width: 0; }
+  .hist-name { font-size: 12px; font-weight: 800; }
+  .hist-sub { color: var(--muted); font-size: 9.5px; margin-top: 2px; }
+  .hist-total { color: var(--ok); font-size: 13px; font-weight: 800; white-space: nowrap; }
+  .hist-body { border-top: 1px solid var(--border); padding: 8px 11px 10px; }
+  .hist-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .hist-grid span { display: block; color: var(--muted); font-size: 8.5px; text-transform: uppercase; font-weight: 700; letter-spacing: .3px; }
+  .hist-grid b { font-size: 10.5px; }
+  .hist-note { margin-top: 7px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+
+  .empty {
+    text-align: center; padding: 46px 18px; color: var(--muted);
+    border: 1px dashed var(--border); border-radius: 11px; font-size: 12px; line-height: 1.6;
+  }
+  .empty .big { font-size: 30px; display: block; margin-bottom: 8px; }
+  .hidden { display: none !important; }
+
+  .toast-container { position: fixed; bottom: 20px; right: 16px; z-index: 500; display: grid; gap: 7px; }
+  .toast {
+    background: #111827; color: #fff; border: 1px solid var(--border);
+    border-left: 3px solid var(--blue); border-radius: 9px;
+    padding: 10px 13px; font-size: 11px; max-width: 330px;
+    box-shadow: var(--shadow); opacity: 0; transform: translateY(8px);
+    transition: .22s;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { border-left-color: var(--danger); }
+  .toast.success { border-left-color: var(--ok); }
+  .loading-overlay {
+    display: none; position: fixed; inset: 0; z-index: 600;
+    background: rgba(0,0,0,0.62); backdrop-filter: blur(3px);
+    align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+    color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .6px;
+  }
+  .loading-overlay.active { display: flex; }
+  .loader {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.16); border-top-color: var(--blue);
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 640px) {
+    .dashboard { grid-template-columns: repeat(2, 1fr); }
+    .scales { grid-template-columns: 1fr; }
+    .pay-inputs { grid-template-columns: 1fr; }
+    .hist-grid { grid-template-columns: repeat(2, 1fr); }
+    .page-title { font-size: .8rem; }
+    .day-meta { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="fixed-header">
+  <div class="header-top">
+    <button class="btn-icon" id="btnVolver" title="Volver">←</button>
+    <h1 class="page-title">Control de Comisiones</h1>
+    <button class="btn-icon" id="btnTheme" title="Tema">🌙</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="dashboard">
+    <div class="kpi"><label>Pendientes</label><div class="v blue" id="kpiPend">$ 0</div></div>
+    <div class="kpi"><label>Ventas con comisión</label><div class="v accent" id="kpiVentas">0</div></div>
+    <div class="kpi"><label>Choferes</label><div class="v warn" id="kpiChoferes">0</div></div>
+    <div class="kpi"><label>Liquidado</label><div class="v ok" id="kpiHist">$ 0</div></div>
+  </section>
+
+  <section class="card">
+    <div class="card-title">Escalas de comisión <small>Se editan en Precios</small></div>
+    <div class="scales" id="scales">
+      <div class="scale-empty">Cargando escalas…</div>
+    </div>
+  </section>
+
+  <div class="toolbar">
+    <div class="tabs">
+      <button class="tab active" data-tab="PENDIENTES">PENDIENTES</button>
+      <button class="tab" data-tab="HISTORIAL">HISTORIAL</button>
+    </div>
+    <button class="btn" id="btnReload">ACTUALIZAR</button>
+  </div>
+
+  <section id="viewPendientes">
+    <div class="card" id="cardChofer">
+      <div class="card-title">Chofer a liquidar</div>
+      <div class="select-row">
+        <select id="selChofer">
+          <option value="">Cargando comisiones pendientes…</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="driverBox" class="hidden">
+      <div class="driver-head">
+        <div>
+          <div class="who" id="driverName">—</div>
+          <div class="sub" id="driverSub">—</div>
+        </div>
+        <div class="amount" id="driverAmount">$ 0</div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:8px;">
+        <button class="btn small" id="btnTodos">MARCAR TODOS</button>
+        <button class="btn small" id="btnNinguno">DESMARCAR</button>
+      </div>
+
+      <div id="diasContainer"></div>
+    </div>
+
+    <div id="emptyPendientes" class="empty hidden">
+      <span class="big">✅</span>
+      No hay comisiones pendientes de pago.
+    </div>
+
+    <div class="card pay-card hidden" id="payCard">
+      <div class="card-title">Liquidación <small>Pago exacto, sin diferencias</small></div>
+      <div class="pay-total">
+        <span>Total seleccionado</span>
+        <b id="payTotal">$ 0,00</b>
+      </div>
+
+      <div class="pay-inputs">
+        <label>Efectivo ($)
+          <input type="number" id="pagoEfvo" inputmode="decimal" min="0" step="0.01" placeholder="0.00">
+        </label>
+        <label>Transferencia ($)
+          <input type="number" id="pagoTransf" inputmode="decimal" min="0" step="0.01" placeholder="0.00">
+        </label>
+      </div>
+
+      <div class="result-box" id="resultBox">
+        <span class="msg" id="resultMsg">Ingresá los medios de pago</span>
+        <span class="diff" id="resultDiff">Faltan: $ 0,00</span>
+      </div>
+
+      <label style="display:grid;gap:4px;color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px;">
+        Observaciones
+        <textarea id="obsPago" placeholder="Nota del pago (opcional)…"></textarea>
+      </label>
+
+      <button class="btn primary" id="btnPagar" disabled>LIQUIDAR COMISIONES</button>
+    </div>
+  </section>
+
+  <section id="viewHistorial" class="hidden">
+    <div id="historial"></div>
+  </section>
+</main>
+
+<div class="toast-container" id="toast-container"></div>
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loader"></div>
+  <div id="loaderText">CARGANDO...</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import {
+  getFirestore, doc, getDoc, getDocs, collection, query, where,
+  runTransaction, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
+  authDomain: "vmgaslr.firebaseapp.com",
+  projectId: "vmgaslr",
+  storageBucket: "vmgaslr.firebasestorage.app",
+  messagingSenderId: "75859850089",
+  appId: "1:75859850089:web:fc551c770bbf4ae25803f8"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const TIMEOUT_SESION = 14400000; // 4 horas
+const MAX_COMISIONES_PAGO = 180;
+const $ = (id) => document.getElementById(id);
+const pad2 = (n) => String(n).padStart(2, "0");
+
+function num(v) {
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  if (v === null || v === undefined || v === "") return 0;
+  let s = String(v).trim().replace(/\s/g, "").replace(/[^\d,.\-]/g, "");
+  if (!s) return 0;
+  const lastComma = s.lastIndexOf(",");
+  const lastDot = s.lastIndexOf(".");
+  if (lastComma > -1 && lastDot > -1) {
+    s = lastComma > lastDot ? s.replace(/\./g, "").replace(",", ".") : s.replace(/,/g, "");
+  } else if (lastComma > -1) {
+    s = s.replace(",", ".");
+  }
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+}
+
+const round2 = (n) => Math.round(num(n) * 100) / 100;
+
+function fmtMoney(n) {
+  return Math.abs(num(n)).toLocaleString("es-AR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+}[c]));
+
+const escAttr = esc;
+
+function isoFromDate(d) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function normFecha(v) {
+  if (!v) return "";
+  if (v instanceof Date) return isoFromDate(v);
+  if (typeof v === "object") {
+    if (typeof v.toDate === "function") return isoFromDate(v.toDate());
+    if (typeof v.seconds === "number") return isoFromDate(new Date(v.seconds * 1000));
+  }
+  const s = String(v).trim();
+  if (!s) return "";
+  let m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (m) return `${m[1]}-${pad2(m[2])}-${pad2(m[3])}`;
+  m = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (m) return `${m[3]}-${pad2(m[2])}-${pad2(m[1])}`;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? "" : isoFromDate(d);
+}
+
+function fechaVisual(iso) {
+  if (!iso) return "—";
+  const p = iso.split("-");
+  return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : iso;
+}
+
+function toMs(v) {
+  if (!v) return 0;
+  if (v instanceof Date) return v.getTime();
+  if (typeof v === "number") return v;
+  if (typeof v.toDate === "function") return v.toDate().getTime();
+  if (typeof v.seconds === "number") return v.seconds * 1000;
+  if (typeof v === "string") {
+    const n = Number(v);
+    if (Number.isFinite(n) && n > 0) return n;
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+  }
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function claveChofer(valor) {
+  return String(valor || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[.,]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseDetalle(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw !== "string" || !raw.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function showToast(msg, type = "info", ms = 4200) {
+  const c = $("toast-container");
+  if (!c) return;
+  const t = document.createElement("div");
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  requestAnimationFrame(() => t.classList.add("show"));
+  setTimeout(() => {
+    t.classList.remove("show");
+    setTimeout(() => t.remove(), 250);
+  }, ms);
+}
+
+function setLoading(show, text = "CARGANDO...") {
+  const o = $("loadingOverlay");
+  if (!o) return;
+  if (text) $("loaderText").textContent = text;
+  o.classList.toggle("active", !!show);
+}
+
+// ---------------- Sesión ----------------
+const params = new URLSearchParams(window.location.search);
+const k = params.get("k") || params.get("token") || sessionStorage.getItem("k") || sessionStorage.getItem("vm_token");
+
+function expulsar() {
+  sessionStorage.clear();
+  window.location.replace("index.html");
+}
+
+window.volver = () => window.location.replace(`inicio.html?k=${encodeURIComponent(k || "")}`);
+
+let tIdle;
+function resetTimer() {
+  clearTimeout(tIdle);
+  tIdle = setTimeout(() => {
+    showToast("Sesión expirada por inactividad.", "info");
+    setTimeout(expulsar, 1200);
+  }, TIMEOUT_SESION);
+}
+["click", "mousemove", "keydown", "touchstart", "scroll"].forEach((evt) =>
+  document.addEventListener(evt, resetTimer, { passive: true })
+);
+resetTimer();
+
+let usuarioActivo = "SISTEMA";
+let usuarioNombre = "SISTEMA";
+let permisosUsuario = { CONFINANZAS: false, FINANZAS: false };
+let usuariosPorClave = new Map();
+let parametros = { comisiones_10: [], comisiones_15: [], comisiones_45: [] };
+
+let pendientes = [];
+let grupos = new Map();
+let grupoActual = null;
+let seleccionDias = new Set();
+let historial = [];
+let tabActual = "PENDIENTES";
+let pendientesError = "";
+let historialError = "";
+
+function permisoActivo(nombre) {
+  return permisosUsuario[String(nombre || "").toUpperCase()] === true;
+}
+
+if (!k) {
+  expulsar();
+} else {
+  sessionStorage.setItem("k", k);
+  sessionStorage.setItem("vm_token", k);
+  if (window.history.replaceState) window.history.replaceState({}, document.title, window.location.pathname);
+  validarSesion();
+}
+
+async function validarSesion() {
+  try {
+    document.body.style.opacity = 1;
+    setLoading(true, "VERIFICANDO SESIÓN...");
+
+    const snap = await getDoc(doc(db, "tokens", k));
+    if (!snap.exists()) throw new Error("Sesión inválida.");
+    const tokenData = snap.data();
+    const exp = toMs(tokenData.expira);
+    if (exp && Date.now() > exp) throw new Error("La sesión expiró.");
+    if (!tokenData.usuario) throw new Error("El token no tiene un usuario asociado.");
+
+    usuarioActivo = String(tokenData.usuario || tokenData.nombre_mostrar || "SISTEMA");
+    sessionStorage.setItem("usuarioActivo", usuarioActivo);
+
+    const userSnap = await getDoc(doc(db, "usuarios", usuarioActivo));
+    if (!userSnap.exists()) throw new Error("Usuario no encontrado.");
+    const u = userSnap.data();
+
+    permisosUsuario = {
+      CONFINANZAS: u.CONFINANZAS === true || u.CONFINANZAS === "true",
+      FINANZAS: u.FINANZAS === true || u.FINANZAS === "true"
+    };
+    if (!permisoActivo("CONFINANZAS") && !permisoActivo("FINANZAS")) {
+      throw new Error("No tenés permiso para Control de Comisiones.");
+    }
+
+    usuarioNombre = String(u.nombre_mostrar || tokenData.nombre_mostrar || usuarioActivo).trim() || usuarioActivo;
+
+    await Promise.all([
+      cargarUsuarios(),
+      cargarParametros(),
+      cargarPendientes(),
+      cargarHistorial()
+    ]);
+
+    renderTodo();
+
+    if (pendientesError) showToast("No se pudieron leer las comisiones: " + pendientesError, "error", 6500);
+    if (historialError) showToast("No se pudo leer el historial: " + historialError, "error", 6500);
+  } catch (e) {
+    console.error(e);
+    showToast("⛔ " + (e.message || "Acceso denegado."), "error", 5500);
+    setTimeout(expulsar, 2000);
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ---------------- Datos ----------------
+async function cargarUsuarios() {
+  usuariosPorClave = new Map();
+  try {
+    const snap = await getDocs(collection(db, "usuarios"));
+    snap.forEach((d) => {
+      const u = d.data();
+      const visible = String(u.nombre_mostrar || u.nombre_completo || d.id).trim();
+      [u.nombre_mostrar, u.nombre_completo, u.id, d.id].forEach((n) => {
+        const clave = claveChofer(n);
+        if (clave && !usuariosPorClave.has(clave)) usuariosPorClave.set(clave, visible);
+      });
+    });
+  } catch (e) {
+    console.warn("No se pudieron leer los usuarios:", e);
+  }
+}
+
+function normalizarRango(r, tipo) {
+  const min = Number(r?.min ?? r?.MIN ?? r?.RANGO_MENOR ?? r?.rango_menor);
+  const max = Number(r?.max ?? r?.MAX ?? r?.RANGO_MAYOR ?? r?.rango_mayor);
+  const com = Number(r?.com ?? r?.COM ?? r?.[`COMISION_${tipo}`] ?? r?.[`comision_${tipo}`]);
+  return {
+    min: Number.isFinite(min) ? min : 0,
+    max: Number.isFinite(max) ? max : 999999999,
+    com: Number.isFinite(com) && com >= 0 ? com : 0
+  };
+}
+
+function normalizarEscalas(raw) {
+  const out = { "10": [], "15": [], "45": [] };
+  if (!raw) return out;
+
+  ["10", "15", "45"].forEach((t) => {
+    const arr = raw[`comisiones_${t}`] ?? raw[`COMISIONES_${t}`];
+    if (Array.isArray(arr)) out[t] = arr.map((r) => normalizarRango(r, t));
+  });
+
+  // Formato legacy: [{ RANGO_MENOR, RANGO_MAYOR, COMISION_10, ... }]
+  if (!out["10"].length && !out["15"].length && !out["45"].length && Array.isArray(raw.comisiones)) {
+    ["10", "15", "45"].forEach((t) => {
+      out[t] = raw.comisiones.map((r) => normalizarRango(r, t)).filter((r) => r.com > 0);
+    });
+  }
+  return out;
+}
+
+async function cargarParametros() {
+  try {
+    const snap = await getDoc(doc(db, "configuracion", "parametros"));
+    if (snap.exists()) {
+      const data = snap.data();
+      parametros = {
+        comisiones_10: normalizarEscalas(data)["10"],
+        comisiones_15: normalizarEscalas(data)["15"],
+        comisiones_45: normalizarEscalas(data)["45"]
+      };
+    }
+  } catch (e) {
+    console.warn("No se pudieron leer las escalas:", e);
+  }
+}
+
+function normalizarComision(id, d) {
+  const fechaISO = normFecha(d.fechaISO ?? d.FECHA_ISO ?? d.fecha ?? d.FECHA);
+  const fecha = String(d.fecha ?? d.FECHA ?? "").trim() || fechaVisual(fechaISO);
+  const hora = String(d.hora ?? d.HORA ?? "").trim();
+  const horaParaTs = /^\d{1,2}:\d{2}/.test(hora) ? hora : "00:00:00";
+  const ts = toMs(d.timestampMs ?? d.TIMESTAMP_MS ?? d.creado) ||
+    (fechaISO ? toMs(`${fechaISO}T${horaParaTs}`) : 0);
+
+  const movimientoId = String(d.movimientoId ?? d.MOVIMIENTO_ID ?? d.movimiento ?? id).trim();
+  const chofer = String(d.chofer ?? d.CHOFER ?? d.USUARIO ?? "").trim();
+  const choferKey = String(d.choferKey ?? d.CHOFER_KEY ?? "").trim() || claveChofer(chofer);
+  const comision = round2(num(d.comision ?? d.COMISION ?? d.COMISION_TOTAL));
+  const ventaTotal = round2(num(d.ventaTotal ?? d.VENTA_TOTAL ?? d.total ?? 0));
+
+  return {
+    id,
+    movimientoId,
+    choferId: String(d.choferId ?? d.CHOFER_ID ?? "").trim(),
+    chofer: chofer || "Chofer sin nombre",
+    choferKey,
+    cliente: String(d.cliente ?? d.CLIENTE ?? "Sin cliente").trim(),
+    fecha,
+    fechaISO,
+    hora,
+    tipo: String(d.tipo ?? d.TIPO ?? "").trim(),
+    ventaTotal,
+    comision,
+    detalle: parseDetalle(d.detalle ?? d.DETALLE),
+    estado: String(d.estado ?? d.ESTADO ?? "PENDIENTE").trim().toUpperCase(),
+    pagoId: String(d.pagoId ?? d.PAGO_ID ?? "").trim(),
+    ts
+  };
+}
+
+async function cargarPendientes() {
+  pendientesError = "";
+  try {
+    const snap = await getDocs(query(collection(db, "comisiones"), where("estado", "==", "PENDIENTE")));
+    pendientes = [];
+    snap.forEach((d) => {
+      const c = normalizarComision(d.id, d.data());
+      if (c.comision > 0 && !c.pagoId) pendientes.push(c);
+    });
+  } catch (e) {
+    console.warn("No se pudieron leer las comisiones pendientes:", e);
+    pendientesError = e.message || e.code || "error desconocido";
+    pendientes = [];
+  }
+  agruparPendientes();
+}
+
+function agruparPendientes() {
+  grupos = new Map();
+
+  pendientes.forEach((c) => {
+    const key = c.choferKey || claveChofer(c.chofer);
+    if (!key) return;
+
+    if (!grupos.has(key)) {
+      grupos.set(key, {
+        key,
+        nombre: usuariosPorClave.get(key) || String(c.chofer || key).toUpperCase(),
+        choferId: c.choferId || "",
+        items: [],
+        total: 0,
+        dias: new Map()
+      });
+    }
+
+    const g = grupos.get(key);
+    g.items.push(c);
+    g.total = round2(g.total + c.comision);
+    if (!g.choferId && c.choferId) g.choferId = c.choferId;
+
+    const diaKey = c.fechaISO || c.fecha || "0000-00-00";
+    if (!g.dias.has(diaKey)) {
+      g.dias.set(diaKey, { fecha: c.fecha || fechaVisual(diaKey), fechaISO: c.fechaISO, items: [], total: 0, ts: c.ts });
+    }
+    const dia = g.dias.get(diaKey);
+    dia.items.push(c);
+    dia.total = round2(dia.total + c.comision);
+    dia.ts = Math.max(dia.ts || 0, c.ts || 0);
+  });
+
+  grupos.forEach((g) => {
+    g.dias = [...g.dias.values()]
+      .map((d) => ({ ...d, items: d.items.sort((a, b) => (a.ts - b.ts) || String(a.hora).localeCompare(String(b.hora))) }))
+      .sort((a, b) => String(b.fechaISO).localeCompare(String(a.fechaISO)) || (b.ts - a.ts));
+    g.items.sort((a, b) => (b.ts - a.ts));
+  });
+}
+
+async function cargarHistorial() {
+  historialError = "";
+  try {
+    const snap = await getDocs(collection(db, "comisiones_pagos"));
+    historial = [];
+    snap.forEach((d) => {
+      const x = d.data();
+      const fechaISO = normFecha(x.fechaISO ?? x.FECHA_ISO ?? x.fecha ?? x.FECHA);
+      const total = round2(num(x.total ?? x.TOTAL ?? x.monto ?? x.MONTO));
+      const cantidad = Number(x.cantidad ?? x.CANTIDAD ?? 0) || parseDetalle(x.detalle).length;
+      historial.push({
+        id: d.id,
+        chofer: String(x.chofer ?? x.CHOFER ?? "Chofer").trim(),
+        choferKey: String(x.choferKey ?? "").trim() || claveChofer(x.chofer),
+        fecha: String(x.fecha ?? "").trim() || fechaVisual(fechaISO),
+        fechaISO,
+        hora: String(x.hora ?? x.HORA ?? "").trim(),
+        total,
+        efectivo: round2(num(x.efectivo ?? x.EFECTIVO)),
+        transferencia: round2(num(x.transferencia ?? x.TRANSF)),
+        cantidad,
+        observaciones: String(x.observaciones ?? x.OBSERVACIONES ?? "").trim(),
+        usuario: String(x.usuario ?? x.USUARIO ?? "").trim(),
+        pagoId: String(x.pagoId ?? x.PAGO_ID ?? d.id).trim(),
+        detalle: parseDetalle(x.detalle),
+        ts: toMs(x.timestampMs ?? x.TIMESTAMP_MS ?? x.creado) || 0
+      });
+    });
+    historial.sort((a, b) => (b.ts - a.ts) || String(b.fechaISO).localeCompare(String(a.fechaISO)));
+  } catch (e) {
+    console.warn("No se pudo leer el historial de pagos:", e);
+    historialError = e.message || e.code || "error desconocido";
+    historial = [];
+  }
+}
+
+// ---------------- Render ----------------
+function renderTodo() {
+  renderKPIs();
+  renderEscalas();
+  renderChoferes();
+  renderDias();
+  renderHistorial();
+  switchTab(tabActual);
+}
+
+function renderKPIs() {
+  const totalPend = round2(pendientes.reduce((a, c) => a + c.comision, 0));
+  const totalHist = round2(historial.reduce((a, h) => a + h.total, 0));
+
+  $("kpiPend").textContent = `$ ${fmtMoney(totalPend)}`;
+  $("kpiVentas").textContent = String(pendientes.length);
+  $("kpiChoferes").textContent = String(grupos.size);
+  $("kpiHist").textContent = `$ ${fmtMoney(totalHist)}`;
+}
+
+function renderEscalas() {
+  const cont = $("scales");
+  const items = [
+    ["10", "Garrafa 10 kg", parametros.comisiones_10],
+    ["15", "Garrafa 15 kg", parametros.comisiones_15],
+    ["45", "Cilindro 45 kg", parametros.comisiones_45]
+  ];
+
+  cont.innerHTML = items.map(([tipo, titulo, rangos]) => {
+    const filas = (rangos || []).length
+      ? rangos.map((r) => `<div class="scale-row"><span>$ ${fmtMoney(r.min)} – $ ${r.max >= 999999999 ? "∞" : fmtMoney(r.max)}</span><b>$ ${fmtMoney(r.com)}</b></div>`).join("")
+      : `<div class="scale-empty">Sin escala configurada</div>`;
+    return `<div class="scale-box"><div class="scale-head">${esc(titulo)}</div>${filas}</div>`;
+  }).join("");
+}
+
+function renderChoferes() {
+  const sel = $("selChofer");
+  const anterior = grupoActual?.key || sel.value || "";
+  const lista = [...grupos.values()].sort((a, b) => String(a.nombre).localeCompare(String(b.nombre)));
+
+  if (!lista.length) {
+    sel.innerHTML = `<option value="">Sin comisiones pendientes</option>`;
+    sel.disabled = true;
+    grupoActual = null;
+    seleccionDias.clear();
+    $("driverBox").classList.add("hidden");
+    $("payCard").classList.add("hidden");
+    $("emptyPendientes").classList.remove("hidden");
+    return;
+  }
+
+  sel.disabled = false;
+  sel.innerHTML = `<option value="">Seleccioná el chofer…</option>` + lista.map((g) => {
+    return `<option value="${escAttr(g.key)}">${esc(g.nombre)} · ${g.items.length} venta${g.items.length === 1 ? "" : "s"} · $ ${fmtMoney(g.total)}</option>`;
+  }).join("");
+
+  const elegido = lista.find((g) => g.key === anterior);
+  if (elegido) {
+    sel.value = elegido.key;
+    seleccionarGrupo(elegido.key, false);
+  } else {
+    grupoActual = null;
+    seleccionDias.clear();
+    $("driverBox").classList.add("hidden");
+    $("payCard").classList.add("hidden");
+  }
+
+  $("emptyPendientes").classList.add("hidden");
+}
+
+function seleccionarGrupo(key, limpiarPago = true) {
+  grupoActual = grupos.get(key) || null;
+  seleccionDias.clear();
+  if (!grupoActual) {
+    $("driverBox").classList.add("hidden");
+    $("payCard").classList.add("hidden");
+    return;
+  }
+
+  grupoActual.dias.forEach((d) => seleccionDias.add(d.fechaISO || d.fecha));
+
+  if (limpiarPago) {
+    $("pagoEfvo").value = "";
+    $("pagoTransf").value = "";
+    $("obsPago").value = "";
+  }
+
+  $("driverBox").classList.remove("hidden");
+  $("payCard").classList.remove("hidden");
+  $("driverName").textContent = grupoActual.nombre;
+  $("driverSub").textContent = `${grupoActual.items.length} venta${grupoActual.items.length === 1 ? "" : "s"} pendiente${grupoActual.items.length === 1 ? "" : "s"} · ${grupoActual.dias.length} día${grupoActual.dias.length === 1 ? "" : "s"}`;
+  $("driverAmount").textContent = `$ ${fmtMoney(grupoActual.total)}`;
+
+  renderDias();
+  actualizarPago();
+}
+
+function renderDias() {
+  const cont = $("diasContainer");
+  if (!grupoActual) {
+    cont.innerHTML = "";
+    return;
+  }
+
+  cont.innerHTML = grupoActual.dias.map((dia) => {
+    const key = dia.fechaISO || dia.fecha;
+    const checked = seleccionDias.has(key);
+    const items = dia.items.map((c) => {
+      const chips = (c.detalle || []).map((d) => {
+        const tipo = String(d.tipo ?? d.TIPO ?? "").trim();
+        const cant = Number(d.cantidad ?? d.CANTIDAD ?? 0) || 0;
+        const precio = num(d.precio ?? d.PRECIO);
+        const uni = num(d.comUnit ?? d.COM_UNIT ?? d.comisionUnitaria);
+        return `<span class="com-chip">${esc(tipo)} kg × ${cant} · $ ${fmtMoney(precio)} → $ ${fmtMoney(uni)}</span>`;
+      }).join("");
+
+      return `<div class="com-item">
+        <div class="com-top">
+          <div style="min-width:0;">
+            <div class="com-client">${esc(c.cliente)}</div>
+            <div class="com-ref">${esc(c.hora || "—")} · ${esc(c.movimientoId)} · venta $ ${fmtMoney(c.ventaTotal)}</div>
+          </div>
+          <div class="com-amount">$ ${fmtMoney(c.comision)}</div>
+        </div>
+        ${chips ? `<div class="com-detail">${chips}</div>` : ""}
+      </div>`;
+    }).join("");
+
+    return `<div class="day-card">
+      <label class="day-head">
+        <input type="checkbox" class="day-check" data-fecha="${escAttr(key)}" ${checked ? "checked" : ""}>
+        <span class="day-date">📅 ${esc(dia.fecha || fechaVisual(key))}</span>
+        <span class="day-meta">${dia.items.length} venta${dia.items.length === 1 ? "" : "s"}</span>
+        <span class="day-amount">$ ${fmtMoney(dia.total)}</span>
+      </label>
+      <div class="day-body">${items}</div>
+    </div>`;
+  }).join("");
+
+  cont.querySelectorAll(".day-check").forEach((chk) => {
+    chk.addEventListener("change", () => {
+      const key = chk.dataset.fecha;
+      if (chk.checked) seleccionDias.add(key);
+      else seleccionDias.delete(key);
+      actualizarPago();
+    });
+  });
+}
+
+function totalSeleccionado() {
+  if (!grupoActual) return { total: 0, items: [] };
+  const items = [];
+  grupoActual.dias.forEach((dia) => {
+    const key = dia.fechaISO || dia.fecha;
+    if (seleccionDias.has(key)) items.push(...dia.items);
+  });
+  return { total: round2(items.reduce((a, c) => a + c.comision, 0)), items };
+}
+
+function actualizarPago() {
+  if (!grupoActual) return;
+  const { total, items } = totalSeleccionado();
+  $("payTotal").textContent = `$ ${fmtMoney(total)}`;
+  $("btnPagar").disabled = total <= 0;
+
+  if (!items.length) {
+    setResultado("neutral", "Seleccioná al menos un día", "Faltan: $ 0,00");
+    return;
+  }
+  validarCuadre();
+}
+
+function setResultado(estado, msg, diff) {
+  const box = $("resultBox");
+  box.classList.remove("ok", "bad");
+  if (estado === "ok") box.classList.add("ok");
+  if (estado === "bad") box.classList.add("bad");
+  $("resultMsg").textContent = msg;
+  $("resultDiff").textContent = diff;
+}
+
+function validarCuadre() {
+  const { total, items } = totalSeleccionado();
+  const efvo = num($("pagoEfvo").value);
+  const transf = num($("pagoTransf").value);
+  const pagado = round2(efvo + transf);
+  const diff = round2(total - pagado);
+  const btn = $("btnPagar");
+
+  if (!items.length || total <= 0) {
+    setResultado("neutral", "Seleccioná al menos un día", "Faltan: $ 0,00");
+    btn.disabled = true;
+    return;
+  }
+
+  if (Math.abs(diff) < 0.009) {
+    setResultado("ok", "✅ Cuadre perfecto", "Diferencia: $ 0,00");
+    btn.disabled = false;
+    return;
+  }
+
+  btn.disabled = true;
+  if (diff > 0) {
+    setResultado("bad", "🛑 Faltan ingresar medios de pago", `Faltan: $ ${fmtMoney(diff)}`);
+  } else {
+    setResultado("bad", "⚠️ Sobran medios de pago", `Sobran: $ ${fmtMoney(Math.abs(diff))}`);
+  }
+}
+
+function renderHistorial() {
+  const cont = $("historial");
+  if (!historial.length) {
+    cont.innerHTML = `<div class="empty"><span class="big">🧾</span>No hay pagos de comisiones registrados.</div>`;
+    return;
+  }
+
+  cont.innerHTML = historial.map((h) => {
+    const detalle = (h.detalle || []).length
+      ? `<details style="margin-top:7px;"><summary style="cursor:pointer;color:var(--muted);font-size:10px;">Ver detalle (${h.detalle.length})</summary>
+          <div style="display:grid;gap:4px;margin-top:6px;">${h.detalle.map((d) => {
+            const cliente = String(d.cliente ?? d.CLIENTE ?? "—");
+            const mov = String(d.movimientoId ?? d.MOVIMIENTO_ID ?? d.id ?? "—");
+            const monto = num(d.comision ?? d.COMISION);
+            return `<div class="com-item" style="padding:6px 8px;">
+              <div class="com-top"><div class="com-client" style="font-size:10px;">${esc(cliente)}</div><div class="com-amount" style="font-size:10.5px;">$ ${fmtMoney(monto)}</div></div>
+              <div class="com-ref">${esc(mov)}</div>
+            </div>`;
+          }).join("")}</div>
+        </details>`
+      : "";
+
+    return `<div class="hist-card">
+      <div class="hist-head">
+        <div class="hist-who">
+          <div class="hist-name">${esc(h.chofer)}</div>
+          <div class="hist-sub">${esc(h.fecha || "—")} ${h.hora ? `· ${esc(h.hora)}` : ""} · ${h.cantidad} venta${h.cantidad === 1 ? "" : "s"}</div>
+        </div>
+        <div class="hist-total">$ ${fmtMoney(h.total)}</div>
+      </div>
+      <div class="hist-body">
+        <div class="hist-grid">
+          <div><span>Efectivo</span><b>$ ${fmtMoney(h.efectivo)}</b></div>
+          <div><span>Transferencia</span><b>$ ${fmtMoney(h.transferencia)}</b></div>
+          <div><span>Registró</span><b>${esc(h.usuario || "—")}</b></div>
+        </div>
+        ${h.observaciones ? `<div class="hist-note">📝 ${esc(h.observaciones)}</div>` : ""}
+        ${detalle}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function switchTab(tab) {
+  tabActual = tab;
+  document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+  $("viewPendientes").classList.toggle("hidden", tab !== "PENDIENTES");
+  $("viewHistorial").classList.toggle("hidden", tab !== "HISTORIAL");
+}
+
+// ---------------- Pago ----------------
+function nuevoPagoId() {
+  const d = new Date();
+  return `PCOM-${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}-${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+}
+
+async function liquidar() {
+  if (!grupoActual) return showToast("Seleccioná un chofer.", "error");
+
+  // Congelamos la identidad del grupo: el usuario podría cambiar el selector
+  // mientras la transacción está en vuelo.
+  const grupo = grupoActual;
+  const grupoKey = grupo.key;
+  const grupoNombre = grupo.nombre;
+  const grupoChoferId = grupo.choferId || "";
+
+  const { total, items } = totalSeleccionado();
+  if (!items.length) return showToast("Seleccioná al menos un día.", "error");
+  if (items.length > MAX_COMISIONES_PAGO) {
+    return showToast(`Seleccionaste ${items.length} comisiones. El máximo por liquidación es ${MAX_COMISIONES_PAGO}.`, "error", 6000);
+  }
+
+  const efvo = round2(num($("pagoEfvo").value));
+  const transf = round2(num($("pagoTransf").value));
+  if (Math.abs(round2(efvo + transf) - total) > 0.009) {
+    return showToast("Los medios de pago no coinciden exactamente con el total seleccionado.", "error", 6000);
+  }
+
+  const obs = $("obsPago").value.trim();
+  const ok = confirm(
+    `¿Liquidar ${items.length} comisión(es) de ${grupoNombre} por $ ${fmtMoney(total)}?\n\n` +
+    `Efectivo: $ ${fmtMoney(efvo)}\nTransferencia: $ ${fmtMoney(transf)}`
+  );
+  if (!ok) return;
+
+  const btn = $("btnPagar");
+  btn.disabled = true;
+  setLoading(true, "REGISTRANDO PAGO...");
+
+  const ahora = new Date();
+  const ahoraMs = ahora.getTime();
+  const fechaISO = isoFromDate(ahora);
+  const fecha = `${pad2(ahora.getDate())}/${pad2(ahora.getMonth() + 1)}/${ahora.getFullYear()}`;
+  const hora = `${pad2(ahora.getHours())}:${pad2(ahora.getMinutes())}:${pad2(ahora.getSeconds())}`;
+  const pagoId = nuevoPagoId();
+  const finId = `COM-${pagoId}`;
+
+  try {
+    await runTransaction(db, async (tx) => {
+      const pagoRef = doc(db, "comisiones_pagos", pagoId);
+      const pagoSnap = await tx.get(pagoRef);
+      if (pagoSnap.exists()) throw new Error("Ese pago ya fue registrado.");
+
+      const refs = items.map((c) => doc(db, "comisiones", c.id));
+      const snaps = await Promise.all(refs.map((r) => tx.get(r)));
+
+      let totalReal = 0;
+      snaps.forEach((s, i) => {
+        const item = items[i];
+        if (!s.exists()) throw new Error(`La comisión de ${item.movimientoId} ya no existe.`);
+        const d = s.data();
+        const estado = String(d.estado ?? d.ESTADO ?? "").trim().toUpperCase();
+        const pagoExistente = String(d.pagoId ?? d.PAGO_ID ?? "").trim();
+        if (estado !== "PENDIENTE" || pagoExistente) {
+          throw new Error(`La comisión de ${item.movimientoId} ya fue pagada. Recargá la página.`);
+        }
+        const keyDoc = String(d.choferKey ?? "").trim() || claveChofer(d.chofer ?? d.USUARIO);
+        if (keyDoc !== grupoKey) {
+          throw new Error(`La comisión de ${item.movimientoId} pertenece a otro chofer.`);
+        }
+        totalReal = round2(totalReal + num(d.comision ?? d.COMISION ?? d.COMISION_TOTAL));
+      });
+
+      if (Math.abs(totalReal - total) > 0.009) {
+        throw new Error("El total de las comisiones cambió. Recargá la página e intentá de nuevo.");
+      }
+      if (Math.abs(round2(efvo + transf) - totalReal) > 0.009) {
+        throw new Error("Los medios de pago no coinciden con el total real.");
+      }
+
+      tx.set(pagoRef, {
+        pagoId,
+        choferKey: grupoKey,
+        choferId: grupoChoferId,
+        chofer: grupoNombre,
+        fecha,
+        fechaISO,
+        hora,
+        cantidad: items.length,
+        total: totalReal,
+        efectivo: efvo,
+        transferencia: transf,
+        observaciones: obs,
+        usuario: usuarioNombre,
+        detalle: items.map((c) => ({
+          comisionId: c.id,
+          movimientoId: c.movimientoId,
+          fecha: c.fecha,
+          cliente: c.cliente,
+          tipo: c.tipo,
+          ventaTotal: c.ventaTotal,
+          comision: c.comision
+        })),
+        creado: serverTimestamp(),
+        timestampMs: ahoraMs
+      });
+
+      snaps.forEach((s, i) => {
+        const d = s.data();
+        const item = items[i];
+
+        tx.update(refs[i], {
+          estado: "PAGADA",
+          pagoId,
+          pagadoPor: usuarioNombre,
+          pagadoTs: ahoraMs,
+          fechaPago: fecha,
+          fechaPagoISO: fechaISO
+        });
+
+        const movId = String(d.movimientoId ?? d.MOVIMIENTO_ID ?? d.movimiento ?? item.movimientoId ?? "").trim();
+        if (movId) {
+          tx.set(doc(db, "movimientos", movId), {
+            COMISION_PAGADA: true,
+            COMISION_PAGO_ID: pagoId,
+            COMISION_PAGO_FECHA: fecha,
+            COMISION_PAGADO_TS: ahoraMs
+          }, { merge: true });
+        }
+      });
+
+      tx.set(doc(db, "confinanzas", finId), {
+        id: finId,
+        fecha: fechaISO,
+        fechaTexto: fecha,
+        hora,
+        rubro: "COMISIONES",
+        subrubro: grupoNombre,
+        detalle: `Pago comisiones ${grupoNombre} · ${items.length} venta(s) · ${pagoId}`,
+        monto: -totalReal,
+        tipo: "EGRESO",
+        origen: "COMISION",
+        referencia: pagoId,
+        pagoId,
+        chofer: grupoNombre,
+        choferId: grupoChoferId,
+        cantidad: items.length,
+        efectivo: efvo,
+        transferencia: transf,
+        usuario: usuarioNombre,
+        creado: serverTimestamp(),
+        timestampMs: ahoraMs
+      });
+    });
+
+    mostrarPagoOk(pagoId, total);
+    await Promise.all([cargarPendientes(), cargarHistorial()]);
+
+    // Si el usuario cambió de chofer mientras se registraba el pago, no le
+    // borramos la selección nueva.
+    if (!grupoActual || grupoActual.key === grupoKey) {
+      grupoActual = null;
+      seleccionDias.clear();
+      $("selChofer").value = "";
+      $("pagoEfvo").value = "";
+      $("pagoTransf").value = "";
+      $("obsPago").value = "";
+    }
+
+    renderKPIs();
+    renderChoferes();
+    renderHistorial();
+  } catch (e) {
+    console.error(e);
+    showToast("Error al liquidar: " + (e.message || e.code || "intente nuevamente"), "error", 6500);
+
+    // Refrescar para no dejar seleccionada una comisión que ya se pagó en otra pestaña.
+    try {
+      await Promise.all([cargarPendientes(), cargarHistorial()]);
+      renderKPIs();
+      renderChoferes();
+      renderHistorial();
+    } catch (err) {
+      console.warn("No se pudo refrescar después del error:", err);
+    }
+  } finally {
+    setLoading(false);
+    $("btnPagar").disabled = false;
+    actualizarPago();
+  }
+}
+
+function mostrarPagoOk(pagoId, total) {
+  showToast(`✅ Pago registrado: $ ${fmtMoney(total)} · ${pagoId}`, "success", 6000);
+}
+
+// ---------------- UI base ----------------
+function wireUI() {
+  $("btnVolver").addEventListener("click", window.volver);
+
+  if (localStorage.getItem("vm_theme") === "light") {
+    document.body.classList.add("light-mode");
+  }
+  $("btnTheme").textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
+  $("btnTheme").addEventListener("click", () => {
+    const isLight = document.body.classList.toggle("light-mode");
+    localStorage.setItem("vm_theme", isLight ? "light" : "dark");
+    $("btnTheme").textContent = isLight ? "☀️" : "🌙";
+  });
+
+  document.querySelectorAll(".tab").forEach((b) => {
+    b.addEventListener("click", () => switchTab(b.dataset.tab));
+  });
+
+  $("selChofer").addEventListener("change", (e) => {
+    seleccionarGrupo(e.target.value, true);
+    if (!e.target.value) {
+      $("driverBox").classList.add("hidden");
+      $("payCard").classList.add("hidden");
+    }
+  });
+
+  $("btnTodos").addEventListener("click", () => {
+    if (!grupoActual) return;
+    grupoActual.dias.forEach((d) => seleccionDias.add(d.fechaISO || d.fecha));
+    document.querySelectorAll(".day-check").forEach((c) => { c.checked = true; });
+    actualizarPago();
+  });
+
+  $("btnNinguno").addEventListener("click", () => {
+    seleccionDias.clear();
+    document.querySelectorAll(".day-check").forEach((c) => { c.checked = false; });
+    actualizarPago();
+  });
+
+  ["pagoEfvo", "pagoTransf"].forEach((id) => {
+    $(id).addEventListener("input", validarCuadre);
+  });
+
+  $("btnPagar").addEventListener("click", liquidar);
+
+  $("btnReload").addEventListener("click", async () => {
+    setLoading(true, "ACTUALIZANDO...");
+    try {
+      await Promise.all([cargarPendientes(), cargarHistorial(), cargarParametros()]);
+      renderTodo();
+      showToast("Datos actualizados.", "success");
+    } finally {
+      setLoading(false);
+    }
+  });
+}
+
+wireUI();
+</script>
+</body>
+</html>

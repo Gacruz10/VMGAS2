@@ -133,49 +133,33 @@
   .price-input:focus { border-color: var(--accent); }
   .price-input.is-modified { border-color: var(--accent); background: rgba(255, 215, 0, 0.15); color: var(--accent); }
 
-  /* ZONA PARÁMETROS Y RANGOS (REFINADA) */
+  /* ZONA PARÁMETROS Y ACCESO A COMISIONES */
   .param-zone { grid-column: 1 / -1; background: rgba(20, 10, 40, 0.8); border-color: var(--accent); }
   body.light-mode .param-zone { background: rgba(255, 245, 230, 0.9); }
   
-  .ranges-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-top: 15px; }
-  .range-box { border: 1px dashed rgba(255,255,255,0.2); padding: 12px; border-radius: 12px; background: rgba(0,0,0,0.2); }
-  body.light-mode .range-box { border-color: rgba(0,0,0,0.15); background: rgba(255,255,255,0.4); }
-  
-  /* GRID DE RANGOS CORREGIDO */
-  .range-header { 
-      display: grid; 
-      grid-template-columns: 1fr 1fr 1fr 28px; 
-      gap: 6px; 
-      font-size: 10px; 
-      color: var(--text-muted); 
-      text-align: center; 
-      font-weight: bold; 
-      margin-bottom: 8px;
+  .commission-access {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    margin-top: 14px; padding: 14px; border-radius: 14px;
+    border: 1px dashed var(--glass-border); background: rgba(0,0,0,0.18);
   }
-  .range-row { 
-      display: grid; 
-      grid-template-columns: 1fr 1fr 1fr 28px; 
-      gap: 6px; 
-      margin-bottom: 8px; 
-      align-items: center;
+  body.light-mode .commission-access { background: rgba(255,255,255,0.45); }
+  .commission-copy { flex: 1 1 220px; min-width: 0; }
+  .commission-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 4px; }
+  .commission-desc { font-size: 11px; color: var(--text-muted); line-height: 1.45; }
+  .commission-summary { display: flex; gap: 6px; flex-wrap: wrap; }
+  .commission-chip {
+    display: flex; flex-direction: column; gap: 2px; min-width: 92px;
+    padding: 7px 10px; border-radius: 9px; border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.04);
   }
-  .range-row input { 
-      width: 100%; min-width: 0; box-sizing: border-box; /* CLAVE PARA RESPONSIVE */
-      text-align: center; 
-      padding: 6px 2px; 
-      font-size: 12px; 
-      font-family: monospace; 
-      border-radius: 6px;
-      border: 1px solid var(--glass-border);
-      background: var(--input-bg);
-      color: var(--text-primary);
-      outline: none;
+  body.light-mode .commission-chip { background: rgba(255,255,255,0.6); }
+  .commission-chip b { font-size: 10px; color: var(--text-primary); }
+  .commission-chip span { font-size: 9px; color: var(--text-muted); font-weight: 600; }
+  .btn-commissions { flex-shrink: 0; }
+  @media(max-width: 700px) {
+      .commission-access { align-items: stretch; }
+      .btn-commissions { width: 100%; text-align: center; }
   }
-  .range-row input:focus { border-color: var(--accent); }
-  
-  .btn-del-range { background: transparent; color: var(--error); border: none; font-size: 18px; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;}
-  .btn-del-range:hover { transform: scale(1.2); }
-  .btn-add-range { width: 100%; background: rgba(255,255,255,0.05); color: var(--accent); border: 1px dashed var(--accent); padding: 8px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-top: 5px; text-transform: uppercase; font-weight: bold;}
 
   /* MODAL */
   .modal-overlay {
@@ -255,28 +239,13 @@
               <input type="number" inputmode="numeric" pattern="[0-9]*" id="inpFlotante" class="price-input" style="width:120px; display:inline-block;" value="0">
           </div>
           
-          <div class="ranges-grid">
-              <!-- 10 KG -->
-              <div class="range-box">
-                  <div class="sub-title" style="color:var(--success);">Escala Comisión 10 KG</div>
-                  <div class="range-header"><div>Desde</div><div>Hasta</div><div>Comis.</div><div></div></div>
-                  <div id="boxRango10"></div>
-                  <button class="btn-add-range" onclick="window.addRango('10')">+ Agregar Escala</button>
+          <div class="commission-access">
+              <div class="commission-copy">
+                  <div class="commission-title">Escalas de comisión</div>
+                  <div class="commission-desc">Se editan en un panel aparte para no mezclarlas con los precios. Se aplican al precio de venta de cada garrafa.</div>
               </div>
-              <!-- 15 KG -->
-              <div class="range-box">
-                  <div class="sub-title" style="color:var(--success);">Escala Comisión 15 KG</div>
-                  <div class="range-header"><div>Desde</div><div>Hasta</div><div>Comis.</div><div></div></div>
-                  <div id="boxRango15"></div>
-                  <button class="btn-add-range" onclick="window.addRango('15')">+ Agregar Escala</button>
-              </div>
-              <!-- 45 KG -->
-              <div class="range-box">
-                  <div class="sub-title" style="color:var(--success);">Escala Comisión 45 KG</div>
-                  <div class="range-header"><div>Desde</div><div>Hasta</div><div>Comis.</div><div></div></div>
-                  <div id="boxRango45"></div>
-                  <button class="btn-add-range" onclick="window.addRango('45')">+ Agregar Escala</button>
-              </div>
+              <div class="commission-summary" id="resumenComisiones"></div>
+              <button class="btn btn-add btn-commissions" id="btnEditarComisiones">⚙ Editar comisiones</button>
           </div>
       </div>
       <!-- ACÁ ABAJO SE INYECTAN LOS PRECIOS POR CATEGORÍA -->
@@ -424,9 +393,7 @@ async function cargarTodoFirebase() {
 function renderUI() {
     document.getElementById('inpFlotante').value = parametrosGlob.recargo_flotante || 0;
 
-    renderRangos('10', parametrosGlob.comisiones_10);
-    renderRangos('15', parametrosGlob.comisiones_15);
-    renderRangos('45', parametrosGlob.comisiones_45);
+    renderResumenComisiones();
 
     const container = document.getElementById('cards-container');
     Array.from(container.children).forEach(c => { if(c.id !== 'cardParametros') c.remove(); });
@@ -498,40 +465,21 @@ function renderUI() {
     });
 }
 
-// ================= LÓGICA RANGOS EN DOM =================
-function renderRangos(kilos, arrayRangos) {
-    const box = document.getElementById(`boxRango${kilos}`);
-    box.innerHTML = '';
-    (arrayRangos || []).forEach(r => addRowRango(kilos, r.min, r.max, r.com));
-}
+// ================= RESUMEN DE COMISIONES =================
+function renderResumenComisiones() {
+    const cont = document.getElementById('resumenComisiones');
+    if (!cont) return;
 
-window.addRango = function(kilos) { addRowRango(kilos, 0, 0, 0); };
-window.delRango = function(btn) { btn.closest('.range-row').remove(); };
-
-function addRowRango(kilos, min, max, com) {
-    const box = document.getElementById(`boxRango${kilos}`);
-    const row = document.createElement('div');
-    row.className = 'range-row';
-    row.innerHTML = `
-        <input type="number" inputmode="numeric" pattern="[0-9]*" class="r-min" value="${min}" placeholder="Mín">
-        <input type="number" inputmode="numeric" pattern="[0-9]*" class="r-max" value="${max}" placeholder="Máx">
-        <input type="number" inputmode="numeric" pattern="[0-9]*" class="r-com" value="${com}" placeholder="Comis.">
-        <button class="btn-del-range" onclick="window.delRango(this)">✖</button>
-    `;
-    box.appendChild(row);
-}
-
-function recolectarRangos(kilos) {
-    const box = document.getElementById(`boxRango${kilos}`);
-    const arr = [];
-    box.querySelectorAll('.range-row').forEach(row => {
-        arr.push({
-            min: parseInt(row.querySelector('.r-min').value) || 0,
-            max: parseInt(row.querySelector('.r-max').value) || 0,
-            com: parseInt(row.querySelector('.r-com').value) || 0
-        });
-    });
-    return arr;
+    cont.innerHTML = ['10', '15', '45'].map(kilos => {
+        const rangos = Array.isArray(parametrosGlob[`comisiones_${kilos}`])
+            ? parametrosGlob[`comisiones_${kilos}`]
+            : [];
+        const comisiones = rangos.map(r => Number(r.com) || 0);
+        const detalle = comisiones.length
+            ? `${rangos.length} rango${rangos.length === 1 ? '' : 's'} · $${Math.min(...comisiones).toLocaleString('es-AR')} a $${Math.max(...comisiones).toLocaleString('es-AR')}`
+            : 'Sin configurar';
+        return `<div class="commission-chip"><b>${kilos} kg</b><span>${detalle}</span></div>`;
+    }).join('');
 }
 
 // ================= ALTA DE PRECIOS =================
@@ -576,15 +524,13 @@ document.getElementById('btnGuardarLote').onclick = async () => {
         }
     });
 
-    const paramNuevos = {
-        recargo_flotante: parseInt(document.getElementById('inpFlotante').value) || 0,
-        comisiones_10: recolectarRangos('10'),
-        comisiones_15: recolectarRangos('15'),
-        comisiones_45: recolectarRangos('45')
-    };
+    const recargoNuevo = parseInt(document.getElementById('inpFlotante').value) || 0;
+    const recargoAnterior = parseInt(parametrosGlob.recargo_flotante) || 0;
 
-    if(JSON.stringify(paramNuevos) !== JSON.stringify(parametrosGlob)) {
-        batch.set(doc(db, "configuracion", "parametros"), paramNuevos, { merge: true });
+    if(recargoNuevo !== recargoAnterior) {
+        // Las escalas de comisión se guardan desde parametroscomisiones.html.
+        // Acá sólo actualizamos el recargo para no pisar cambios del panel.
+        batch.set(doc(db, "configuracion", "parametros"), { recargo_flotante: recargoNuevo }, { merge: true });
         hayCambios = true;
     }
 
@@ -594,7 +540,7 @@ document.getElementById('btnGuardarLote').onclick = async () => {
     try {
         await batch.commit();
         chismosoPrecios = {}; 
-        parametrosGlob = paramNuevos;
+        parametrosGlob.recargo_flotante = recargoNuevo;
         
         window.toggleLoader(true, "¡TODO ACTUALIZADO!", true);
         setTimeout(() => { window.toggleLoader(false); renderUI(); }, 1200);
@@ -603,6 +549,13 @@ document.getElementById('btnGuardarLote').onclick = async () => {
         window.toggleLoader(false);
         window.showToast("Error crítico al guardar.", "error");
     }
+};
+
+document.getElementById('btnEditarComisiones').onclick = () => {
+    const recargoCambiado = (parseInt(document.getElementById('inpFlotante').value) || 0) !== (parseInt(parametrosGlob.recargo_flotante) || 0);
+    const hayCambios = Object.keys(chismosoPrecios).length > 0 || recargoCambiado;
+    if (hayCambios && !confirm("Tenés cambios de precios sin guardar. ¿Ir al panel de comisiones igual?")) return;
+    window.location.href = `parametroscomisiones.html?k=${encodeURIComponent(window.k)}`;
 };
 
 document.getElementById('btnVolver').onclick = () => window.location.replace(`inicio.html?k=${window.k}`);

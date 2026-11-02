@@ -111,6 +111,11 @@
             <span class="menu-title">Arqueo de Caja</span>
             <span class="menu-desc">Control y cierre de efectivo</span>
         </a>
+        <a href="#" id="linkComisiones" class="menu-btn comisiones">
+            <span class="menu-icon">💸</span>
+            <span class="menu-title">Comisiones</span>
+            <span class="menu-desc">Liquidación de comisiones por chofer</span>
+        </a>
         <a href="#" id="linkRemitos" class="menu-btn remitos">
             <span class="menu-icon">🏭</span>
             <span class="menu-title">Control Remitos</span>
@@ -204,6 +209,7 @@ async function validarSesion() {
         const verRemitos = finanzas || confinanzas;
 
         document.getElementById('linkArqueo').style.display = finanzas ? '' : 'none';
+        document.getElementById('linkComisiones').style.display = verRemitos ? '' : 'none';
         document.getElementById('linkRemitos').style.display = verRemitos ? '' : 'none';
         document.getElementById('linkTransferencias').style.display = verRemitos ? '' : 'none';
 
@@ -217,6 +223,7 @@ async function validarSesion() {
 
         document.getElementById('btnBack').href = `inicio.html?k=${encodeURIComponent(k)}`;
         document.getElementById('linkArqueo').href = `arqueo.html?k=${encodeURIComponent(k)}`;
+        document.getElementById('linkComisiones').href = `controlcomisiones.html?k=${encodeURIComponent(k)}`;
         document.getElementById('linkRemitos').href = `controlremitos.html?k=${encodeURIComponent(k)}`;
         document.getElementById('linkTransferencias').href = `controltransferencias.html?k=${encodeURIComponent(k)}`;
 

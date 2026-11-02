@@ -304,6 +304,10 @@
           <span class="material-symbols-rounded tile-icon">receipt_long</span>
           <span class="title">Formulario<br>de Venta</span>
       </a>
+      <a class="tile" id="tileMiCaja" onclick="window.navegar('micaja.html')" style="display:none">
+          <span class="material-symbols-rounded tile-icon">payments</span>
+          <span class="title">Mi Caja</span>
+      </a>
       <a class="tile" id="tileClientes"   onclick="window.navegar('clientes.html')" style="display:none">
           <span class="material-symbols-rounded tile-icon">group</span>
           <span class="title">Clientes</span>
@@ -634,6 +638,7 @@ function renderizarInterfaz(nombre, p) {
     
     // VISIBILIDAD DE LOS MÓDULOS SEGÚN PERMISOS
     show('tileFormulario',  p.formulario !== false); 
+    show('tileMiCaja',      p.formulario);
     show('tileClientes',    p.clientes);
     show('tilePrecios',     p.precios);
     show('tileUsuarios',    p.usuarios);

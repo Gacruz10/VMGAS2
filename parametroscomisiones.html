@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+
+<title>Escalas de Comisiones</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-1: #0d031a;
+    --bg-2: #1e053a;
+    --panel: rgba(20, 10, 40, 0.78);
+    --border: rgba(255, 255, 255, 0.14);
+    --accent: #FFD700;
+    --accent-soft: rgba(255, 215, 0, 0.12);
+    --text: #ffffff;
+    --muted: #a8a8b8;
+    --success: #2dd4bf;
+    --error: #ff6b6b;
+    --warn: #fbbf24;
+    --input: rgba(0, 0, 0, 0.45);
+    --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+    --btn-text: #1a0b00;
+  }
+
+  body.light-mode {
+    --bg-1: #eef2f7;
+    --bg-2: #dbe4ee;
+    --panel: rgba(255, 255, 255, 0.9);
+    --border: #d7dee8;
+    --accent: #b45309;
+    --accent-soft: rgba(180, 83, 9, 0.10);
+    --text: #111827;
+    --muted: #64748b;
+    --success: #0f766e;
+    --error: #dc2626;
+    --warn: #b45309;
+    --input: #f8fafc;
+    --shadow: 0 18px 50px rgba(15, 23, 42, 0.12);
+    --btn-text: #ffffff;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    margin: 0;
+    padding-bottom: 110px;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(circle at 8% -10%, rgba(255, 215, 0, 0.12), transparent 35%),
+      radial-gradient(circle at 100% 0%, rgba(124, 58, 237, 0.24), transparent 42%),
+      linear-gradient(160deg, var(--bg-1), var(--bg-2));
+    background-attachment: fixed;
+  }
+
+  body.light-mode {
+    background:
+      radial-gradient(circle at 8% -10%, rgba(180, 83, 9, 0.10), transparent 35%),
+      radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.12), transparent 42%),
+      linear-gradient(160deg, var(--bg-1), var(--bg-2));
+    background-attachment: fixed;
+  }
+
+  button, input { font-family: inherit; }
+
+  .topbar {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px 18px 10px;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+  }
+
+  .icon-btn {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    display: grid;
+    place-items: center;
+    transition: 0.15s;
+  }
+
+  .icon-btn:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .title-block { flex: 1; min-width: 0; }
+
+  .title-block h1 {
+    margin: 0;
+    font-size: 1.08rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    line-height: 1.25;
+  }
+
+  .title-block p {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 6px 18px 0;
+  }
+
+  .intro {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    margin-bottom: 15px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 14px;
+    background: var(--panel);
+    box-shadow: var(--shadow);
+  }
+
+  .intro-icon {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 11px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 18px;
+    font-weight: 800;
+  }
+
+  .intro h2 {
+    margin: 0 0 4px;
+    font-size: 0.9rem;
+    font-weight: 800;
+  }
+
+  .intro p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 11.5px;
+    line-height: 1.55;
+  }
+
+  .intro p b { color: var(--text); }
+
+  .scales-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 14px;
+    align-items: start;
+  }
+
+  .scale-card {
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .scale-card.has-error {
+    border-color: rgba(255, 107, 107, 0.6);
+    box-shadow: 0 0 0 1px rgba(255, 107, 107, 0.22), var(--shadow);
+  }
+
+  .scale-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .scale-icon {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 2px;
+    padding-top: 11px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), #ffb700);
+    color: #241000;
+    font-size: 16px;
+    font-weight: 900;
+    box-shadow: 0 8px 20px rgba(255, 215, 0, 0.18);
+  }
+
+  body.light-mode .scale-icon {
+    background: linear-gradient(135deg, #b45309, #d97706);
+    color: #ffffff;
+  }
+
+  .scale-icon small {
+    font-size: 8px;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .scale-copy { min-width: 0; }
+
+  .scale-copy h2 {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 800;
+  }
+
+  .scale-copy p {
+    margin: 3px 0 0;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .range-head {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 34px;
+    gap: 7px;
+    padding: 0 4px 5px;
+    color: var(--muted);
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+  }
+
+  .range-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .range-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 34px;
+    gap: 7px;
+    align-items: center;
+    padding: 7px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.18);
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  body.light-mode .range-row { background: #f8fafc; }
+
+  .range-row.has-error {
+    border-color: rgba(255, 107, 107, 0.55);
+    background: rgba(255, 107, 107, 0.07);
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .field-label {
+    display: none;
+    margin-bottom: 3px;
+    color: var(--muted);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .money-wrap {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    height: 34px;
+    padding: 0 6px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--input);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .money-wrap:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  .money-sign {
+    flex-shrink: 0;
+    margin-right: 3px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .money-wrap input {
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: right;
+  }
+
+  .btn-del {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 800;
+    transition: 0.15s;
+  }
+
+  .btn-del:hover {
+    border-color: rgba(255, 107, 107, 0.4);
+    background: rgba(255, 107, 107, 0.1);
+    color: var(--error);
+  }
+
+  .add-row {
+    width: 100%;
+    margin-top: 8px;
+    padding: 9px;
+    border: 1px dashed var(--border);
+    border-radius: 9px;
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    transition: 0.15s;
+  }
+
+  .add-row:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .empty {
+    padding: 14px 8px;
+    border: 1px dashed var(--border);
+    border-radius: 9px;
+    color: var(--muted);
+    font-size: 10px;
+    text-align: center;
+  }
+
+  .scale-status {
+    min-height: 15px;
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 9.5px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .scale-status.ok { color: var(--success); }
+  .scale-status.warn { color: var(--warn); }
+  .scale-status.error { color: var(--error); }
+
+  .save-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    padding: 10px 18px calc(10px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    background: rgba(13, 3, 26, 0.9);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  body.light-mode .save-bar { background: rgba(255, 255, 255, 0.93); }
+
+  .save-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .save-info { flex: 1; min-width: 0; }
+
+  .save-state {
+    margin: 0;
+    color: var(--success);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .save-state.dirty { color: var(--accent); }
+
+  .save-detail {
+    margin: 2px 0 0;
+    color: var(--muted);
+    font-size: 9.5px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .save-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .btn {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: rgba(128, 128, 128, 0.1);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: 0.15s;
+  }
+
+  .btn:hover:not(:disabled) { background: rgba(128, 128, 128, 0.2); }
+
+  .btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--btn-text);
+    box-shadow: 0 6px 20px rgba(255, 215, 0, 0.22);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent);
+    filter: brightness(1.05);
+  }
+
+  .btn-ghost { background: transparent; }
+
+  #toast-container {
+    position: fixed;
+    right: 18px;
+    bottom: 96px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: min(360px, calc(100vw - 36px));
+  }
+
+  .toast {
+    padding: 12px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.4;
+    box-shadow: var(--shadow);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: 0.25s;
+  }
+
+  .toast.show { opacity: 1; transform: none; }
+  .toast.success { background: #0f766e; }
+  .toast.error { background: #b91c1c; }
+  .toast.info { background: #1e293b; }
+
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(13, 3, 26, 0.9);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    opacity: 0;
+    visibility: hidden;
+    transition: 0.2s;
+  }
+
+  body.light-mode .loading-overlay { background: rgba(238, 242, 247, 0.94); }
+
+  .loading-overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .spinner {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 14px;
+    border: 3px solid rgba(128, 128, 128, 0.2);
+    border-left-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  .spinner.success-mode { border-left-color: var(--success); }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text {
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .loading-text.success-mode { color: var(--success); }
+
+  @media (max-width: 560px) {
+    body { padding-bottom: 132px; }
+    .topbar { padding: 14px 12px 8px; }
+    .wrap { padding: 6px 12px 0; }
+    .intro { padding: 12px; }
+    .intro p { font-size: 11px; }
+
+    .range-head { display: none; }
+
+    .range-row {
+      grid-template-columns: 1fr 1fr 38px;
+      padding: 9px;
+    }
+
+    .field-label { display: block; }
+    .field-com { grid-column: 1 / 3; grid-row: 2; }
+
+    .btn-del {
+      grid-column: 3;
+      grid-row: 1 / 3;
+      width: 38px;
+      height: 100%;
+    }
+
+    .save-inner {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    .save-actions { width: 100%; }
+    .save-actions .btn { flex: 1; }
+
+    .money-wrap input { font-size: 16px; }
+    #toast-container { bottom: 148px; }
+  }
+</style>
+</head>
+<body>
+
+  <div id="toast-container"></div>
+
+  <div class="loading-overlay active" id="loadingOverlay">
+    <div class="spinner" id="loaderSpinner"></div>
+    <div class="loading-text" id="loaderText">VERIFICANDO SESIÓN...</div>
+  </div>
+
+  <header class="topbar">
+    <button class="icon-btn" id="btnVolver" type="button" title="Volver a Precios" aria-label="Volver a Precios">←</button>
+    <div class="title-block">
+      <h1>Escalas de Comisiones</h1>
+      <p id="sessionInfo">Verificando sesión…</p>
+    </div>
+    <button class="icon-btn" id="btnTheme" type="button" title="Cambiar tema" aria-label="Cambiar tema">🌙</button>
+  </header>
+
+  <main class="wrap">
+    <section class="intro">
+      <div class="intro-icon">%</div>
+      <div>
+        <h2>Cómo se calcula la comisión</h2>
+        <p>
+          Cada venta busca el rango que contiene el <b>precio unitario de venta al cliente</b>.
+          La comisión se paga por garrafa vendida y se multiplica por la cantidad.
+          Las ventas con <b>retiro en planta</b> no generan comisión.
+          Cambiar una escala <b>no recalcula</b> comisiones ya generadas.
+        </p>
+      </div>
+    </section>
+
+    <section class="scales-grid" id="scalesGrid" aria-label="Escalas de comisión por presentación"></section>
+  </main>
+
+  <div class="save-bar">
+    <div class="save-inner">
+      <div class="save-info">
+        <p class="save-state" id="saveState">Cargando escalas…</p>
+        <p class="save-detail" id="saveDetail">Esperá un momento.</p>
+      </div>
+      <div class="save-actions">
+        <button class="btn btn-ghost" id="btnDescartar" type="button" disabled>Descartar</button>
+        <button class="btn btn-primary" id="btnGuardar" type="button" disabled>Guardar escalas</button>
+      </div>
+    </div>
+  </div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
+  authDomain: "vmgaslr.firebaseapp.com",
+  projectId: "vmgaslr",
+  storageBucket: "vmgaslr.firebasestorage.app",
+  messagingSenderId: "75859850089",
+  appId: "1:75859850089:web:fc551c770bbf4ae25803f8"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const TIPOS = ["10", "15", "45"];
+const TIMEOUT_SESION = 15 * 60 * 1000;
+const params = new URLSearchParams(window.location.search);
+const k = params.get("k") || params.get("token") || sessionStorage.getItem("k") || sessionStorage.getItem("vm_token");
+
+let escalas = { "10": [], "15": [], "45": [] };
+let originalJSON = "";
+let dirty = false;
+let guardando = false;
+let ultimaActividad = Date.now();
+let avisoInactividad = false;
+
+function toMs(valor) {
+  if (valor === null || valor === undefined || valor === "") return 0;
+  if (typeof valor === "number") return valor;
+  if (typeof valor?.toMillis === "function") return valor.toMillis();
+  const n = Number(valor);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function parseMonto(valor) {
+  if (valor === null || valor === undefined) return null;
+  const texto = String(valor).trim();
+  if (!texto) return null;
+  const limpio = texto.replace(/[^\d-]/g, "");
+  if (!limpio || limpio === "-") return null;
+  const n = Number(limpio);
+  return Number.isFinite(n) ? n : null;
+}
+
+function numeroDB(valor) {
+  if (valor === null || valor === undefined || valor === "") return null;
+  const n = Number(valor);
+  return Number.isFinite(n) ? Math.round(n) : null;
+}
+
+function formatMonto(n) {
+  if (n === null || n === undefined || n === "") return "";
+  const num = Number(n);
+  if (!Number.isFinite(num)) return "";
+  return num.toLocaleString("es-AR", { maximumFractionDigits: 0 });
+}
+
+function money(n) {
+  return Number(n).toLocaleString("es-AR", { maximumFractionDigits: 0 });
+}
+
+function showToast(mensaje, tipo = "info") {
+  const cont = document.getElementById("toast-container");
+  if (!cont) return;
+  const toast = document.createElement("div");
+  toast.className = `toast ${tipo}`;
+  toast.textContent = mensaje;
+  cont.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add("show"));
+  setTimeout(() => {
+    toast.classList.remove("show");
+    setTimeout(() => toast.remove(), 250);
+  }, 4000);
+}
+
+function toggleLoader(show, texto = null, exito = false) {
+  const overlay = document.getElementById("loadingOverlay");
+  const text = document.getElementById("loaderText");
+  const spinner = document.getElementById("loaderSpinner");
+  if (!overlay || !text || !spinner) return;
+  if (texto) text.textContent = texto;
+  spinner.classList.toggle("success-mode", !!exito);
+  text.classList.toggle("success-mode", !!exito);
+  overlay.classList.toggle("active", !!show);
+}
+
+function expulsar() {
+  sessionStorage.clear();
+  window.location.replace("index.html");
+}
+
+function normalizarRangos(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((r) => ({
+    min: numeroDB(r?.min ?? r?.MIN ?? r?.RANGO_MENOR),
+    max: numeroDB(r?.max ?? r?.MAX ?? r?.RANGO_MAYOR),
+    com: numeroDB(r?.com ?? r?.COM)
+  })).filter((r) => r.min !== null && r.max !== null && r.com !== null);
+}
+
+function normalizarParaRender(data) {
+  const out = {};
+  TIPOS.forEach((tipo) => {
+    out[tipo] = (data[tipo] || []).map((r) => ({
+      min: parseMonto(r.min),
+      max: parseMonto(r.max),
+      com: parseMonto(r.com)
+    }));
+  });
+  return out;
+}
+
+function snapshotDeDatos(data) {
+  const out = {};
+  TIPOS.forEach((tipo) => {
+    out[tipo] = (data[tipo] || []).map((r) => ({
+      min: parseMonto(r.min),
+      max: parseMonto(r.max),
+      com: parseMonto(r.com)
+    }));
+  });
+  return JSON.stringify(out);
+}
+
+function leerEscalasDesdeDOM() {
+  const out = {};
+  TIPOS.forEach((tipo) => {
+    const card = document.querySelector(`.scale-card[data-tipo="${tipo}"]`);
+    out[tipo] = card ? [...card.querySelectorAll(".range-row")].map((row) => ({
+      min: row.querySelector(".r-min").value,
+      max: row.querySelector(".r-max").value,
+      com: row.querySelector(".r-com").value
+    })) : [];
+  });
+  return out;
+}
+
+function filaHtml(i, r) {
+  return `<div class="range-row" data-index="${i}">
+    <label class="field">
+      <span class="field-label">Desde</span>
+      <span class="money-wrap">
+        <span class="money-sign">$</span>
+        <input class="r-min" type="text" inputmode="numeric" autocomplete="off" value="${formatMonto(r.min)}" aria-label="Rango ${i + 1}, precio desde">
+      </span>
+    </label>
+    <label class="field">
+      <span class="field-label">Hasta</span>
+      <span class="money-wrap">
+        <span class="money-sign">$</span>
+        <input class="r-max" type="text" inputmode="numeric" autocomplete="off" value="${formatMonto(r.max)}" aria-label="Rango ${i + 1}, precio hasta">
+      </span>
+    </label>
+    <label class="field field-com">
+      <span class="field-label">Comisión</span>
+      <span class="money-wrap">
+        <span class="money-sign">$</span>
+        <input class="r-com" type="text" inputmode="numeric" autocomplete="off" value="${formatMonto(r.com)}" aria-label="Rango ${i + 1}, comisión">
+      </span>
+    </label>
+    <button class="btn-del" type="button" data-del="${i}" title="Eliminar rango" aria-label="Eliminar rango ${i + 1}">✕</button>
+  </div>`;
+}
+
+function tarjetaHtml(tipo, filas) {
+  const cantidad = filas.length;
+  return `<article class="scale-card" data-tipo="${tipo}">
+    <div class="scale-head">
+      <div class="scale-icon">${tipo}<small>kg</small></div>
+      <div class="scale-copy">
+        <h2>Garrafa ${tipo} kg</h2>
+        <p id="meta-${tipo}">${cantidad} rango${cantidad === 1 ? "" : "s"} configurado${cantidad === 1 ? "" : "s"}</p>
+      </div>
+    </div>
+    <div class="range-head">
+      <span>Desde</span><span>Hasta</span><span>Comisión</span><span></span>
+    </div>
+    <div class="range-list">
+      ${cantidad ? filas.map((r, i) => filaHtml(i, r)).join("") : `<div class="empty">Sin rangos. Agregá el primero para esta presentación.</div>`}
+    </div>
+    <button class="add-row" type="button" data-add="${tipo}">+ Agregar rango</button>
+    <div class="scale-status" id="estado-${tipo}"></div>
+  </article>`;
+}
+
+function wireEscalas() {
+  const grid = document.getElementById("scalesGrid");
+  if (!grid) return;
+
+  grid.querySelectorAll(".range-row input").forEach((input) => {
+    const tipo = input.closest(".scale-card").dataset.tipo;
+
+    input.addEventListener("focus", () => {
+      const n = parseMonto(input.value);
+      input.value = n === null ? "" : String(n);
+      input.select();
+    });
+
+    input.addEventListener("input", () => {
+      actualizarEstado(tipo);
+      actualizarDirty();
+    });
+
+    input.addEventListener("blur", () => {
+      const n = parseMonto(input.value);
+      if (n !== null) input.value = formatMonto(n);
+      actualizarEstado(tipo);
+      actualizarDirty();
+    });
+  });
+
+  grid.querySelectorAll("[data-add]").forEach((btn) => {
+    btn.addEventListener("click", () => agregarRango(btn.dataset.add));
+  });
+
+  grid.querySelectorAll("[data-del]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tipo = btn.closest(".scale-card").dataset.tipo;
+      eliminarRango(tipo, Number(btn.dataset.del));
+    });
+  });
+}
+
+function renderEscalas(data, focusTipo = null, focusIndex = null) {
+  escalas = normalizarParaRender(data);
+  const grid = document.getElementById("scalesGrid");
+  if (!grid) return;
+
+  grid.innerHTML = TIPOS.map((tipo) => tarjetaHtml(tipo, escalas[tipo])).join("");
+  wireEscalas();
+  TIPOS.forEach((tipo) => actualizarEstado(tipo));
+  actualizarDirty();
+
+  if (focusTipo && focusIndex !== null) {
+    const input = grid.querySelector(`.scale-card[data-tipo="${focusTipo}"] .range-row[data-index="${focusIndex}"] .r-min`);
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  }
+}
+
+function agregarRango(tipo) {
+  const actual = leerEscalasDesdeDOM();
+  const filas = actual[tipo] || [];
+  const numeros = filas.map((f) => ({
+    min: parseMonto(f.min),
+    max: parseMonto(f.max),
+    com: parseMonto(f.com)
+  }));
+
+  let min = 0;
+  let max = 999999;
+  let com = 0;
+
+  if (numeros.length) {
+    const maximos = numeros.map((n) => n.max).filter((n) => n !== null);
+    const comisiones = numeros.map((n) => n.com).filter((n) => n !== null);
+    const maximo = maximos.length ? Math.max(...maximos) : -1;
+    min = maximo >= 0 ? maximo + 1 : 0;
+    max = min + 49999;
+    com = comisiones.length ? comisiones[comisiones.length - 1] : 0;
+  }
+
+  filas.push({ min, max, com });
+  renderEscalas({ ...actual, [tipo]: filas }, tipo, filas.length - 1);
+}
+
+function eliminarRango(tipo, index) {
+  const actual = leerEscalasDesdeDOM();
+  if (!actual[tipo] || index < 0 || index >= actual[tipo].length) return;
+  actual[tipo].splice(index, 1);
+  renderEscalas(actual);
+}
+
+function buscarHuecos(rangos) {
+  const ordenados = [...rangos].sort((a, b) => (a.min - b.min) || (a.max - b.max));
+  const huecos = [];
+  for (let i = 1; i < ordenados.length; i++) {
+    if (ordenados[i].min > ordenados[i - 1].max + 1) {
+      huecos.push({
+        desde: ordenados[i - 1].max + 1,
+        hasta: ordenados[i].min - 1
+      });
+    }
+  }
+  return huecos;
+}
+
+function validarTipo(tipo) {
+  const card = document.querySelector(`.scale-card[data-tipo="${tipo}"]`);
+  if (!card) return { ok: true, errores: [], filasConError: new Set(), rangos: [] };
+
+  const filas = [...card.querySelectorAll(".range-row")];
+  const errores = [];
+  const filasConError = new Set();
+  const rangos = [];
+
+  if (!filas.length) {
+    errores.push("Agregá al menos un rango.");
+    return { ok: false, errores, filasConError, rangos };
+  }
+
+  filas.forEach((row, i) => {
+    const min = parseMonto(row.querySelector(".r-min").value);
+    const max = parseMonto(row.querySelector(".r-max").value);
+    const com = parseMonto(row.querySelector(".r-com").value);
+    let mal = false;
+
+    if (min === null) {
+      errores.push(`Rango ${i + 1}: completá el "Desde".`);
+      mal = true;
+    } else if (min < 0) {
+      errores.push(`Rango ${i + 1}: el "Desde" no puede ser negativo.`);
+      mal = true;
+    }
+
+    if (max === null) {
+      errores.push(`Rango ${i + 1}: completá el "Hasta".`);
+      mal = true;
+    } else if (max < 0) {
+      errores.push(`Rango ${i + 1}: el "Hasta" no puede ser negativo.`);
+      mal = true;
+    }
+
+    if (com === null) {
+      errores.push(`Rango ${i + 1}: completá la comisión.`);
+      mal = true;
+    } else if (com < 0) {
+      errores.push(`Rango ${i + 1}: la comisión no puede ser negativa.`);
+      mal = true;
+    }
+
+    if (min !== null && max !== null && min > max) {
+      errores.push(`Rango ${i + 1}: "Desde" no puede ser mayor que "Hasta".`);
+      mal = true;
+    }
+
+    if (mal) filasConError.add(i);
+    if (min !== null && max !== null && com !== null && min <= max) {
+      rangos.push({ index: i, min, max, com });
+    }
+  });
+
+  const ordenados = [...rangos].sort((a, b) => (a.min - b.min) || (a.max - b.max));
+  for (let i = 1; i < ordenados.length; i++) {
+    if (ordenados[i].min <= ordenados[i - 1].max) {
+      errores.push(`Se superponen $${money(ordenados[i - 1].min)}–$${money(ordenados[i - 1].max)} y $${money(ordenados[i].min)}–$${money(ordenados[i].max)}.`);
+      filasConError.add(ordenados[i - 1].index);
+      filasConError.add(ordenados[i].index);
+    }
+  }
+
+  return { ok: errores.length === 0, errores, filasConError, rangos };
+}
+
+function actualizarEstado(tipo) {
+  const card = document.querySelector(`.scale-card[data-tipo="${tipo}"]`);
+  if (!card) return;
+
+  const res = validarTipo(tipo);
+  const filas = [...card.querySelectorAll(".range-row")];
+  filas.forEach((row, i) => row.classList.toggle("has-error", res.filasConError.has(i)));
+  card.classList.toggle("has-error", !res.ok);
+
+  const meta = document.getElementById(`meta-${tipo}`);
+  if (meta) {
+    if (!filas.length) {
+      meta.textContent = "Sin rangos configurados";
+    } else {
+      const comisiones = res.rangos.map((r) => r.com);
+      let texto = `${filas.length} rango${filas.length === 1 ? "" : "s"}`;
+      if (comisiones.length) {
+        texto += ` · comisión $${money(Math.min(...comisiones))} a $${money(Math.max(...comisiones))}`;
+      }
+      meta.textContent = texto;
+    }
+  }
+
+  const status = document.getElementById(`estado-${tipo}`);
+  if (!status) return;
+  status.className = "scale-status";
+
+  if (!res.ok) {
+    status.classList.add("error");
+    status.textContent = res.errores.slice(0, 2).join(" ");
+    return;
+  }
+
+  const huecos = buscarHuecos(res.rangos);
+  if (huecos.length) {
+    status.classList.add("warn");
+    status.textContent = `⚠ Sin rango entre $${money(huecos[0].desde)} y $${money(huecos[0].hasta)}: esas ventas no generan comisión.`;
+    return;
+  }
+
+  status.classList.add("ok");
+  status.textContent = "✓ Escala válida.";
+}
+
+function actualizarDirty() {
+  const actual = snapshotDeDatos(leerEscalasDesdeDOM());
+  dirty = actual !== originalJSON;
+
+  const state = document.getElementById("saveState");
+  const detail = document.getElementById("saveDetail");
+  const btnGuardar = document.getElementById("btnGuardar");
+  const btnDescartar = document.getElementById("btnDescartar");
+  if (!state || !btnGuardar || !btnDescartar) return;
+
+  if (dirty) {
+    state.textContent = "Cambios sin guardar";
+    state.classList.add("dirty");
+    if (detail) detail.textContent = "Revisá las escalas y guardá para aplicarlas.";
+  } else {
+    state.textContent = "Escalas sincronizadas";
+    state.classList.remove("dirty");
+    if (detail) detail.textContent = originalJSON ? "Los valores coinciden con la base de datos." : "Cargando escalas...";
+  }
+
+  btnGuardar.disabled = !dirty || guardando;
+  btnDescartar.disabled = !dirty || guardando;
+}
+
+function validarTodo() {
+  for (const tipo of TIPOS) {
+    const res = validarTipo(tipo);
+    actualizarEstado(tipo);
+    if (!res.ok) {
+      return {
+        ok: false,
+        tipo,
+        mensaje: res.errores[0] || `Revisá la escala de ${tipo} kg.`
+      };
+    }
+  }
+
+  const raw = leerEscalasDesdeDOM();
+  const data = {};
+  TIPOS.forEach((tipo) => {
+    data[tipo] = raw[tipo].map((r) => ({
+      min: parseMonto(r.min),
+      max: parseMonto(r.max),
+      com: parseMonto(r.com)
+    }));
+  });
+
+  return { ok: true, data };
+}
+
+async function guardar() {
+  if (guardando) return;
+
+  const validacion = validarTodo();
+  if (!validacion.ok) {
+    showToast(validacion.mensaje, "error");
+    const card = document.querySelector(`.scale-card[data-tipo="${validacion.tipo}"]`);
+    if (card) {
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+      const input = card.querySelector(".range-row.has-error input") || card.querySelector("input");
+      if (input) setTimeout(() => input.focus(), 250);
+    }
+    return;
+  }
+
+  guardando = true;
+  actualizarDirty();
+  toggleLoader(true, "GUARDANDO ESCALAS...");
+
+  try {
+    const payload = {};
+    TIPOS.forEach((tipo) => {
+      payload[`comisiones_${tipo}`] = validacion.data[tipo];
+    });
+
+    await setDoc(doc(db, "configuracion", "parametros"), payload, { merge: true });
+
+    originalJSON = snapshotDeDatos(validacion.data);
+    renderEscalas(validacion.data);
+    toggleLoader(true, "¡ESCALAS GUARDADAS!", true);
+    showToast("Escalas actualizadas. Se aplican a las próximas ventas.", "success");
+    setTimeout(() => toggleLoader(false), 900);
+  } catch (e) {
+    console.error(e);
+    toggleLoader(false);
+    showToast("No se pudieron guardar las escalas. Reintentá.", "error");
+  } finally {
+    guardando = false;
+    actualizarDirty();
+  }
+}
+
+function descartar() {
+  if (!dirty || guardando) return;
+  try {
+    renderEscalas(JSON.parse(originalJSON));
+    showToast("Cambios descartados.", "info");
+  } catch (e) {
+    console.error(e);
+    showToast("No se pudieron descartar los cambios.", "error");
+  }
+}
+
+function volver() {
+  if (dirty && !confirm("Tenés cambios sin guardar. ¿Querés salir igual?")) return;
+  dirty = false;
+  window.location.href = `precios.html?k=${encodeURIComponent(k)}`;
+}
+
+async function cargarEscalas() {
+  toggleLoader(true, "LEYENDO ESCALAS...");
+  const snap = await getDoc(doc(db, "configuracion", "parametros"));
+  const data = snap.exists() ? snap.data() : {};
+  const cargadas = {};
+  TIPOS.forEach((tipo) => {
+    cargadas[tipo] = normalizarRangos(data[`comisiones_${tipo}`]);
+  });
+
+  originalJSON = snapshotDeDatos(cargadas);
+  renderEscalas(cargadas);
+  toggleLoader(false);
+}
+
+async function iniciar() {
+  try {
+    toggleLoader(true, "VERIFICANDO SESIÓN...");
+    const tokenSnap = await getDoc(doc(db, "tokens", k));
+    if (!tokenSnap.exists()) throw new Error("El token no existe o venció.");
+
+    const token = tokenSnap.data();
+    const exp = toMs(token.expira);
+    if (exp && Date.now() > exp) throw new Error("La sesión venció. Volvé a iniciar sesión.");
+    if (!token.usuario) throw new Error("El token no tiene un usuario asociado.");
+
+    const userSnap = await getDoc(doc(db, "usuarios", token.usuario));
+    if (!userSnap.exists()) throw new Error("Usuario no encontrado.");
+
+    const user = userSnap.data();
+    const puede = user.PRECIOS === true || user.PRECIOS === "true";
+    if (!puede) {
+      alert("⛔ Tu usuario no tiene permiso PRECIOS para editar las escalas de comisión.");
+      sessionStorage.setItem("k", k);
+      sessionStorage.setItem("vm_token", k);
+      window.location.replace(`inicio.html?k=${encodeURIComponent(k)}`);
+      return;
+    }
+
+    sessionStorage.setItem("usuarioActivo", token.usuario);
+    const nombre = token.nombre_mostrar || user.nombre_mostrar || token.usuario;
+    document.getElementById("sessionInfo").textContent = `Sesión: ${nombre}`;
+    document.title = `Escalas de Comisiones · ${nombre}`;
+
+    await cargarEscalas();
+  } catch (e) {
+    console.error(e);
+    toggleLoader(false);
+    alert("⛔ " + (e.message || "No se pudo validar la sesión."));
+    sessionStorage.clear();
+    window.location.replace("index.html");
+  }
+}
+
+function aplicarTema() {
+  const light = localStorage.getItem("vm_theme") === "light";
+  document.body.classList.toggle("light-mode", light);
+  const btnTheme = document.getElementById("btnTheme");
+  if (btnTheme) btnTheme.textContent = light ? "☀️" : "🌙";
+}
+
+document.getElementById("btnTheme").addEventListener("click", () => {
+  const light = document.body.classList.toggle("light-mode");
+  localStorage.setItem("vm_theme", light ? "light" : "dark");
+  document.getElementById("btnTheme").textContent = light ? "☀️" : "🌙";
+});
+
+document.getElementById("btnVolver").addEventListener("click", volver);
+document.getElementById("btnGuardar").addEventListener("click", guardar);
+document.getElementById("btnDescartar").addEventListener("click", descartar);
+
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === "s") {
+    e.preventDefault();
+    if (!document.getElementById("btnGuardar").disabled) guardar();
+  }
+});
+
+window.addEventListener("beforeunload", (e) => {
+  if (!dirty) return;
+  e.preventDefault();
+  e.returnValue = "";
+});
+
+["click", "mousemove", "keydown", "touchstart", "scroll"].forEach((evt) => {
+  document.addEventListener(evt, () => {
+    ultimaActividad = Date.now();
+    avisoInactividad = false;
+  }, { passive: true });
+});
+
+setInterval(() => {
+  if (Date.now() - ultimaActividad <= TIMEOUT_SESION) return;
+  if (dirty) {
+    if (!avisoInactividad) {
+      showToast("Sesión inactiva. Guardá o descartá los cambios.", "info");
+      avisoInactividad = true;
+    }
+    return;
+  }
+  expulsar();
+}, 30000);
+
+aplicarTema();
+
+if (!k) {
+  toggleLoader(true, "VOLVIENDO AL INGRESO...");
+  window.location.replace("index.html");
+} else {
+  sessionStorage.setItem("k", k);
+  sessionStorage.setItem("vm_token", k);
+  if (window.history.replaceState) window.history.replaceState({}, document.title, window.location.pathname);
+  iniciar();
+}
+</script>
+</body>
+</html>

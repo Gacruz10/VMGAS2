@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getFirestore, doc, getDoc, collection, getDocs, writeBatch, increment, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, getDocs, writeBatch, increment, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
@@ -32,7 +32,7 @@ window.addEventListener('pageshow', function (event) {
 });
 
 let clientesData = []; let preciosData = []; let zonasActivas = []; let clienteSeleccionado = null;
-let comisionesData = [];
+let comisionesData = { "10": [], "15": [], "45": [] };
 let sessionTimeout = 180;
 let idClienteSeleccionado = '';
 let deudasData = {};
@@ -87,14 +87,117 @@ function autocompletarFaltante() {
     actualizarTotales();
 }
 
-function getComisionPorRango(precioUnitario, tipoStr) {
-    if (!comisionesData || comisionesData.length === 0) return 0;
-    const p = Number(precioUnitario) || 0;
-    const rango = comisionesData.find(r => p >= Number(r.RANGO_MENOR) && p <= Number(r.RANGO_MAYOR));
-    if (rango) {
-        return Number(rango[`COMISION_${tipoStr}`]) || 0;
+function round2(n) {
+    return Math.round((Number(n) || 0) * 100) / 100;
+}
+
+// Identidad estable para agrupar ventas/comisiones de un mismo chofer,
+// aunque el nombre venga con mayúsculas, acentos o puntos.
+function claveChofer(valor) {
+    return String(valor || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[.,]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+// Valor de la venta (gas + envases), no lo que el cliente pagó.
+// Se usa para mostrar la venta en Control de Comisiones.
+function totalVentaDeMovimiento(data) {
+    let total = 0;
+    try {
+        const arr = Array.isArray(data.garrafas) ? data.garrafas : JSON.parse(data.garrafas || '[]');
+        if (Array.isArray(arr)) {
+            arr.forEach(g => {
+                total += (Number(g?.cantidad) || 0) * (Number(g?.precio) || 0);
+            });
+        }
+    } catch (e) { /* datos viejos o JSON inválido */ }
+
+    if (String(data.operacionEnvase || '').toLowerCase() === 'venta') {
+        total += (Number(data['CE10$']) || 0) + (Number(data['CE15$']) || 0) + (Number(data['CE45$']) || 0);
     }
-    return 0;
+    if (total <= 0) total = Number(data.TOTAL) || 0;
+    return round2(total);
+}
+
+function normalizarRangoComision(r, tipo) {
+    const min = Number(r?.min ?? r?.MIN ?? r?.RANGO_MENOR ?? r?.rango_menor);
+    const max = Number(r?.max ?? r?.MAX ?? r?.RANGO_MAYOR ?? r?.rango_mayor);
+    const com = Number(r?.com ?? r?.COM ?? r?.[`COMISION_${tipo}`] ?? r?.[`comision_${tipo}`]);
+    return {
+        min: Number.isFinite(min) ? min : 0,
+        max: Number.isFinite(max) ? max : 999999999,
+        com: Number.isFinite(com) && com >= 0 ? com : 0
+    };
+}
+
+function normalizarComisiones(raw) {
+    const out = { "10": [], "15": [], "45": [] };
+    if (!raw) return out;
+    if (Array.isArray(raw)) raw = { comisiones: raw };
+
+    // Formato ya normalizado en memoria: { "10": [...], "15": [...], "45": [...] }
+    if (Array.isArray(raw["10"]) || Array.isArray(raw["15"]) || Array.isArray(raw["45"])) {
+        ["10", "15", "45"].forEach(t => {
+            out[t] = (Array.isArray(raw[t]) ? raw[t] : []).map(r => normalizarRangoComision(r, t));
+        });
+        return out;
+    }
+
+    // Formato Firestore actual: comisiones_10 / comisiones_15 / comisiones_45
+    let encontrado = false;
+    ["10", "15", "45"].forEach(t => {
+        const arr = raw[`comisiones_${t}`] ?? raw[`COMISIONES_${t}`] ?? raw[`comisiones${t}`];
+        if (Array.isArray(arr)) {
+            out[t] = arr.map(r => normalizarRangoComision(r, t));
+            encontrado = true;
+        }
+    });
+    if (encontrado) return out;
+
+    // Formato legacy: comisiones: [{ RANGO_MENOR, RANGO_MAYOR, COMISION_10, ... }]
+    if (Array.isArray(raw.comisiones)) {
+        ["10", "15", "45"].forEach(t => {
+            out[t] = raw.comisiones
+                .map(r => normalizarRangoComision(r, t))
+                .filter(r => r.com > 0);
+        });
+    }
+    return out;
+}
+
+function getComisionPorRango(precioUnitario, tipoStr) {
+    const tipo = String(tipoStr || "");
+    const arr = comisionesData[tipo] || [];
+    const p = Number(precioUnitario) || 0;
+    const matches = arr.filter(r => p >= r.min && p <= r.max);
+    if (!matches.length) return 0;
+    // Si dos escalas se tocan en el límite, gana la de rango inferior más alto.
+    matches.sort((a, b) => (a.min - b.min) || (a.max - b.max));
+    return Number(matches[matches.length - 1].com) || 0;
+}
+
+function calcularComision(garrafas, esRetiroPlanta) {
+    if (esRetiroPlanta) return { total: 0, detalle: [] };
+
+    const detalle = [];
+    let total = 0;
+    (Array.isArray(garrafas) ? garrafas : []).forEach(g => {
+        const tipo = String(g?.tipo ?? "");
+        const cantidad = Number(g?.cantidad) || 0;
+        const precio = Number(g?.precio) || 0;
+        if (cantidad <= 0) return;
+
+        const comUnit = getComisionPorRango(precio, tipo);
+        if (comUnit <= 0) return;
+
+        const subtotal = round2(cantidad * comUnit);
+        detalle.push({ tipo, cantidad, precio, comUnit, subtotal });
+        total += subtotal;
+    });
+    return { total: round2(total), detalle };
 }
 
 function esAcuerdoVigente(fechaStr) {
@@ -326,8 +429,8 @@ async function cargarDatos() {
                 preciosData = snapPrecios.docs.map(d => d.data());
 
                 const snapParam = await getDoc(doc(db, "configuracion", "parametros"));
-                if (snapParam.exists() && snapParam.data().comisiones) {
-                    comisionesData = snapParam.data().comisiones;
+                if (snapParam.exists()) {
+                    comisionesData = normalizarComisiones(snapParam.data());
                 }
 
                 deudasData = {};
@@ -365,7 +468,7 @@ async function cargarDatos() {
                 clientesData = paquete.clientes || [];
                 preciosData = paquete.precios || [];
                 deudasData = paquete.deudas || {};
-                comisionesData = paquete.comisiones || [];
+                comisionesData = normalizarComisiones(paquete.comisiones);
                 showToast('Modo Offline: Usando datos en memoria', 'warning');
             } else {
                 throw new Error("El paquete offline no existe o está corrupto");
@@ -1164,6 +1267,31 @@ async function enviarVentaFirestore(payload) {
 
         tx.set(movRef, data);
 
+        // Una comisión pendiente por cada venta que generó comisión.
+        // El pago se registra desde controlcomisiones.html.
+        const comisionMonto = round2(data.COMISION_TOTAL);
+        if (comisionMonto > 0) {
+            tx.set(doc(db, "comisiones", data.N), {
+                movimientoId: data.N,
+                choferId: data.USUARIO_ID || "",
+                chofer: data.USUARIO || "",
+                choferKey: claveChofer(data.USUARIO),
+                clienteId: data.ID_CLIENTE || "",
+                cliente: data.C || data.clienteNombre || "",
+                fecha: data.FECHA || "",
+                fechaISO: data.FECHA_ISO || "",
+                hora: data.HORA || "",
+                tipo: data.TIPO || "",
+                ventaTotal: totalVentaDeMovimiento(data),
+                comision: comisionMonto,
+                detalle: Array.isArray(data.COMISION_DETALLE) ? data.COMISION_DETALLE : [],
+                estado: "PENDIENTE",
+                pagoId: null,
+                creado: serverTimestamp(),
+                timestampMs: data.TIMESTAMP_MS || Date.now()
+            });
+        }
+
         if (data.esClienteNuevo) {
             tx.set(doc(db, "clientes", data.ID_CLIENTE), {
                 nombre: data.clienteNombre, zona: data.clienteZona, categoria: data.clienteCategoria,
@@ -1401,11 +1529,9 @@ async function guardar() {
 
     let deudaGeneradaPlanta = (isModoFlotante && objetivoGas > pagado) ? (objetivoGas - pagado) : 0;
 
-    const comisionTotal = isRetiroPlanta ? 0 : (
-        (q10 * getComisionPorRango(parseM('precioGarrafa1'), '10')) +
-        (q15 * getComisionPorRango(parseM('precioGarrafa2'), '15')) +
-        (q45 * getComisionPorRango(parseM('precioGarrafa3'), '45'))
-    );
+    const comision = calcularComision(garrafasArray, isRetiroPlanta);
+    const comisionTotal = comision.total;
+    const comisionDetalle = comision.detalle;
 
     let neto10 = 0, neto15 = 0, neto45 = 0, netoDinero = 0;
 
@@ -1434,6 +1560,9 @@ async function guardar() {
         USUARIO: document.getElementById('welcomeMessage').textContent.replace('Usuario: ', '').toLowerCase().trim(),
         TIPO: tipoOp, FECHA: now.toLocaleDateString('es-AR'), HORA: hora24, C: nombreC, N: `V-${generarID()}`,
         'E$': efectivoOK, 'T$': transfOK, TOTAL: pagado,
+        FECHA_ISO: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
+        TIMESTAMP_MS: now.getTime(),
+        USUARIO_ID: window.idUsuarioFirebase || '',
         G: esGasto ? document.getElementById('descripcionGastos').value : '', GASTO_TOTAL: esGasto ? parseM('montoGastos') : 0,
         declaracionGastos: esGasto, garrafas: JSON.stringify(garrafasArray), pin: pinParaEnviar, esClienteNuevo: esNuevo, clienteNombre: esNuevo ? document.getElementById('nombreCliente').value : '',
         clienteZona: esNuevo ? document.getElementById('nuevaZona').value : document.getElementById('zona').value, clienteCategoria: cat, clienteDireccion: document.getElementById('nuevaDireccion').value, clienteTelefono: document.getElementById('nuevoTelefono').value, clienteMail: document.getElementById('nuevoMail').value,
@@ -1453,6 +1582,8 @@ async function guardar() {
         UBICACION: ubicacionActual,
         PUNTO_GPS: validacionGPS,
         COMISION_TOTAL: comisionTotal,
+        COMISION_DETALLE: comisionDetalle,
+        COMISION_PAGADA: false,
         MOV_NETO_10: neto10, MOV_NETO_15: neto15, MOV_NETO_45: neto45, MOV_NETO_DINERO: netoDinero
     };
 

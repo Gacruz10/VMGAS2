@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<title>Mi Caja</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050510;
+    --panel: rgba(255,255,255,0.035);
+    --panel-strong: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.10);
+    --text: #ffffff;
+    --muted: #9ca3af;
+    --accent: #FFD700;
+    --accent-soft: rgba(255,215,0,0.12);
+    --ok: #2dd4bf;
+    --ok-soft: rgba(45,212,191,0.12);
+    --warn: #f59e0b;
+    --warn-soft: rgba(245,158,11,0.12);
+    --danger: #ff4757;
+    --danger-soft: rgba(255,71,87,0.12);
+    --shadow: 0 10px 40px rgba(0,0,0,0.35);
+  }
+  body.light-mode {
+    --bg: #eef2f7;
+    --panel: #ffffff;
+    --panel-strong: #f8fafc;
+    --border: #d7dee8;
+    --text: #111827;
+    --muted: #64748b;
+    --accent: #b45309;
+    --accent-soft: rgba(180,83,9,0.10);
+    --ok: #0f766e;
+    --ok-soft: rgba(15,118,110,0.10);
+    --warn: #b45309;
+    --warn-soft: rgba(180,83,9,0.10);
+    --danger: #dc2626;
+    --danger-soft: rgba(220,38,38,0.10);
+    --shadow: 0 10px 30px rgba(15,23,42,0.12);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+    font-family: 'Outfit', sans-serif; opacity: 0; transition: opacity .35s ease, background .25s ease, color .25s ease;
+  }
+  .fixed-header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(5,5,16,0.94);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(14px);
+    padding: 8px 14px;
+  }
+  body.light-mode .fixed-header { background: rgba(255,255,255,0.94); }
+  .header-top {
+    max-width: 1020px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .page-title {
+    margin: 0; font-size: .98rem; font-weight: 800; letter-spacing: .8px;
+    text-transform: uppercase;
+    background: linear-gradient(to right, var(--text), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    text-align: center; flex: 1;
+  }
+  .btn-icon {
+    width: 34px; height: 34px; border-radius: 9px;
+    border: 1px solid var(--border); background: var(--panel);
+    color: var(--text); cursor: pointer; font-size: 15px;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: .2s;
+  }
+  .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+  .wrap { max-width: 1020px; margin: 0 auto; padding: 14px 14px 40px; }
+
+  .hero {
+    position: relative; overflow: hidden;
+    background: linear-gradient(135deg, rgba(255,215,0,0.18), rgba(255,215,0,0.04) 55%, transparent);
+    border: 1px solid rgba(255,215,0,0.35);
+    border-radius: 16px; padding: 18px 18px 16px; margin-bottom: 12px;
+  }
+  body.light-mode .hero { background: linear-gradient(135deg, rgba(180,83,9,0.12), rgba(180,83,9,0.02) 60%, #fff); }
+  .hero::after {
+    content: "💵"; position: absolute; right: 12px; top: 4px;
+    font-size: 74px; opacity: .09; pointer-events: none;
+  }
+  .hero-label { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; }
+  .hero-value { font-size: 2.15rem; font-weight: 800; color: var(--accent); line-height: 1.15; margin: 4px 0 6px; }
+  .hero-sub { color: var(--muted); font-size: 11px; line-height: 1.6; }
+  .hero-sub b { color: var(--text); }
+
+  .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+  .kpi {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 9px 10px; text-align: center;
+  }
+  .kpi label { display: block; color: var(--muted); font-size: 9px; letter-spacing: .5px; text-transform: uppercase; font-weight: 700; margin-bottom: 3px; }
+  .kpi .v { font-size: .98rem; font-weight: 800; }
+  .kpi .v.ok { color: var(--ok); }
+  .kpi .v.warn { color: var(--warn); }
+  .kpi .v.danger { color: var(--danger); }
+  .kpi .v.accent { color: var(--accent); }
+
+  .notice {
+    display: flex; align-items: flex-start; gap: 7px;
+    background: var(--panel-strong); border: 1px dashed var(--border);
+    border-radius: 9px; padding: 8px 10px; margin-bottom: 13px;
+    color: var(--muted); font-size: 10.5px; line-height: 1.55;
+  }
+  .toolbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    margin: 16px 0 9px;
+  }
+  .toolbar h2 { margin: 0; font-size: 12px; letter-spacing: .5px; text-transform: uppercase; }
+  .toolbar .count { color: var(--muted); font-size: 10px; font-weight: 700; }
+
+  .date-group {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 11px;
+    margin-bottom: 10px; overflow: hidden;
+  }
+  .date-group > summary {
+    list-style: none; cursor: pointer; padding: 9px 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--panel-strong); border-bottom: 1px solid var(--border);
+    font-size: 11px; font-weight: 800; letter-spacing: .3px;
+  }
+  .date-group > summary::-webkit-details-marker { display: none; }
+  .date-group > summary .meta { color: var(--muted); font-size: 10px; font-weight: 600; }
+  .date-body { padding: 9px; display: grid; gap: 8px; }
+
+  .mov-card {
+    border: 1px solid var(--border); border-radius: 10px;
+    background: rgba(0,0,0,0.12); overflow: hidden;
+  }
+  body.light-mode .mov-card { background: #fff; }
+  .mov-head { display: flex; align-items: flex-start; gap: 9px; padding: 10px 11px 7px; }
+  .mov-who { flex: 1; min-width: 0; }
+  .mov-client { font-size: 12.5px; font-weight: 800; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; }
+  .mov-meta { color: var(--muted); font-size: 9.5px; margin-top: 3px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .mov-total { text-align: right; white-space: nowrap; }
+  .mov-total .lbl { display: block; color: var(--muted); font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+  .mov-total b { font-size: 13px; color: var(--text); }
+  .badge {
+    display: inline-block; padding: 2px 6px; border-radius: 999px;
+    font-size: 8.5px; font-weight: 800; letter-spacing: .3px;
+    background: var(--accent-soft); color: var(--accent);
+  }
+  .badge.gasto { background: var(--danger-soft); color: var(--danger); }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+
+  .qty-row {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+    padding: 0 11px 8px;
+  }
+  .qty {
+    background: var(--panel-strong); border: 1px solid var(--border); border-radius: 7px;
+    padding: 5px 7px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .qty span { color: var(--muted); font-size: 9px; font-weight: 700; text-transform: uppercase; }
+  .qty b { font-size: 12px; }
+
+  .money-row {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+    border-top: 1px dashed var(--border); padding: 8px 11px 10px;
+  }
+  .money-row span { display: block; color: var(--muted); font-size: 8.5px; text-transform: uppercase; letter-spacing: .4px; font-weight: 700; }
+  .money-row b { display: block; font-size: 11.5px; margin-top: 1px; }
+  .money-row .efe b { color: var(--ok); }
+  .money-row .trans b { color: var(--warn); }
+  .mov-foot { padding: 0 11px 9px; display: grid; gap: 4px; }
+  .foot-line { display: flex; justify-content: space-between; gap: 8px; font-size: 10px; color: var(--muted); }
+  .foot-line b.danger { color: var(--danger); }
+  .foot-line b.warn { color: var(--warn); }
+
+  .empty {
+    text-align: center; padding: 44px 18px; color: var(--muted);
+    border: 1px dashed var(--border); border-radius: 11px; font-size: 12px; line-height: 1.6;
+  }
+  .empty .big { font-size: 30px; display: block; margin-bottom: 8px; }
+
+  .toast-container { position: fixed; bottom: 20px; right: 16px; z-index: 500; display: grid; gap: 7px; }
+  .toast {
+    background: #111827; color: #fff; border: 1px solid var(--border);
+    border-left: 3px solid var(--accent); border-radius: 9px;
+    padding: 10px 13px; font-size: 11px; max-width: 330px;
+    box-shadow: var(--shadow); opacity: 0; transform: translateY(8px);
+    transition: .22s;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { border-left-color: var(--danger); }
+  .toast.success { border-left-color: var(--ok); }
+  .loading-overlay {
+    display: none; position: fixed; inset: 0; z-index: 600;
+    background: rgba(0,0,0,0.62); backdrop-filter: blur(3px);
+    align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+    color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .6px;
+  }
+  .loading-overlay.active { display: flex; }
+  .loader {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.16); border-top-color: var(--accent);
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 640px) {
+    .dashboard { grid-template-columns: repeat(2, 1fr); }
+    .hero-value { font-size: 1.85rem; }
+    .money-row { grid-template-columns: repeat(2, 1fr); }
+    .money-row .total { grid-column: 1 / -1; }
+    .page-title { font-size: .82rem; }
+  }
+</style>
+</head>
+<body>
+
+<header class="fixed-header">
+  <div class="header-top">
+    <button class="btn-icon" id="btnVolver" title="Volver">←</button>
+    <h1 class="page-title">Mi Caja</h1>
+    <button class="btn-icon" id="btnTheme" title="Tema">🌙</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="hero-label">Efectivo que tenés que rendir</div>
+    <div class="hero-value" id="kpiEfectivo">$ 0,00</div>
+    <div class="hero-sub" id="kpiDetalle">Cargando movimientos…</div>
+  </section>
+
+  <section class="dashboard">
+    <div class="kpi"><label>Ventas sin arqueo</label><div class="v accent" id="kpiVentas">0</div></div>
+    <div class="kpi"><label>Total vendido</label><div class="v ok" id="kpiTotal">$ 0</div></div>
+    <div class="kpi"><label>Transferencias</label><div class="v warn" id="kpiTransf">$ 0</div></div>
+    <div class="kpi"><label>Gastos</label><div class="v danger" id="kpiGastos">$ 0</div></div>
+  </section>
+
+  <div class="notice">
+    <span>🔒</span>
+    <span><b>Solo lectura.</b> Acá ves lo que tenés pendiente de rendir. El arqueo y las correcciones los hace administración.</span>
+  </div>
+
+  <div class="toolbar">
+    <h2>Movimientos sin arqueo</h2>
+    <span class="count" id="lblCantidad">—</span>
+  </div>
+
+  <div id="list"></div>
+</main>
+
+<div class="toast-container" id="toast-container"></div>
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loader"></div>
+  <div id="loaderText">CARGANDO...</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import {
+  getFirestore, doc, getDoc, getDocs, collection, query, where
+} from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
+  authDomain: "vmgaslr.firebaseapp.com",
+  projectId: "vmgaslr",
+  storageBucket: "vmgaslr.firebasestorage.app",
+  messagingSenderId: "75859850089",
+  appId: "1:75859850089:web:fc551c770bbf4ae25803f8"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const TIMEOUT_SESION = 14400000; // 4 horas
+const $ = (id) => document.getElementById(id);
+const pad2 = (n) => String(n).padStart(2, "0");
+
+function num(v) {
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  if (v === null || v === undefined || v === "") return 0;
+  let s = String(v).trim().replace(/\s/g, "").replace(/[^\d,.\-]/g, "");
+  if (!s) return 0;
+  const lastComma = s.lastIndexOf(",");
+  const lastDot = s.lastIndexOf(".");
+  if (lastComma > -1 && lastDot > -1) {
+    s = lastComma > lastDot ? s.replace(/\./g, "").replace(",", ".") : s.replace(/,/g, "");
+  } else if (lastComma > -1) {
+    s = s.replace(",", ".");
+  }
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+}
+
+const round2 = (n) => Math.round(num(n) * 100) / 100;
+
+function fmtMoney(n) {
+  return Math.abs(num(n)).toLocaleString("es-AR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function fmtSigned(n) {
+  return `${num(n) < 0 ? "− " : ""}$ ${fmtMoney(n)}`;
+}
+
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+}[c]));
+
+function isoFromDate(d) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function normFecha(v) {
+  if (!v) return "";
+  if (v instanceof Date) return isoFromDate(v);
+  if (typeof v === "object") {
+    if (typeof v.toDate === "function") return isoFromDate(v.toDate());
+    if (typeof v.seconds === "number") return isoFromDate(new Date(v.seconds * 1000));
+  }
+  const s = String(v).trim();
+  if (!s) return "";
+  let m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (m) return `${m[1]}-${pad2(m[2])}-${pad2(m[3])}`;
+  m = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (m) return `${m[3]}-${pad2(m[2])}-${pad2(m[1])}`;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? "" : isoFromDate(d);
+}
+
+function fechaVisual(iso) {
+  if (!iso) return "—";
+  const p = iso.split("-");
+  return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : iso;
+}
+
+function toMs(v) {
+  if (!v) return 0;
+  if (v instanceof Date) return v.getTime();
+  if (typeof v === "number") return v;
+  if (typeof v.toDate === "function") return v.toDate().getTime();
+  if (typeof v.seconds === "number") return v.seconds * 1000;
+  if (typeof v === "string") {
+    const n = Number(v);
+    if (Number.isFinite(n) && n > 0) return n;
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+  }
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+// Misma identidad que usa index4 al guardar la comisión.
+function claveChofer(valor) {
+  return String(valor || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[.,]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseGarrafas(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw !== "string" || !raw.trim()) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function tsDeMovimiento(m, fechaISO) {
+  const directo = toMs(m.TIMESTAMP_MS ?? m.timestampMs);
+  if (directo > 0) return directo;
+
+  const f = fechaISO || normFecha(m.FECHA);
+  if (!f) return 0;
+  const [y, mo, d] = f.split("-").map(Number);
+  const h = String(m.HORA || "").match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  return new Date(
+    y, (mo || 1) - 1, d || 1,
+    h ? Number(h[1]) : 0,
+    h ? Number(h[2]) : 0,
+    h && h[3] ? Number(h[3]) : 0
+  ).getTime();
+}
+
+function showToast(msg, type = "info", ms = 4200) {
+  const c = $("toast-container");
+  if (!c) return;
+  const t = document.createElement("div");
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  requestAnimationFrame(() => t.classList.add("show"));
+  setTimeout(() => {
+    t.classList.remove("show");
+    setTimeout(() => t.remove(), 250);
+  }, ms);
+}
+
+function setLoading(show, text = "CARGANDO...") {
+  const o = $("loadingOverlay");
+  if (!o) return;
+  if (text) $("loaderText").textContent = text;
+  o.classList.toggle("active", !!show);
+}
+
+// ---------------- Sesión ----------------
+const params = new URLSearchParams(window.location.search);
+const k = params.get("k") || params.get("token") || sessionStorage.getItem("k") || sessionStorage.getItem("vm_token");
+
+function expulsar() {
+  sessionStorage.clear();
+  window.location.replace("index.html");
+}
+
+window.volver = () => window.location.replace(`inicio.html?k=${encodeURIComponent(k || "")}`);
+
+let tIdle;
+function resetTimer() {
+  clearTimeout(tIdle);
+  tIdle = setTimeout(() => {
+    showToast("Sesión expirada por inactividad.", "info");
+    setTimeout(expulsar, 1200);
+  }, TIMEOUT_SESION);
+}
+["click", "mousemove", "keydown", "touchstart", "scroll"].forEach((evt) =>
+  document.addEventListener(evt, resetTimer, { passive: true })
+);
+resetTimer();
+
+let rows = [];
+let nombreMostrar = "";
+
+if (!k) {
+  expulsar();
+} else {
+  sessionStorage.setItem("k", k);
+  sessionStorage.setItem("vm_token", k);
+  if (window.history.replaceState) window.history.replaceState({}, document.title, window.location.pathname);
+  validarSesion();
+}
+
+async function validarSesion() {
+  try {
+    document.body.style.opacity = 1;
+    setLoading(true, "VERIFICANDO SESIÓN...");
+
+    const snap = await getDoc(doc(db, "tokens", k));
+    if (!snap.exists()) throw new Error("Sesión inválida.");
+    const tokenData = snap.data();
+    const exp = toMs(tokenData.expira);
+    if (exp && Date.now() > exp) throw new Error("La sesión expiró.");
+
+    const userId = String(tokenData.usuario || "").trim();
+    if (!userId) throw new Error("El token no tiene un usuario asociado.");
+
+    sessionStorage.setItem("usuarioActivo", userId);
+    document.title = `Mi Caja · ${tokenData.nombre_mostrar || userId}`;
+
+    const userSnap = await getDoc(doc(db, "usuarios", userId));
+    const userData = userSnap.exists() ? userSnap.data() : null;
+
+    nombreMostrar = String(
+      userData?.nombre_mostrar || tokenData.nombre_mostrar || userData?.nombre_completo || userId
+    ).trim() || userId;
+    document.title = `Mi Caja · ${nombreMostrar}`;
+
+    await cargarMovimientos(userData, tokenData, userId);
+  } catch (e) {
+    console.error(e);
+    showToast("⛔ " + (e.message || "No se pudo abrir Mi Caja."), "error", 5000);
+    setTimeout(expulsar, 2200);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function candidatosUsuario(userData, tokenData, userId) {
+  const nombres = [
+    userData?.nombre_mostrar,
+    tokenData?.nombre_mostrar,
+    userData?.nombre_completo,
+    userData?.id,
+    userId
+  ];
+
+  const out = new Set();
+  nombres.forEach((n) => {
+    const base = String(n || "").replace(/\s+/g, " ").trim();
+    if (!base) return;
+    const sinAcentos = base.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    [base, sinAcentos].forEach((v) => {
+      if (!v) return;
+      out.add(v.toLowerCase());
+      out.add(v.toUpperCase());
+    });
+  });
+  return [...out];
+}
+
+async function cargarMovimientos(userData, tokenData, userId) {
+  setLoading(true, "BUSCANDO MOVIMIENTOS...");
+
+  const candidatos = candidatosUsuario(userData, tokenData, userId);
+  if (!candidatos.length) throw new Error("No se pudo identificar al chofer.");
+
+  const docs = new Map();
+  for (let i = 0; i < candidatos.length; i += 10) {
+    const chunk = candidatos.slice(i, i + 10);
+    const snap = await getDocs(query(collection(db, "movimientos"), where("USUARIO", "in", chunk)));
+    snap.forEach((d) => {
+      const m = d.data();
+      if (String(m.ARQUEO_ID || "").trim()) return; // ya rendido
+      docs.set(d.id, { id: d.id, ...m });
+    });
+  }
+
+  // Las ventas nuevas guardan USUARIO_ID: cubre cambios de nombre del chofer.
+  const snapId = await getDocs(query(collection(db, "movimientos"), where("USUARIO_ID", "==", userId)));
+  snapId.forEach((d) => {
+    const m = d.data();
+    if (String(m.ARQUEO_ID || "").trim()) return;
+    if (!docs.has(d.id)) docs.set(d.id, { id: d.id, ...m });
+  });
+
+  rows = [...docs.values()].map(normalizarMovimiento);
+  rows.sort((a, b) => (b.ts - a.ts) || String(b.hora).localeCompare(String(a.hora)));
+
+  render();
+}
+
+function normalizarMovimiento(m) {
+  const fechaISO = normFecha(m.FECHA);
+  const garrafas = parseGarrafas(m.garrafas);
+  const cant = { "10": 0, "15": 0, "45": 0 };
+
+  garrafas.forEach((g) => {
+    const t = String(g?.tipo ?? g?.TIPO ?? "").replace(/[^\d]/g, "");
+    if (t in cant) cant[t] += num(g?.cantidad ?? g?.CANTIDAD);
+  });
+
+  // Movimientos viejos sin JSON de garrafas: usar los contadores por categoría.
+  const totalGarrafas = cant["10"] + cant["15"] + cant["45"];
+  if (totalGarrafas <= 0) {
+    ["10", "15", "45"].forEach((t) => {
+      cant[t] = num(m[`VRP${t}`]) + num(m[`VC${t}`]) + num(m[`VS${t}`]) + num(m[`VU${t}`]);
+    });
+  }
+
+  const totalDoc = round2(num(m.TOTAL));
+  let efectivo = round2(num(m["E$"] ?? m.E));
+  let transferencia = round2(num(m["T$"] ?? m.T));
+  const tipo = String(m.TIPO || "").trim();
+  const tipoNorm = tipo.toUpperCase();
+  const esGastoDoc = tipoNorm.includes("GAST") || tipoNorm.includes("EGRESO");
+
+  let gasto = round2(num(m.GASTO_TOTAL));
+  if (gasto < 0) gasto = round2(Math.abs(gasto));
+
+  if (esGastoDoc) {
+    // Igual que arqueo.html: datos viejos pueden traer el gasto en TOTAL.
+    if (gasto <= 0) gasto = round2(Math.abs(totalDoc));
+  } else {
+    // Tolerancia a registros viejos que sólo tienen TOTAL.
+    if (efectivo <= 0 && transferencia <= 0 && totalDoc > 0) efectivo = totalDoc;
+  }
+
+  const operacion = String(m.operacionEnvase || "").trim().toLowerCase();
+
+  let totalVenta = round2(garrafas.reduce((a, g) => {
+    return a + num(g?.cantidad ?? g?.CANTIDAD) * num(g?.precio ?? g?.PRECIO);
+  }, 0));
+
+  if (operacion === "venta") {
+    totalVenta = round2(totalVenta + num(m["CE10$"]) + num(m["CE15$"]) + num(m["CE45$"]));
+  }
+  if (totalVenta <= 0 && !esGastoDoc) {
+    totalVenta = round2(totalDoc || (efectivo + transferencia));
+  }
+  if (totalVenta < 0) totalVenta = 0;
+
+  const cantTotal = cant["10"] + cant["15"] + cant["45"];
+  const esGastoPuro = tipoNorm === "GASTO" && cantTotal <= 0 && (efectivo + transferencia) <= 0;
+  const esVenta = !esGastoPuro && (
+    cantTotal > 0 ||
+    ["VENTA", "FLOTANTE", "VENTA_ENVASE"].includes(tipoNorm) ||
+    efectivo > 0 || transferencia > 0 || totalVenta > 0
+  );
+
+  return {
+    id: m.id || m.N || "",
+    fechaISO,
+    fecha: fechaVisual(fechaISO),
+    hora: String(m.HORA || "").trim(),
+    ts: tsDeMovimiento(m, fechaISO),
+    cliente: String(m.C || m.clienteNombre || (tipoNorm === "GASTO" ? "Gasto" : "Sin cliente")).trim(),
+    tipo: tipo || "MOVIMIENTO",
+    tipoNorm,
+    cant,
+    cantTotal,
+    totalVenta,
+    efectivo,
+    transferencia,
+    gasto,
+    cobrado: round2(efectivo + transferencia),
+    saldo: round2(Math.max(0, totalVenta - (efectivo + transferencia))),
+    esVenta
+  };
+}
+
+function render() {
+  const ventas = rows.filter((r) => r.esVenta);
+  const efectivo = round2(rows.reduce((a, r) => a + r.efectivo, 0));
+  const transferencia = round2(rows.reduce((a, r) => a + r.transferencia, 0));
+  const gastos = round2(rows.reduce((a, r) => a + r.gasto, 0));
+  const totalVendido = round2(ventas.reduce((a, r) => a + r.totalVenta, 0));
+  const aRendir = round2(efectivo - gastos);
+
+  $("kpiEfectivo").textContent = fmtSigned(aRendir);
+  $("kpiEfectivo").style.color = aRendir < 0 ? "var(--danger)" : "";
+  $("kpiDetalle").innerHTML = `Efectivo cobrado <b>$ ${fmtMoney(efectivo)}</b> − gastos <b>$ ${fmtMoney(gastos)}</b> · Transferencias <b>$ ${fmtMoney(transferencia)}</b>`;
+  $("kpiVentas").textContent = String(ventas.length);
+  $("kpiTotal").textContent = `$ ${fmtMoney(totalVendido)}`;
+  $("kpiTransf").textContent = `$ ${fmtMoney(transferencia)}`;
+  $("kpiGastos").textContent = `$ ${fmtMoney(gastos)}`;
+  $("lblCantidad").textContent = rows.length ? `${rows.length} movimiento${rows.length === 1 ? "" : "s"}` : "Sin pendientes";
+
+  const cont = $("list");
+  if (!rows.length) {
+    cont.innerHTML = `<div class="empty">
+      <span class="big">✅</span>
+      No tenés movimientos pendientes de arqueo.<br>
+      Todo lo que vendiste ya fue rendido.
+    </div>`;
+    return;
+  }
+
+  const groups = new Map();
+  rows.forEach((r) => {
+    const key = r.fechaISO || "0000-00-00";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r);
+  });
+
+  let html = "";
+  [...groups.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .forEach(([fechaISO, items]) => {
+      const efectivoDia = round2(items.reduce((a, r) => a + r.efectivo, 0));
+      const gastosDia = round2(items.reduce((a, r) => a + r.gasto, 0));
+      const totalDia = round2(items.reduce((a, r) => a + r.totalVenta, 0));
+      const netoDia = round2(efectivoDia - gastosDia);
+
+      html += `<details class="date-group" open>
+        <summary>
+          <span>📅 ${esc(fechaVisual(fechaISO))} · ${items.length} mov.</span>
+          <span class="meta">Total $ ${fmtMoney(totalDia)} · Efectivo ${fmtSigned(netoDia)}</span>
+        </summary>
+        <div class="date-body">`;
+
+      items.forEach((r) => {
+        const badgeExtra = r.tipoNorm === "GASTO" ? "gasto" : (r.saldo > 0.01 ? "" : "ok");
+        const badgeTxt = r.tipoNorm === "GASTO" ? "GASTO" : r.saldo > 0.01 ? "CON SALDO" : "COBRADA";
+
+        html += `<div class="mov-card">
+          <div class="mov-head">
+            <div class="mov-who">
+              <div class="mov-client">${esc(r.cliente)}</div>
+              <div class="mov-meta">
+                <span>${esc(r.hora || "—")}</span>
+                <span class="badge ${badgeExtra}">${esc(badgeTxt)}</span>
+                <span>${esc(r.tipo)}</span>
+              </div>
+            </div>
+            <div class="mov-total">
+              <span class="lbl">Total</span>
+              <b>$ ${fmtMoney(r.totalVenta)}</b>
+            </div>
+          </div>`;
+
+        if (r.cantTotal > 0) {
+          html += `<div class="qty-row">
+            <div class="qty"><span>10 kg</span><b>${r.cant["10"]}</b></div>
+            <div class="qty"><span>15 kg</span><b>${r.cant["15"]}</b></div>
+            <div class="qty"><span>45 kg</span><b>${r.cant["45"]}</b></div>
+          </div>`;
+        }
+
+        html += `<div class="money-row">
+          <div class="efe"><span>Efectivo</span><b>$ ${fmtMoney(r.efectivo)}</b></div>
+          <div class="trans"><span>Transferencia</span><b>$ ${fmtMoney(r.transferencia)}</b></div>
+          <div class="total"><span>Total cobrado</span><b>$ ${fmtMoney(r.cobrado)}</b></div>
+        </div>`;
+
+        if (r.gasto > 0 || r.saldo > 0.01) {
+          html += `<div class="mov-foot">`;
+          if (r.gasto > 0) {
+            html += `<div class="foot-line"><span>Gasto declarado</span><b class="danger">− $ ${fmtMoney(r.gasto)}</b></div>`;
+          }
+          if (r.saldo > 0.01) {
+            html += `<div class="foot-line"><span>Saldo pendiente del cliente</span><b class="warn">$ ${fmtMoney(r.saldo)}</b></div>`;
+          }
+          html += `</div>`;
+        }
+
+        html += `</div>`;
+      });
+
+      html += `</div></details>`;
+    });
+
+  cont.innerHTML = html;
+}
+
+// ---------------- UI base ----------------
+function wireUI() {
+  $("btnVolver").addEventListener("click", window.volver);
+
+  if (localStorage.getItem("vm_theme") === "light") {
+    document.body.classList.add("light-mode");
+  }
+  $("btnTheme").textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
+  $("btnTheme").addEventListener("click", () => {
+    const isLight = document.body.classList.toggle("light-mode");
+    localStorage.setItem("vm_theme", isLight ? "light" : "dark");
+    $("btnTheme").textContent = isLight ? "☀️" : "🌙";
+  });
+}
+
+wireUI();
+</script>
+</body>
+</html>

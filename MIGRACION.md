@@ -1,7 +1,7 @@
 # Migración VMGAS → VMGAS2 (Firebase)
 
 Documento de trabajo para mantener consistentes los módulos que se van migrando.
-Última actualización: 2026-10-30.
+Última actualización: 2026-11-02.
 
 ## Estado
 
@@ -11,6 +11,7 @@ Documento de trabajo para mantener consistentes los módulos que se van migrando
 | `inicio.html` | Migrado (token, permisos, alarmas) |
 | `clientes.html` | Migrado |
 | `precios.html` | Migrado |
+| `parametroscomisiones.html` | **Migrado (editor de escalas, permiso `PRECIOS`)** |
 | `usuarios.html` | Migrado |
 | `controlcarga.html` | Migrado |
 | `controlstock.html` | Migrado |
@@ -18,12 +19,12 @@ Documento de trabajo para mantener consistentes los módulos que se van migrando
 | `alarmas.html` | Migrado (queda pendiente el envío de audio vía Apps Script) |
 | `arqueo.html` | **Migrado + historial y permiso `FINANZAS`** |
 | `controlfinanzas.html` | **Migrado a Firestore directo + conciliación de arqueos** |
-| `controlcomisiones.html` | Pendiente (sin archivo; enlace quitado de Administración) |
+| `controlcomisiones.html` | **Migrado (escalas, pendientes y liquidación)** |
 | `controltransferencias.html` | **Migrado (auditoría manual v1)** |
 | `controlremitos.html` | **Migrado (conciliación de compras v1)** |
 | `flota.html` | Pendiente |
 | `tablero.html` | Pendiente |
-| `micaja.html` | Pendiente |
+| `micaja.html` | **Migrado (solo lectura del chofer)** |
 | `index_recepcion.html` | Pendiente |
 
 ## Convenciones
@@ -58,6 +59,8 @@ Documento de trabajo para mantener consistentes los módulos que se van migrando
 | `papelera_movimientos` | Movimientos eliminados | — |
 | **`arqueos`** | **Cierres de caja** | ver abajo |
 | **`confinanzas`** | **Movimientos financieros** | `id`, `fecha` (YYYY-MM-DD), `rubro`, `subrubro`, `detalle`, `monto`, `tipo` (`INGRESO`/`EGRESO`) |
+| **`comisiones`** | **Comisión pendiente por venta** | `movimientoId`, `choferKey`, `comision`, `estado`, `pagoId` |
+| **`comisiones_pagos`** | **Liquidaciones de comisiones** | `pagoId`, `choferKey`, `total`, `efectivo`, `transferencia`, `detalle` |
 
 ## Contrato de `arqueos`
 
@@ -219,6 +222,105 @@ El PIN maestro solo puede inicializarse si todavía no existe y el usuario tiene
 `USUARIOS`. Si ya existe, se exige el PIN actual. La operación se hace con
 `runTransaction` para evitar condiciones de carrera.
 
+## Comisiones y Mi Caja (2026-11-01)
+
+### Escalas
+
+La fuente es `configuracion/parametros`:
+
+```js
+{
+  comisiones_10: [{ min: 0, max: 20999, com: 150 }, ...],
+  comisiones_15: [{ min: 0, max: 28500, com: 375 }, ...],
+  comisiones_45: [{ min: 0, max: 85000, com: 500 }, ...]
+}
+```
+
+El editor es `parametroscomisiones.html`, al que se accede desde el botón
+**⚙ Editar comisiones** de `precios.html`. Ese panel valida el token y el permiso
+`PRECIOS`, edita únicamente `comisiones_10/15/45` y guarda con
+`setDoc(..., { merge: true })`, sin tocar otras claves de `configuracion/parametros`.
+`precios.html` ya no edita las escalas: solo guarda los precios y `recargo_flotante`,
+por lo que nunca pisa los cambios hechos desde el panel.
+
+El panel permite agregar y quitar rangos, muestra la comisión mínima y máxima de cada
+presentación, bloquea solapamientos y avisa si queda un hueco entre dos rangos. Los
+montos se guardan como enteros en pesos. `app.js` normaliza el formato nuevo y también
+el legacy (`comisiones: [{ RANGO_MENOR, RANGO_MAYOR, COMISION_10, ... }]`). Si dos
+rangos se tocan en el límite, gana el rango con `min` más alto. La comisión se calcula
+por garrafa según el precio unitario de venta al cliente y no se paga en ventas con
+retiro en planta.
+
+### Venta (`index4.html` / `app.js`)
+
+Cada venta guarda en `movimientos`:
+
+```js
+{
+  COMISION_TOTAL: 650,
+  COMISION_DETALLE: [
+    { tipo: "10", cantidad: 1, precio: 24000, comUnit: 250, subtotal: 250 },
+    { tipo: "15", cantidad: 1, precio: 35000, comUnit: 750, subtotal: 750 }
+  ],
+  COMISION_PAGADA: false
+}
+```
+
+Si `COMISION_TOTAL > 0`, la misma transacción crea `comisiones/{movimientoId}`:
+
+```js
+{
+  movimientoId, choferId, chofer, choferKey,
+  clienteId, cliente,
+  fecha: "01/11/2026", fechaISO: "2026-11-01", hora,
+  tipo, ventaTotal, comision, detalle,
+  estado: "PENDIENTE",
+  pagoId: null,
+  creado: <serverTimestamp>,
+  timestampMs
+}
+```
+
+`choferKey` se calcula con `claveChofer()` (minúsculas, sin acentos ni puntos), igual
+en `app.js`, `micaja.html` y `controlcomisiones.html`. `movimientos.USUARIO` sigue
+guardando el `nombre_mostrar` en minúsculas; `choferId` guarda el id del token
+(`USUARIO_ID`) para trazabilidad. En `comisiones`, `ventaTotal` es el valor de la venta
+(gas + envases), no lo cobrado (`movimientos.TOTAL` puede ser un pago parcial).
+
+### Liquidación (`controlcomisiones.html`)
+
+- Requiere `FINANZAS` o `CONFINANZAS`.
+- Lee `comisiones` con `estado == "PENDIENTE"` y agrupa por `choferKey` y por día.
+- El pago debe cuadrar exactamente (tolerancia de un centavo) entre efectivo +
+  transferencia y la suma seleccionada. No se permite pagar de más ni de menos.
+- En una única `runTransaction`:
+  - vuelve a leer cada comisión y rechaza si ya fue pagada o cambió de chofer/total;
+  - crea `comisiones_pagos/{pagoId}` con el detalle y los medios de pago;
+  - marca cada `comisiones` como `estado: "PAGADA"` con `pagoId`, `pagadoPor`, `pagadoTs`;
+  - actualiza cada `movimientos/{movimientoId}` con
+    `COMISION_PAGADA: true`, `COMISION_PAGO_ID`, `COMISION_PAGO_FECHA`,
+    `COMISION_PAGADO_TS`;
+  - crea `confinanzas/COM-{pagoId}` como `EGRESO`, `origen: "COMISION"`,
+    `rubro: "COMISIONES"`, `monto` negativo, `fecha` `YYYY-MM-DD`.
+- `controlfinanzas` muestra el badge `COMISIÓN` y bloquea edición/borrado de esos
+  asientos automáticos.
+
+### Mi Caja (`micaja.html`)
+
+- Solo lectura; requiere un token válido, sin permisos extra.
+- Identifica al chofer por `tokens.usuario` → `usuarios/{id}` y consulta `movimientos`
+  por `USUARIO` con alias (`nombre_mostrar`, `nombre_completo`, id), en minúsculas,
+  mayúsculas y sin acentos. Además consulta por `USUARIO_ID` para las ventas nuevas.
+  Filtra los que ya tienen `ARQUEO_ID`.
+- Muestra por movimiento: cliente, cantidades 10/15/45, total, efectivo,
+  transferencia, gasto declarado y saldo pendiente.
+- **Efectivo a rendir** = suma de `E$` menos suma de `GASTO_TOTAL` de los movimientos
+  sin `ARQUEO_ID`. Las transferencias se muestran aparte porque no forman parte de la
+  rendición de efectivo.
+- Los movimientos viejos sin `garrafas` usan los contadores `VRP/VC/VS/VU` como
+  fallback. Si un movimiento viejo no tiene `E$`/`T$`, se usa `TOTAL` como efectivo
+  (igual que `arqueo.html`). Los gastos viejos sin `GASTO_TOTAL` usan `abs(TOTAL)`.
+
 ## Conciliación arqueos ↔ finanzas
 
 `controlfinanzas.html` lee `confinanzas` y `arqueos` en paralelo. Si la lectura de
@@ -255,8 +357,11 @@ a finanzas.
 Las páginas nuevas leen y escriben directo desde el navegador. Hay que asegurar reglas para:
 
 - `tokens/{k}`: lectura permitida solo para validar la sesión (o vía API).
+- `configuracion/parametros`: lectura/escritura solo para usuarios con permiso `PRECIOS`; el panel de comisiones actualiza únicamente `comisiones_10/15/45` y `precios.html` solo precios y `recargo_flotante`.
 - `movimientos`: lectura para usuarios autenticados; update limitado a `ARQUEO_ID`, `ARQUEO_FECHA`, `ARQUEO_TS` desde el módulo de arqueo.
 - `arqueos`: lectura para usuarios con permiso `FINANZAS` o `CONFINANZAS`; escritura solo desde arqueo.
+- `comisiones`: lectura y update solo para `FINANZAS` / `CONFINANZAS`; `create` lo hace `app.js` al vender (usuario con `FORMULARIO`). El chofer no necesita leerla para Mi Caja.
+- `comisiones_pagos`: lectura/escritura solo para `FINANZAS` / `CONFINANZAS`.
 - `confinanzas`, `alarmas`: escritura solo para usuarios con permiso `FINANZAS` / `CONFINANZAS`.
 - `seguridad/pin`, `historialPin`, `auditoria`: las operaciones sensibles se hacen en transacción; las reglas deben impedir que un usuario sin permiso rote el PIN.
 - Evitar reglas `allow read, write: if true`.
@@ -395,11 +500,14 @@ ni rentabilidad diaria; quedan para una etapa posterior.
 
 - `arqueo.html`: permiso `FINANZAS`.
 - `controlfinanzas.html`: permiso `CONFINANZAS`.
+- `controlcomisiones.html`: `FINANZAS` o `CONFINANZAS`.
 - `controlremitos.html` y `controltransferencias.html`: `FINANZAS` o `CONFINANZAS`.
+- `parametroscomisiones.html`: permiso `PRECIOS`; se abre desde `precios.html`.
+- `micaja.html`: solo token válido; cada chofer ve únicamente sus movimientos.
 - `administrativo.html` valida `tokens/{k}` y luego `usuarios/{usuario}`; muestra
-  Arqueo solo con `FINANZAS` y Remitos/Transferencias con cualquiera de los dos.
-  El enlace a Comisiones se quitó porque el módulo no existe.
-- `inicio.html` muestra el tile Administrativo con `FINANZAS` o `CONFINANZAS`.
-- Los tiles de `micaja.html`, `tablero.html` e `index_recepcion.html` se quitaron de
-  `inicio.html` porque esas páginas todavía no existen en VMGAS2. Se vuelven a agregar
-  cuando se migren.
+  Arqueo solo con `FINANZAS` y Comisiones/Remitos/Transferencias con cualquiera de los
+  dos.
+- `inicio.html` muestra el tile Administrativo con `FINANZAS` o `CONFINANZAS`, y el
+  tile Mi Caja con `FORMULARIO`.
+- Los tiles de `tablero.html` e `index_recepcion.html` siguen fuera de `inicio.html`
+  porque esas páginas todavía no existen en VMGAS2.

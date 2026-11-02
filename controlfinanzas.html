@@ -180,6 +180,8 @@
   body.light-mode .badge-transferencia { color: #0f766e; background: #ccfbf1; border-color: #5eead4; }
   .badge-compra { color: #7c3aed; background: rgba(124,58,237,.14); border-color: rgba(124,58,237,.4); }
   body.light-mode .badge-compra { color: #6d28d9; background: #ede9fe; border-color: #c4b5fd; }
+  .badge-comision { color: #1d4ed8; background: rgba(96,165,250,.14); border-color: rgba(96,165,250,.4); }
+  body.light-mode .badge-comision { color: #1e40af; background: #dbeafe; border-color: #93c5fd; }
   .badge-link { cursor: pointer; font-family: inherit; }
   .badge-link:hover { filter: brightness(1.2); }
   .hidden { display: none !important; }
@@ -835,8 +837,12 @@ function esDeCompra(raw) {
     return String((raw && (raw.origen ?? raw.ORIGEN)) || '').trim().toUpperCase() === 'COMPRA';
 }
 
+function esDeComision(raw) {
+    return String((raw && (raw.origen ?? raw.ORIGEN)) || '').trim().toUpperCase() === 'COMISION';
+}
+
 function esAutomatico(raw) {
-    return esDeImpuesto(raw) || esDeTransferencia(raw) || esDeCompra(raw);
+    return esDeImpuesto(raw) || esDeTransferencia(raw) || esDeCompra(raw) || esDeComision(raw);
 }
 
 function avisoAutomatico(raw) {
@@ -845,6 +851,9 @@ function avisoAutomatico(raw) {
     }
     if (esDeCompra(raw)) {
         return '⛔ Los asientos de compras se administran desde Control de Remitos y no se pueden editar ni eliminar acá.';
+    }
+    if (esDeComision(raw)) {
+        return '⛔ Los pagos de comisiones se administran desde Control de Comisiones y no se pueden editar ni eliminar acá.';
     }
     return '⛔ Los registros de impuesto son automáticos y no se pueden editar ni eliminar.';
 }
@@ -1238,6 +1247,8 @@ function renderTree(tree) {
                     badge = `<span class="badge badge-transferencia" title="Acreditado desde Control de Transferencias${r.referencia ? ` · ${escAttr(r.referencia)}` : ''}">TRANSFERENCIA</span>`;
                 } else if (r.origen === 'COMPRA') {
                     badge = `<span class="badge badge-compra" title="Registrado desde Control de Remitos${r.referencia ? ` · ${escAttr(r.referencia)}` : ''}">COMPRA</span>`;
+                } else if (r.origen === 'COMISION') {
+                    badge = `<span class="badge badge-comision" title="Pagado desde Control de Comisiones${r.referencia ? ` · ${escAttr(r.referencia)}` : ''}">COMISIÓN</span>`;
                 }
 
                 html += `<tr class="${rowClass}" data-id="${escAttr(r.id)}">
