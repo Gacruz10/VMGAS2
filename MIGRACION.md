@@ -24,7 +24,7 @@ Documento de trabajo para mantener consistentes los módulos que se van migrando
 | `controlremitos.html` | **Migrado (conciliación de compras v1)** |
 | `flota.html` | Pendiente |
 | `tablero.html` | Pendiente |
-| `micaja.html` | **Migrado (solo lectura del chofer)** |
+| `micaja.html` | **Migrado (caja y transferencias, solo lectura)** |
 | `index_recepcion.html` | Pendiente |
 
 ## Convenciones
@@ -311,12 +311,17 @@ guardando el `nombre_mostrar` en minúsculas; `choferId` guarda el id del token
 - Identifica al chofer por `tokens.usuario` → `usuarios/{id}` y consulta `movimientos`
   por `USUARIO` con alias (`nombre_mostrar`, `nombre_completo`, id), en minúsculas,
   mayúsculas y sin acentos. Además consulta por `USUARIO_ID` para las ventas nuevas.
-  Filtra los que ya tienen `ARQUEO_ID`.
-- Muestra por movimiento: cliente, cantidades 10/15/45, total, efectivo,
-  transferencia, gasto declarado y saldo pendiente.
-- **Efectivo a rendir** = suma de `E$` menos suma de `GASTO_TOTAL` de los movimientos
-  sin `ARQUEO_ID`. Las transferencias se muestran aparte porque no forman parte de la
-  rendición de efectivo.
+- La caja usa solo movimientos sin `ARQUEO_ID` (o con `ARQUEO_ID = "S/D"`): el
+  **efectivo a rendir** es la suma de `E$` menos `GASTO_TOTAL`.
+- Los movimientos se muestran dentro de una etiqueta `<details>` colapsada por defecto.
+  Cada venta es una línea compacta con fecha, hora, cliente, cantidades 10/15/45,
+  total, transferencia y efectivo; los gastos y saldos se agregan como chips.
+- Debajo se lista **Transferencias** leyendo todos los movimientos con `T$ > 0` y
+  clasificándolos solo por `ARQUEO_ID`:
+  - verde (`SIN ARQUEAR`): todavía forma parte de la caja;
+  - rojo (`ARQUEADA`): ya fue rendida en un arqueo.
+  Las pendientes se muestran siempre; las arqueadas, solo de los últimos 30 días.
+  No se usa `TRF_ESTADO` ni la verificación bancaria para este listado.
 - Los movimientos viejos sin `garrafas` usan los contadores `VRP/VC/VS/VU` como
   fallback. Si un movimiento viejo no tiene `E$`/`T$`, se usa `TOTAL` como efectivo
   (igual que `arqueo.html`). Los gastos viejos sin `GASTO_TOTAL` usan `abs(TOTAL)`.

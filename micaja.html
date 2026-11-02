@@ -109,70 +109,141 @@
     border-radius: 9px; padding: 8px 10px; margin-bottom: 13px;
     color: var(--muted); font-size: 10.5px; line-height: 1.55;
   }
-  .toolbar {
-    display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    margin: 16px 0 9px;
-  }
-  .toolbar h2 { margin: 0; font-size: 12px; letter-spacing: .5px; text-transform: uppercase; }
-  .toolbar .count { color: var(--muted); font-size: 10px; font-weight: 700; }
+  .tx-head .count { color: var(--muted); font-size: 10px; font-weight: 700; white-space: nowrap; }
 
-  .date-group {
+  .section-block {
     background: var(--panel); border: 1px solid var(--border); border-radius: 11px;
-    margin-bottom: 10px; overflow: hidden;
+    margin-bottom: 12px; overflow: hidden;
   }
-  .date-group > summary {
-    list-style: none; cursor: pointer; padding: 9px 12px;
-    display: flex; justify-content: space-between; align-items: center;
-    background: var(--panel-strong); border-bottom: 1px solid var(--border);
-    font-size: 11px; font-weight: 800; letter-spacing: .3px;
+  .section-block > summary {
+    list-style: none; cursor: pointer; padding: 10px 12px;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    background: var(--panel-strong);
+    font-size: 11px; font-weight: 800; letter-spacing: .3px; text-transform: uppercase;
   }
-  .date-group > summary::-webkit-details-marker { display: none; }
-  .date-group > summary .meta { color: var(--muted); font-size: 10px; font-weight: 600; }
-  .date-body { padding: 9px; display: grid; gap: 8px; }
+  .section-block > summary::-webkit-details-marker { display: none; }
+  .section-block > summary .sum-meta {
+    color: var(--muted); font-size: 9.5px; font-weight: 600;
+    text-transform: none; letter-spacing: 0;
+  }
+  .section-block > summary .chev {
+    margin-left: auto; color: var(--muted); font-size: 12px; line-height: 1;
+    transition: transform .2s;
+  }
+  .section-block[open] > summary { border-bottom: 1px solid var(--border); }
+  .section-block[open] > summary .chev { transform: rotate(180deg); }
+  .movs-body { padding: 0 6px 6px; }
 
-  .mov-card {
-    border: 1px solid var(--border); border-radius: 10px;
-    background: rgba(0,0,0,0.12); overflow: hidden;
+  .date-head {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+    padding: 9px 4px 5px; color: var(--muted);
+    font-size: 9px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase;
   }
-  body.light-mode .mov-card { background: #fff; }
-  .mov-head { display: flex; align-items: flex-start; gap: 9px; padding: 10px 11px 7px; }
-  .mov-who { flex: 1; min-width: 0; }
-  .mov-client { font-size: 12.5px; font-weight: 800; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; }
-  .mov-meta { color: var(--muted); font-size: 9.5px; margin-top: 3px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-  .mov-total { text-align: right; white-space: nowrap; }
-  .mov-total .lbl { display: block; color: var(--muted); font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
-  .mov-total b { font-size: 13px; color: var(--text); }
-  .badge {
-    display: inline-block; padding: 2px 6px; border-radius: 999px;
-    font-size: 8.5px; font-weight: 800; letter-spacing: .3px;
-    background: var(--accent-soft); color: var(--accent);
-  }
-  .badge.gasto { background: var(--danger-soft); color: var(--danger); }
-  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .date-head b { color: var(--text); font-size: 10px; }
 
-  .qty-row {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
-    padding: 0 11px 8px;
+  .mov-line {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "id money"
+      "qty money";
+    gap: 4px 10px;
+    align-items: center;
+    padding: 7px 8px;
+    border-top: 1px solid var(--border);
   }
-  .qty {
-    background: var(--panel-strong); border: 1px solid var(--border); border-radius: 7px;
-    padding: 5px 7px; display: flex; justify-content: space-between; align-items: center;
+  .ml-id { grid-area: id; display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+  .ml-date { color: var(--muted); font-size: 9px; font-weight: 700; white-space: nowrap; }
+  .ml-client {
+    min-width: 0; font-size: 12px; font-weight: 700; line-height: 1.2;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .qty span { color: var(--muted); font-size: 9px; font-weight: 700; text-transform: uppercase; }
-  .qty b { font-size: 12px; }
+  .ml-qty { grid-area: qty; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+  .qchip {
+    display: inline-flex; align-items: baseline; gap: 3px;
+    padding: 1px 5px; border: 1px solid var(--border); border-radius: 5px;
+    background: var(--panel-strong); color: var(--muted);
+    font-size: 8.5px; font-weight: 700; white-space: nowrap;
+  }
+  .qchip b { color: var(--text); font-size: 10px; }
+  .qchip.danger { color: var(--danger); border-color: var(--danger-soft); }
+  .qchip.warn { color: var(--warn); border-color: var(--warn-soft); }
+  .ml-money {
+    grid-area: money; display: flex; flex-direction: column; align-items: flex-end;
+    gap: 1px; white-space: nowrap;
+  }
+  .mm { display: flex; align-items: baseline; gap: 4px; }
+  .mm i {
+    color: var(--muted); font-style: normal; font-size: 7.5px;
+    font-weight: 800; letter-spacing: .3px; text-transform: uppercase;
+  }
+  .mm b { font-size: 10.5px; }
+  .mm.total b { font-size: 12px; color: var(--text); }
+  .mm.ef b { color: var(--ok); }
+  .mm.tr b { color: var(--warn); }
 
-  .money-row {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
-    border-top: 1px dashed var(--border); padding: 8px 11px 10px;
+  .tx-block { margin-bottom: 14px; }
+  .tx-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 8px; margin: 0 0 8px;
   }
-  .money-row span { display: block; color: var(--muted); font-size: 8.5px; text-transform: uppercase; letter-spacing: .4px; font-weight: 700; }
-  .money-row b { display: block; font-size: 11.5px; margin-top: 1px; }
-  .money-row .efe b { color: var(--ok); }
-  .money-row .trans b { color: var(--warn); }
-  .mov-foot { padding: 0 11px 9px; display: grid; gap: 4px; }
-  .foot-line { display: flex; justify-content: space-between; gap: 8px; font-size: 10px; color: var(--muted); }
-  .foot-line b.danger { color: var(--danger); }
-  .foot-line b.warn { color: var(--warn); }
+  .tx-head h2 { margin: 0; font-size: 12px; letter-spacing: .5px; text-transform: uppercase; }
+  .tx-summary { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 7px; }
+  .tx-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 8px; border: 1px solid var(--border); border-radius: 999px;
+    font-size: 9.5px; font-weight: 700;
+  }
+  .tx-pill .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .tx-pill.pending { color: var(--ok); background: var(--ok-soft); border-color: rgba(45,212,191,.3); }
+  .tx-pill.pending .dot { background: var(--ok); }
+  .tx-pill.done { color: var(--danger); background: var(--danger-soft); border-color: rgba(255,71,87,.3); }
+  .tx-pill.done .dot { background: var(--danger); }
+  .tx-note {
+    margin: 0 0 8px; color: var(--muted); font-size: 9.5px; line-height: 1.5;
+    display: flex; flex-wrap: wrap; gap: 2px 12px;
+  }
+  .tx-note b.ok { color: var(--ok); }
+  .tx-note b.danger { color: var(--danger); }
+  .tx-list { display: grid; gap: 6px; }
+  .tx-row {
+    display: flex; align-items: center; gap: 9px;
+    padding: 8px 10px; border: 1px solid var(--border); border-left: 3px solid var(--ok);
+    border-radius: 9px; background: var(--panel);
+  }
+  .tx-row.done { border-left-color: var(--danger); }
+  .tx-dot {
+    width: 8px; height: 8px; flex-shrink: 0; border-radius: 50%;
+    background: var(--ok); box-shadow: 0 0 7px rgba(45,212,191,.55);
+  }
+  .tx-row.done .tx-dot { background: var(--danger); box-shadow: 0 0 7px rgba(255,71,87,.55); }
+  .tx-info { flex: 1; min-width: 0; }
+  .tx-client {
+    font-size: 11.5px; font-weight: 700; line-height: 1.25;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tx-meta {
+    display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+    margin-top: 2px; color: var(--muted); font-size: 9px; font-weight: 600;
+  }
+  .tx-state {
+    padding: 1px 5px; border-radius: 4px;
+    font-size: 7.5px; font-weight: 800; letter-spacing: .3px; text-transform: uppercase;
+  }
+  .tx-state.pending { color: var(--ok); background: var(--ok-soft); }
+  .tx-state.done { color: var(--danger); background: var(--danger-soft); }
+  .tx-amount { font-size: 12.5px; font-weight: 800; color: var(--accent); white-space: nowrap; }
+
+  @media (min-width: 760px) {
+    .mov-line {
+      grid-template-columns: minmax(180px, 1.4fr) auto auto;
+      grid-template-areas: "id qty money";
+      padding: 7px 10px;
+    }
+    .ml-money { flex-direction: row; align-items: center; gap: 12px; }
+    .mm { flex-direction: column; align-items: flex-end; gap: 0; }
+    .mm.total b { font-size: 12.5px; }
+  }
 
   .empty {
     text-align: center; padding: 44px 18px; color: var(--muted);
@@ -208,9 +279,30 @@
   @media (max-width: 640px) {
     .dashboard { grid-template-columns: repeat(2, 1fr); }
     .hero-value { font-size: 1.85rem; }
-    .money-row { grid-template-columns: repeat(2, 1fr); }
-    .money-row .total { grid-column: 1 / -1; }
+    .hero-sub { font-size: 11.5px; }
+    .hero-extra { display: none; }
     .page-title { font-size: .82rem; }
+    .section-block > summary { padding: 9px 10px; font-size: 10px; }
+    .date-head { font-size: 10px; }
+    .date-head b { font-size: 11px; }
+    .ml-date { font-size: 9.5px; }
+    .ml-client {
+      font-size: 12.5px; white-space: normal;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    }
+    .qchip { font-size: 9px; padding: 1px 6px; }
+    .qchip b { font-size: 11px; }
+    .mm i { font-size: 8.5px; }
+    .mm b { font-size: 11.5px; }
+    .mm.total b { font-size: 13px; }
+    .tx-note { font-size: 10px; }
+    .tx-client {
+      font-size: 13px; white-space: normal;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    }
+    .tx-meta { font-size: 10px; }
+    .tx-state { font-size: 9px; padding: 2px 6px; }
+    .tx-amount { font-size: 14px; }
   }
 </style>
 </head>
@@ -243,12 +335,27 @@
     <span><b>Solo lectura.</b> Acá ves lo que tenés pendiente de rendir. El arqueo y las correcciones los hace administración.</span>
   </div>
 
-  <div class="toolbar">
-    <h2>Movimientos sin arqueo</h2>
-    <span class="count" id="lblCantidad">—</span>
-  </div>
+  <details class="section-block" id="bloqueMovimientos">
+    <summary>
+      <span>Movimientos sin arqueo</span>
+      <span class="sum-meta" id="lblCantidad">—</span>
+      <span class="chev">▾</span>
+    </summary>
+    <div id="list" class="movs-body"></div>
+  </details>
 
-  <div id="list"></div>
+  <section class="tx-block" aria-label="Transferencias">
+    <div class="tx-head">
+      <h2>Transferencias</h2>
+      <span class="count" id="lblTransf">—</span>
+    </div>
+    <div class="tx-summary" id="txResumen"></div>
+    <p class="tx-note">
+      <span><b class="ok">● Sin arquear</b> todavía está en tu caja.</span>
+      <span><b class="danger">● Arqueada</b> ya la rendiste.</span>
+    </p>
+    <div class="tx-list" id="txList"></div>
+  </section>
 </main>
 
 <div class="toast-container" id="toast-container"></div>
@@ -438,6 +545,8 @@ function resetTimer() {
 resetTimer();
 
 let rows = [];
+let allRows = [];
+let txRows = [];
 let nombreMostrar = "";
 
 if (!k) {
@@ -519,7 +628,6 @@ async function cargarMovimientos(userData, tokenData, userId) {
     const snap = await getDocs(query(collection(db, "movimientos"), where("USUARIO", "in", chunk)));
     snap.forEach((d) => {
       const m = d.data();
-      if (String(m.ARQUEO_ID || "").trim()) return; // ya rendido
       docs.set(d.id, { id: d.id, ...m });
     });
   }
@@ -528,12 +636,17 @@ async function cargarMovimientos(userData, tokenData, userId) {
   const snapId = await getDocs(query(collection(db, "movimientos"), where("USUARIO_ID", "==", userId)));
   snapId.forEach((d) => {
     const m = d.data();
-    if (String(m.ARQUEO_ID || "").trim()) return;
     if (!docs.has(d.id)) docs.set(d.id, { id: d.id, ...m });
   });
 
-  rows = [...docs.values()].map(normalizarMovimiento);
-  rows.sort((a, b) => (b.ts - a.ts) || String(b.hora).localeCompare(String(a.hora)));
+  allRows = [...docs.values()].map(normalizarMovimiento);
+  allRows.sort((a, b) => (b.ts - a.ts) || String(b.hora).localeCompare(String(a.hora)));
+
+  // La caja del chofer solo cuenta lo que todavía no fue arqueado.
+  rows = allRows.filter((r) => !r.arqueado);
+
+  // Las transferencias se muestran con su estado de arqueo, por eso se leen todas.
+  txRows = allRows.filter((r) => r.transferencia > 0);
 
   render();
 }
@@ -596,10 +709,14 @@ function normalizarMovimiento(m) {
     efectivo > 0 || transferencia > 0 || totalVenta > 0
   );
 
+  const arqueoId = String(m.ARQUEO_ID || "").trim();
+  const arqueado = !!arqueoId && arqueoId.toUpperCase() !== "S/D";
+
   return {
     id: m.id || m.N || "",
     fechaISO,
     fecha: fechaVisual(fechaISO),
+    fechaCorta: fechaVisual(fechaISO).slice(0, 5),
     hora: String(m.HORA || "").trim(),
     ts: tsDeMovimiento(m, fechaISO),
     cliente: String(m.C || m.clienteNombre || (tipoNorm === "GASTO" ? "Gasto" : "Sin cliente")).trim(),
@@ -613,6 +730,9 @@ function normalizarMovimiento(m) {
     gasto,
     cobrado: round2(efectivo + transferencia),
     saldo: round2(Math.max(0, totalVenta - (efectivo + transferencia))),
+    arqueoId,
+    arqueado,
+    trfEstado: String(m.TRF_ESTADO || "").trim().toUpperCase(),
     esVenta
   };
 }
@@ -627,12 +747,14 @@ function render() {
 
   $("kpiEfectivo").textContent = fmtSigned(aRendir);
   $("kpiEfectivo").style.color = aRendir < 0 ? "var(--danger)" : "";
-  $("kpiDetalle").innerHTML = `Efectivo cobrado <b>$ ${fmtMoney(efectivo)}</b> − gastos <b>$ ${fmtMoney(gastos)}</b> · Transferencias <b>$ ${fmtMoney(transferencia)}</b>`;
+  $("kpiDetalle").innerHTML = `Efectivo cobrado <b>$ ${fmtMoney(efectivo)}</b> − gastos <b>$ ${fmtMoney(gastos)}</b><span class="hero-extra"> · Transferencias <b>$ ${fmtMoney(transferencia)}</b></span>`;
   $("kpiVentas").textContent = String(ventas.length);
   $("kpiTotal").textContent = `$ ${fmtMoney(totalVendido)}`;
   $("kpiTransf").textContent = `$ ${fmtMoney(transferencia)}`;
   $("kpiGastos").textContent = `$ ${fmtMoney(gastos)}`;
-  $("lblCantidad").textContent = rows.length ? `${rows.length} movimiento${rows.length === 1 ? "" : "s"}` : "Sin pendientes";
+  $("lblCantidad").textContent = rows.length
+    ? `${rows.length} mov · $ ${fmtMoney(totalVendido)}`
+    : "Sin pendientes";
 
   const cont = $("list");
   if (!rows.length) {
@@ -641,6 +763,7 @@ function render() {
       No tenés movimientos pendientes de arqueo.<br>
       Todo lo que vendiste ya fue rendido.
     </div>`;
+    renderTransferencias();
     return;
   }
 
@@ -655,70 +778,94 @@ function render() {
   [...groups.entries()]
     .sort((a, b) => b[0].localeCompare(a[0]))
     .forEach(([fechaISO, items]) => {
-      const efectivoDia = round2(items.reduce((a, r) => a + r.efectivo, 0));
-      const gastosDia = round2(items.reduce((a, r) => a + r.gasto, 0));
       const totalDia = round2(items.reduce((a, r) => a + r.totalVenta, 0));
-      const netoDia = round2(efectivoDia - gastosDia);
 
-      html += `<details class="date-group" open>
-        <summary>
-          <span>📅 ${esc(fechaVisual(fechaISO))} · ${items.length} mov.</span>
-          <span class="meta">Total $ ${fmtMoney(totalDia)} · Efectivo ${fmtSigned(netoDia)}</span>
-        </summary>
-        <div class="date-body">`;
+      html += `<div class="date-head">
+        <span>📅 ${esc(fechaVisual(fechaISO))}</span>
+        <span>${items.length} mov · <b>$ ${fmtMoney(totalDia)}</b></span>
+      </div>`;
 
       items.forEach((r) => {
-        const badgeExtra = r.tipoNorm === "GASTO" ? "gasto" : (r.saldo > 0.01 ? "" : "ok");
-        const badgeTxt = r.tipoNorm === "GASTO" ? "GASTO" : r.saldo > 0.01 ? "CON SALDO" : "COBRADA";
-
-        html += `<div class="mov-card">
-          <div class="mov-head">
-            <div class="mov-who">
-              <div class="mov-client">${esc(r.cliente)}</div>
-              <div class="mov-meta">
-                <span>${esc(r.hora || "—")}</span>
-                <span class="badge ${badgeExtra}">${esc(badgeTxt)}</span>
-                <span>${esc(r.tipo)}</span>
-              </div>
-            </div>
-            <div class="mov-total">
-              <span class="lbl">Total</span>
-              <b>$ ${fmtMoney(r.totalVenta)}</b>
-            </div>
-          </div>`;
-
-        if (r.cantTotal > 0) {
-          html += `<div class="qty-row">
-            <div class="qty"><span>10 kg</span><b>${r.cant["10"]}</b></div>
-            <div class="qty"><span>15 kg</span><b>${r.cant["15"]}</b></div>
-            <div class="qty"><span>45 kg</span><b>${r.cant["45"]}</b></div>
-          </div>`;
+        const extras = [];
+        if (r.gasto > 0) {
+          extras.push(`<span class="qchip danger">Gasto $ ${fmtMoney(r.gasto)}</span>`);
+        }
+        if (r.saldo > 0.01) {
+          extras.push(`<span class="qchip warn">Saldo $ ${fmtMoney(r.saldo)}</span>`);
         }
 
-        html += `<div class="money-row">
-          <div class="efe"><span>Efectivo</span><b>$ ${fmtMoney(r.efectivo)}</b></div>
-          <div class="trans"><span>Transferencia</span><b>$ ${fmtMoney(r.transferencia)}</b></div>
-          <div class="total"><span>Total cobrado</span><b>$ ${fmtMoney(r.cobrado)}</b></div>
+        html += `<div class="mov-line" title="${esc(r.cliente)}">
+          <div class="ml-id">
+            <span class="ml-date">${esc(r.fechaCorta || "—")}${r.hora ? ` ${esc(r.hora)}` : ""}</span>
+            <span class="ml-client">${esc(r.cliente)}</span>
+          </div>
+          <div class="ml-qty">
+            <span class="qchip">10kg <b>${r.cant["10"]}</b></span>
+            <span class="qchip">15kg <b>${r.cant["15"]}</b></span>
+            <span class="qchip">45kg <b>${r.cant["45"]}</b></span>
+            ${extras.join("")}
+          </div>
+          <div class="ml-money">
+            <span class="mm total"><i>Total</i><b>$ ${fmtMoney(r.totalVenta)}</b></span>
+            <span class="mm tr"><i>Transf</i><b>$ ${fmtMoney(r.transferencia)}</b></span>
+            <span class="mm ef"><i>Efect</i><b>$ ${fmtMoney(r.efectivo)}</b></span>
+          </div>
         </div>`;
-
-        if (r.gasto > 0 || r.saldo > 0.01) {
-          html += `<div class="mov-foot">`;
-          if (r.gasto > 0) {
-            html += `<div class="foot-line"><span>Gasto declarado</span><b class="danger">− $ ${fmtMoney(r.gasto)}</b></div>`;
-          }
-          if (r.saldo > 0.01) {
-            html += `<div class="foot-line"><span>Saldo pendiente del cliente</span><b class="warn">$ ${fmtMoney(r.saldo)}</b></div>`;
-          }
-          html += `</div>`;
-        }
-
-        html += `</div>`;
       });
-
-      html += `</div></details>`;
     });
 
   cont.innerHTML = html;
+  renderTransferencias();
+}
+
+function renderTransferencias() {
+  // Las transferencias sin arquear se muestran siempre; las arqueadas, los últimos 30 días.
+  const hace30 = Date.now() - (30 * 24 * 60 * 60 * 1000);
+  const pendientes = txRows
+    .filter((r) => !r.arqueado)
+    .sort((a, b) => (b.ts - a.ts) || String(b.hora).localeCompare(String(a.hora)));
+  const arqueadas = txRows
+    .filter((r) => r.arqueado && (!r.ts || r.ts >= hace30))
+    .sort((a, b) => (b.ts - a.ts) || String(b.hora).localeCompare(String(a.hora)));
+
+  const totalPend = round2(pendientes.reduce((a, r) => a + r.transferencia, 0));
+  const totalArq = round2(arqueadas.reduce((a, r) => a + r.transferencia, 0));
+
+  $("lblTransf").textContent = pendientes.length
+    ? `${pendientes.length} pendiente${pendientes.length === 1 ? "" : "s"}`
+    : "Sin pendientes";
+
+  $("txResumen").innerHTML = `
+    <span class="tx-pill pending"><span class="dot"></span>Sin arquear ${pendientes.length} · $ ${fmtMoney(totalPend)}</span>
+    <span class="tx-pill done"><span class="dot"></span>Arqueadas ${arqueadas.length} · $ ${fmtMoney(totalArq)}</span>`;
+
+  const cont = $("txList");
+  const items = [...pendientes, ...arqueadas];
+
+  if (!items.length) {
+    cont.innerHTML = `<div class="empty">
+      <span class="big">✅</span>
+      No tenés transferencias pendientes.
+    </div>`;
+    return;
+  }
+
+  cont.innerHTML = items.map((r) => {
+    const estado = r.arqueado ? "ARQUEADA" : "SIN ARQUEAR";
+    const estadoClase = r.arqueado ? "done" : "pending";
+    return `<div class="tx-row ${r.arqueado ? "done" : ""}" title="${esc(r.cliente)}">
+      <span class="tx-dot"></span>
+      <div class="tx-info">
+        <div class="tx-client">${esc(r.cliente)}</div>
+        <div class="tx-meta">
+          <span>${esc(r.fecha || "—")}</span>
+          ${r.hora ? `<span>${esc(r.hora)}</span>` : ""}
+          <span class="tx-state ${estadoClase}">${estado}</span>
+        </div>
+      </div>
+      <div class="tx-amount">$ ${fmtMoney(r.transferencia)}</div>
+    </div>`;
+  }).join("");
 }
 
 // ---------------- UI base ----------------
