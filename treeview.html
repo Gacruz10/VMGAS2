@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>VM Gas · Visor Pro</title>
 <style>
-:root{--bg:#eef1f6;--card:#ffffff;--head:#ffffff;--line:#dfe4ee;--text:#1c2638;--dim:#6b7689;--blue:#1e6fd9;--green:#0f9d58;--orange:#e8820c;--red:#e5484d;--purple:#7c3aed;--purpleBg:#f3ecff;--shadow:0 1px 2px rgba(16,24,40,.06),0 2px 8px rgba(16,24,40,.05)}
-body.dark{--bg:#0e1420;--card:#18213a;--head:#141c30;--line:#2a3555;--text:#e6ebf5;--dim:#8f9bb8;--blue:#4c9bff;--green:#34d399;--orange:#fb923c;--red:#f87171;--purple:#a78bfa;--purpleBg:#231a3d;--shadow:none}
+:root{--bg:#eef1f6;--card:#ffffff;--head:#ffffff;--line:#dfe4ee;--text:#1c2638;--dim:#6b7689;--blue:#1e6fd9;--green:#0f9d58;--orange:#e8820c;--red:#e5484d;--purple:#7c3aed;--purpleBg:#f3ecff;--turnoBd:#e5a9ac;--turnoBg:#fbf1f0;--shadow:0 1px 2px rgba(16,24,40,.06),0 2px 8px rgba(16,24,40,.05)}
+body.dark{--bg:#0e1420;--card:#18213a;--head:#141c30;--line:#2a3555;--text:#e6ebf5;--dim:#8f9bb8;--blue:#4c9bff;--green:#34d399;--orange:#fb923c;--red:#f87171;--purple:#a78bfa;--purpleBg:#231a3d;--turnoBd:#7c3038;--turnoBg:#201419;--shadow:none}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:14px;-webkit-text-size-adjust:100%}
 .top{position:sticky;top:0;z-index:20;background:var(--head);box-shadow:var(--shadow);padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top,0px))}
@@ -34,6 +34,10 @@ details[open]>summary::before{transform:rotate(90deg)}
 .dayhead{background:var(--head);border-left:4px solid var(--blue)}
 .turnhead{border-left:4px solid var(--red)}
 .turnhead.closed{border-left-color:var(--dim)}
+/* Bloque TURNO: marco rojizo para diferenciarlo del bloque DÍA (azul) */
+.card.turno{border-color:var(--turnoBd);background:var(--turnoBg)}
+.card.turno>.turnhead{background:var(--turnoBg)}
+.card.turno>.stock-grid>.strip{background:var(--turnoBg)}
 .purple{background:var(--purpleBg);border:1px solid var(--purple);border-radius:10px;margin:10px;overflow:hidden}
 .purple>summary{color:var(--purple);font-weight:800}
 .trip{border:1px solid var(--line);border-radius:10px;margin:8px;background:var(--card)}
@@ -244,7 +248,7 @@ td.pend{background:rgba(232,130,12,.18)!important;font-weight:700}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getFirestore, doc, getDoc, getDocs, collection, query, where, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, getDocs, collection, query, where, writeBatch, serverTimestamp, deleteField } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
@@ -323,7 +327,7 @@ const COL_KEYS = COLS.map(c => c.k);
 const colByKey = k => COLS.find(c => c.k === k);
 const visibleCols = () => S.cols.map(colByKey).filter(Boolean);
 
-// Campos editables de una operación
+// Campos editables de una operación (k = campo en movimientos)
 const EDITABLE = [
   { k: 'USUARIO', l: 'Usuario', t: 'txt' },
   { k: 'C', l: 'Cliente', t: 'txt' },
@@ -338,7 +342,19 @@ const EDITABLE = [
   { k: 'AV45', l: 'Vacíos 45', t: 'int' },
   { k: 'TOTAL', l: 'Total $', t: 'int' },
   { k: 'E$', l: 'Efectivo $', t: 'int' },
-  { k: 'T$', l: 'Transferencia $', t: 'int' }
+  { k: 'T$', l: 'Transferencia $', t: 'int' },
+  { k: 'ID_CLIENTE', l: 'ID cliente', t: 'txt' },
+  { k: 'idViaje', l: 'ID viaje (vacío = sin camión)', t: 'txt' },
+  { k: 'idTurno', l: 'ID turno', t: 'txt' },
+  { k: 'GASTO_TOTAL', l: 'Gasto $', t: 'int' },
+  { k: 'COMISION_TOTAL', l: 'Comisión $', t: 'int' },
+  { k: 'clienteZona', l: 'Zona', t: 'txt' },
+  { k: 'clienteCategoria', l: 'Categoría', t: 'txt' },
+  { k: 'operacionEnvase', l: 'Operación envase', t: 'txt' },
+  { k: 'esPagoDeuda', l: 'Cobro deuda (S/N)', t: 'bool' },
+  { k: 'esFlotante', l: 'Flotante (S/N)', t: 'bool' },
+  { k: 'ventaDesdePlanta', l: 'Retira en planta (S/N)', t: 'bool' },
+  { k: 'garrafas', l: 'Detalle garrafas', t: 'txt' }
 ];
 
 // ---------- Estado ----------
@@ -505,11 +521,14 @@ async function cargar() {
       };
     }).filter(v => v.ms >= ini && v.ms <= fin);
 
-    // Ventas -> viaje (por ID o por chofer y ventana horaria)
+    // Ventas -> viaje: si el movimiento trae idViaje explícito, se respeta tal cual
+    // (si no existe el viaje en el rango queda "sin camión", SIN deducir por chofer/ventana);
+    // sin id, se asocia por chofer y ventana horaria.
     ventas.forEach(v => {
       let t = null;
-      if (v.idViaje) t = trips.find(x => x.idViaje === v.idViaje) || null;
-      if (!t) {
+      if (v.idViaje) {
+        t = trips.find(x => x.idViaje === v.idViaje) || null;
+      } else {
         trips.forEach(x => {
           if (x.chofer !== v.chofer) return;
           const lim = x.llegMs ? x.llegMs + 60000 : (x.open ? Infinity : x.ms + 12 * 3600000);
@@ -525,14 +544,19 @@ async function cargar() {
       t.turnoId = tn ? tn.id : null;
     });
 
-    // Venta -> turno
+    // Venta -> turno: idTurno explícito tiene prioridad (sin fallback por hora)
     ventas.forEach(v => {
       if (v.viajeId) {
         const tr = trips.find(x => x.idViaje === v.viajeId);
         v.turnoId = tr ? tr.turnoId : null;
         return;
       }
-      const tn = (v.idTurno && turnos.get(v.idTurno)) || turnoEnMs(v.ms);
+      if (v.idTurno) {
+        const tn = turnos.get(v.idTurno);
+        v.turnoId = tn ? tn.id : null;
+        return;
+      }
+      const tn = turnoEnMs(v.ms);
       v.turnoId = tn ? tn.id : null;
     });
 
@@ -781,7 +805,7 @@ function turnoHtml(g, viajes, sueltas) {
   const sueltasHtml = sueltas.length ? sinCamionHtml(sueltas) : '';
   const vacio = !viajes.length && !sueltas.length ? '<div class="muted" style="padding:12px">Sin movimientos</div>' : '';
 
-  return `<details class="card" open>${cab}${stock}${caja}
+  return `<details class="card ${t ? 'turno' : ''}" open>${cab}${stock}${caja}
     <div style="padding-bottom:8px">${choferes}${sueltasHtml}${vacio}</div>
   </details>`;
 }
@@ -862,6 +886,10 @@ function renderPla() {
 }
 
 // ---------- Edición en planilla ----------
+// k = columna de la planilla, f = campo en movimientos
+// Si se edita un vínculo (idViaje/idTurno) también se escribe la llave legacy ALT_VIN.
+const ALT_VIN = { idViaje: 'ID_VIAJE', idTurno: 'ID_TURNO' };
+const CAMPOS_VACIABLES = ['idViaje', 'ID_VIAJE', 'idTurno', 'ID_TURNO']; // '' borra el campo en Firestore
 const EDIT_MAP = {
   usuario: { f: 'USUARIO', t: 'txt', l: 'USUARIO' },
   tipo: { f: 'TIPO', t: 'txt', l: 'TIPO' },
@@ -876,17 +904,33 @@ const EDIT_MAP = {
   V45: { f: 'AV45', t: 'int', l: 'VACÍOS 45' },
   total: { f: 'TOTAL', t: 'int', l: 'TOTAL' },
   efe: { f: 'E$', t: 'int', l: 'EFECTIVO' },
-  tra: { f: 'T$', t: 'int', l: 'TRANSF.' }
+  tra: { f: 'T$', t: 'int', l: 'TRANSF.' },
+  ID_CLIENTE: { f: 'ID_CLIENTE', t: 'txt', l: 'ID CLIENTE' },
+  idTurno: { f: 'idTurno', t: 'txt', l: 'ID TURNO' },
+  idViaje: { f: 'idViaje', t: 'txt', l: 'ID VIAJE' },
+  GASTO_TOTAL: { f: 'GASTO_TOTAL', t: 'int', l: 'GASTO' },
+  COMISION_TOTAL: { f: 'COMISION_TOTAL', t: 'int', l: 'COMISIÓN' },
+  clienteZona: { f: 'clienteZona', t: 'txt', l: 'ZONA' },
+  clienteCategoria: { f: 'clienteCategoria', t: 'txt', l: 'CATEGORÍA' },
+  operacionEnvase: { f: 'operacionEnvase', t: 'txt', l: 'OPERACIÓN ENVASE' },
+  esPagoDeuda: { f: 'esPagoDeuda', t: 'bool', l: 'COBRO DEUDA' },
+  esFlotante: { f: 'esFlotante', t: 'bool', l: 'FLOTANTE' },
+  ventaDesdePlanta: { f: 'ventaDesdePlanta', t: 'bool', l: 'RETIRO EN PLANTA' },
+  garrafas: { f: 'garrafas', t: 'txt', l: 'DETALLE GARRAFAS' }
 };
 
 function setPend(id, k, raw) {
-  const meta = EDIT_MAP[k], v = S.byId.get(id);
+  const meta = EDIT_MAP[k], c = colByKey(k), v = S.byId.get(id);
   const texto = String(raw ?? '').trim();
-  if (meta.t === 'int' && !/^\d*$/.test(texto)) { toast('Ingrese solo números'); return; }
-  const nuevo = meta.t === 'int' ? num(texto) : texto;
-  const original = meta.t === 'int' ? num(v.raw[meta.f]) : String(v.raw[meta.f] ?? '');
+  if (meta.t === 'int' && !/^-?\d*$/.test(texto)) { toast('Ingrese solo números (negativos con -)'); return; }
+  if (meta.t === 'bool' && texto && !/^(S|SI|SÍ|N|NO|1|0)$/i.test(texto)) { toast('S/N o vacío'); return; }
+  const nuevo = meta.t === 'bool' ? /^(S|SI|SÍ|1)$/i.test(texto)
+    : meta.t === 'int' ? num(texto)
+    : texto;
+  const original = valorCelda(c, v);
+  const cambio = meta.t === 'bool' ? !!original !== nuevo : nuevo !== original;
   const p = { ...(S.pend.get(id) || {}) };
-  if (nuevo === original) delete p[k]; else p[k] = nuevo;
+  if (!cambio) delete p[k]; else p[k] = nuevo;
   if (Object.keys(p).length) S.pend.set(id, p); else S.pend.delete(id);
 }
 
@@ -896,7 +940,11 @@ function abrirEdicionCelda(td) {
   const v = S.byId.get(id);
   if (!v) return;
   const meta = EDIT_MAP[k];
-  td.innerHTML = `<input class="cell-in" value="${esc(valorCelda(colByKey(k), v))}" ${meta.t === 'int' ? 'inputmode="numeric" pattern="[0-9]*"' : ''}>`;
+  const val = valorCelda(colByKey(k), v);
+  const inpVal = meta.t === 'bool' ? (String(val).trim().toUpperCase().startsWith('S') ? 'S' : 'N') : val;
+  const attrs = meta.t === 'int' ? 'inputmode="numeric" pattern="-?[0-9]*"'
+    : meta.t === 'bool' ? 'placeholder="S/N"' : '';
+  td.innerHTML = `<input class="cell-in" value="${esc(inpVal)}" ${attrs}>`;
   const inp = td.querySelector('input');
   inp.focus(); inp.select();
   let cerrado = false;
@@ -928,25 +976,34 @@ function guardarPendientes() {
       const meta = EDIT_MAP[k];
       filas.push({
         id, k, f: meta.f, t: meta.t, label: meta.l,
-        antes: meta.t === 'int' ? num(v.raw[meta.f]) : String(v.raw[meta.f] ?? ''),
+        antes: valorCelda(colByKey(k), v),
         despues: nuevo,
         operacion: `${v.fecha} ${v.hora.slice(0, 5)} · ${v.cliente || '—'}`
       });
     });
   });
   if (!filas.length) return;
+  const mostrar = a => a === true ? 'SÍ' : a === false ? 'NO' : String(a ?? '');
   const cuerpo = `<div style="max-height:40vh;overflow:auto"><table style="width:100%;font-size:12px">
     <thead><tr><th style="text-align:left">Operación</th><th style="text-align:left">Campo</th><th style="text-align:right">Antes</th><th style="text-align:right">Después</th></tr></thead>
-    <tbody>${filas.map(r => `<tr><td>${esc(r.operacion)}</td><td>${esc(r.label)}</td><td class="r">${esc(r.antes)}</td><td class="r"><b>${esc(r.despues)}</b></td></tr>`).join('')}</tbody>
+    <tbody>${filas.map(r => `<tr><td>${esc(r.operacion)}</td><td>${esc(r.label)}</td><td class="r">${esc(mostrar(r.antes))}</td><td class="r"><b>${esc(mostrar(r.despues))}</b></td></tr>`).join('')}</tbody>
     </table></div>`;
   pedirConfirmacion({
     titulo: `Confirmar ${filas.length} cambio(s)`,
     cuerpo,
     onOk: async (motivo, pinTipo) => {
+      const valor = r => {
+        if (r.t === 'int') return num(r.despues);
+        if (r.t === 'bool') return r.despues ? true : deleteField();
+        if (r.despues === '' && (CAMPOS_VACIABLES.includes(r.f) || CAMPOS_VACIABLES.includes(ALT_VIN[r.f]))) return deleteField();
+        return r.despues;
+      };
       const porDoc = new Map();
       filas.forEach(r => {
         if (!porDoc.has(r.id)) porDoc.set(r.id, {});
-        porDoc.get(r.id)[r.f] = r.t === 'int' ? num(r.despues) : r.despues;
+        const d = porDoc.get(r.id);
+        d[r.f] = valor(r);
+        if (ALT_VIN[r.f]) d[ALT_VIN[r.f]] = valor(r);
       });
       const batch = writeBatch(db);
       porDoc.forEach((datos, id) => batch.update(doc(db, 'movimientos', id), datos));
@@ -1030,10 +1087,12 @@ function abrirFicha(id) {
   const v = S.byId.get(id);
   if (!v) return;
   S.actual = v;
-  const campos = EDITABLE.map(c => `
-    <label>${c.l}
-      <input data-f="${c.k}" data-t="${c.t}" value="${esc(v.raw[c.k] ?? (c.t === 'int' ? 0 : ''))}" ${c.t === 'int' ? 'inputmode="numeric" pattern="[0-9]*"' : ''}>
-    </label>`).join('');
+  const campos = EDITABLE.map(c => {
+    const val = c.t === 'bool' ? (v.raw[c.k] ? 'S' : 'N') : (v.raw[c.k] ?? (c.t === 'int' ? 0 : ''));
+    const attrs = c.t === 'int' ? 'inputmode="numeric" pattern="-?[0-9]*"'
+      : c.t === 'bool' ? 'placeholder="S/N"' : '';
+    return `<label>${c.l}<input data-f="${c.k}" data-t="${c.t}" value="${esc(val)}" ${attrs}></label>`;
+  }).join('');
   const sistema = Object.entries(v.raw)
     .filter(([k]) => !EDITABLE.some(c => c.k === k) && k !== 'pin')
     .map(([k, val]) => `<dt>${esc(k)}</dt><dd>${esc(val !== null && typeof val === 'object' ? JSON.stringify(val) : val)}</dd>`).join('');
@@ -1041,7 +1100,7 @@ function abrirFicha(id) {
     <div class="row" style="margin-bottom:8px">
       <span class="pill p-tag">${esc(v.tipo)}</span>
       <span class="muted">N° ${esc(v.id)}</span>
-      <span class="muted">Viaje: ${esc(v.viajeId || 'sin camión')} · Turno: ${esc(v.turnoId || 'sin turno')}</span>
+      <span class="muted">Viaje: ${esc(v.viajeId || v.idViaje || 'sin camión')} · Turno: ${esc(v.turnoId || v.idTurno || 'sin turno')}</span>
     </div>
     <div class="fgrid">${campos}</div>
     <div class="warnbox" id="avisoCambios" style="display:none">Cambios sin guardar. Al guardar se pide PIN y motivo. El saldo de clientes no se recalcula.</div>
@@ -1061,8 +1120,10 @@ function cambiosActuales() {
   const v = S.actual, cambios = [];
   $('fichaBody').querySelectorAll('[data-f]').forEach(inp => {
     const k = inp.dataset.f, t = inp.dataset.t;
-    const original = t === 'int' ? num(v.raw[k]) : String(v.raw[k] ?? '');
-    const nuevo = t === 'int' ? num(inp.value) : String(inp.value).trim();
+    let original, nuevo;
+    if (t === 'int') { original = num(v.raw[k]); nuevo = num(inp.value); }
+    else if (t === 'bool') { original = !!v.raw[k]; nuevo = /^(S|SI|SÍ|1)$/i.test(String(inp.value).trim()); }
+    else { original = String(v.raw[k] ?? ''); nuevo = String(inp.value).trim(); }
     const changed = original !== nuevo;
     inp.classList.toggle('changed', changed);
     if (changed) cambios.push({ k, t, antes: original, despues: nuevo, label: EDITABLE.find(c => c.k === k)?.l || k });
@@ -1088,7 +1149,17 @@ function guardarCambios() {
     cuerpo,
     onOk: async (motivo, pinTipo) => {
       const datos = {};
-      cambios.forEach(c => { datos[c.k] = c.t === 'int' ? num(c.despues) : c.despues; });
+      cambios.forEach(c => {
+        if (c.t === 'int') { datos[c.k] = num(c.despues); return; }
+        if (c.t === 'bool') { datos[c.k] = c.despues ? true : deleteField(); return; }
+        if (c.despues === '' && (CAMPOS_VACIABLES.includes(c.k) || CAMPOS_VACIABLES.includes(ALT_VIN[c.k]))) {
+          datos[c.k] = deleteField();
+          if (ALT_VIN[c.k]) datos[ALT_VIN[c.k]] = deleteField();
+          return;
+        }
+        datos[c.k] = c.despues;
+        if (ALT_VIN[c.k]) datos[ALT_VIN[c.k]] = c.despues;
+      });
       const batch = writeBatch(db);
       batch.update(doc(db, 'movimientos', movId), datos);
       batch.set(doc(collection(db, 'auditoria')), {
