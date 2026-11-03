@@ -104,6 +104,7 @@
     padding: 12px 15px; display: grid; grid-template-columns: 75px 1fr 100px 40px; gap: 8px; align-items: center; 
     cursor: pointer; font-size: 13px; font-weight: 600;
   }
+  @media(max-width: 500px){ .cli-summary { grid-template-columns: 60px 1fr 40px; } .cli-phone { display: none; } }
   .cli-summary:hover { background: var(--row-hover); }
   .cli-id { color: var(--text-muted); font-size: 11px; font-family: monospace;}
   .cli-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px;}
@@ -187,7 +188,7 @@
   <div class="toolbar">
     <div class="search-box">
       <span class="search-icon">🔍</span>
-      <input type="search" id="txtBuscar" class="search-input" placeholder="Buscar cliente, dirección, CUIT, zona..." oninput="window.filterData()">
+      <input type="search" id="txtBuscar" class="search-input" placeholder="Buscar cliente, dirección, CUIT, CUIL, zona..." oninput="window.filterData()">
     </div>
     <div class="toolbar-actions">
         <button class="btn btn-new" onclick="window.abrirModal()">➕ NUEVO CLIENTE</button>
@@ -238,6 +239,14 @@
             <label>CUIT / DNI</label>
             <input type="text" id="newCuit">
         </div>
+        <div class="input-group">
+            <label>CUIL</label>
+            <input type="text" id="newCuil" placeholder="20-29418675-6">
+        </div>
+        <div class="input-group">
+            <label>CUIL PAGO (cuenta bancaria)</label>
+            <input type="text" id="newCuilPago" placeholder="CUIL de quien paga">
+        </div>
     </div>
 
     <div class="prices-box">
@@ -262,7 +271,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getFirestore, doc, getDoc, collection, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, getDocs, writeBatch, increment } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
@@ -281,6 +290,8 @@ const TIMEOUT_SESION = 300000;
 let GLOBAL_ZONAS = ["ZONA1", "ZONA2"];
 let GLOBAL_CATEGORIAS = ["USUARIO (PUBLICO)", "COMERCIO", "SUBDISTRIBUIDOR", "ROT. Y PAN."];
 let rows = [];
+let byId = new Map();
+let termActual = '';
 
 window.toggleTheme = function() {
     const isLight = document.body.classList.toggle('light-mode');
@@ -336,6 +347,7 @@ async function validarSesion() {
 
 // ---------------- UTILIDADES ----------------
 function removeAccents(str) { return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function formatDateForInput(ds) {
     if (!ds) return '';
     if(ds.includes('/')){ let p=ds.split('/'); return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`; }
@@ -350,138 +362,188 @@ function esAcuerdoVigente(ds) {
 function llenarSelectHtml(opciones, valor = "") {
     return `<option value="">-- Seleccionar --</option>` + opciones.map(op => `<option value="${op}" ${op===valor?'selected':''}>${op}</option>`).join('');
 }
+function armarBusqueda(r) {
+    return removeAccents(`${r.nombre || ''} ${r.nombre || ''} ${r.direccion || ''} ${r.cuit_dni || ''} ${r.cuil || ''} ${r.cuil_pago || ''} ${r.zona || ''} ${r.categoria || ''}`).replace(/\s+/g, ' ');
+}
+function indexar() {
+    byId = new Map(rows.map(r => [r.id, r]));
+    rows.forEach((r, idx) => { r._idx = idx; r._search = armarBusqueda(r); });
+}
 
 // ---------------- CARGA DE DATOS DESDE FIREBASE ----------------
+// Caché local (localStorage) primero: la pantalla se abre al instante; después
+// se refresca contra Firebase en segundo plano.
 window.iniciarCargaDatos = async function() {
-    toggleLoader(true, "CARGANDO DATOS...");
+    let cacheOk = false;
     try {
-        if (navigator.onLine) {
-            // Intentamos traer Zonas y Categorías desde un documento de configuración si existe
-            try {
-               const docConfig = await getDoc(doc(db, "configuracion", "listas"));
-               if (docConfig.exists()) {
-                   GLOBAL_ZONAS = docConfig.data().zonas || GLOBAL_ZONAS;
-                   GLOBAL_CATEGORIAS = docConfig.data().categorias || GLOBAL_CATEGORIAS;
-               }
-            } catch(e) {} // Fallback silencioso a las listas duras de arriba
-
-            const querySnapshot = await getDocs(collection(db, "clientes"));
-            rows = [];
-            
-            querySnapshot.forEach((docSnap) => {
-                const data = docSnap.data();
-                data.id = docSnap.id; // Guardamos la llave primaria nativa
-                
-                // CHISMOSO: Guardamos un clon limpio como texto para comparar rápido en el guardado
-                const { id, _idx, _original, _isNew, ...cleanData } = data;
-                data._original = JSON.stringify(cleanData);
-                
-                rows.push(data);
-            });
-            
-            localStorage.setItem('vm_clientes_data', JSON.stringify(rows));
-        } else {
-            rows = JSON.parse(localStorage.getItem('vm_clientes_data') || '[]');
-            showToast('Modo sin conexión', 'info');
+        const cache = JSON.parse(localStorage.getItem('vm_clientes_data') || 'null');
+        if (Array.isArray(cache) && cache.length) {
+            rows = cache;
+            toggleLoader(true, "ARMANDO LISTA...");
+            buildUI();
+            cacheOk = true;
+            showToast('Mostrando copia guardada. Sincronizando...', 'info');
         }
+    } catch(e) {}
+
+    if (!navigator.onLine) {
+        if (!cacheOk) showToast('Modo sin conexión y sin copia local', 'error');
+        else toggleLoader(false);
+        return;
+    }
+
+    toggleLoader(!cacheOk, cacheOk ? "SINCRONIZANDO..." : "CARGANDO DATOS...");
+    try {
+        try {
+           const docConfig = await getDoc(doc(db, "configuracion", "listas"));
+           if (docConfig.exists()) {
+               GLOBAL_ZONAS = docConfig.data().zonas || GLOBAL_ZONAS;
+               GLOBAL_CATEGORIAS = docConfig.data().categorias || GLOBAL_CATEGORIAS;
+           }
+        } catch(e) {} // Fallback silencioso a las listas duras de arriba
+
+        const querySnapshot = await getDocs(collection(db, "clientes"));
+        rows = [];
+        
+        querySnapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            data.id = docSnap.id; // Guardamos la llave primaria nativa
+            
+            // CHISMOSO: Guardamos un clon limpio como texto para comparar rápido en el guardado
+            const { id, _idx, _original, _search, _isNew, ...cleanData } = data;
+            data._original = JSON.stringify(cleanData);
+            
+            rows.push(data);
+        });
+        
+        indexar();
+        localStorage.setItem('vm_clientes_data', JSON.stringify(rows));
         buildUI();
+        toggleLoader(false);
     } catch(e) { 
         console.error(e);
-        showToast("Error cargando base de clientes.", "error"); 
+        toggleLoader(false);
+        if (!cacheOk) showToast("Error cargando base de clientes.", "error");
+        else showToast("No se pudo refrescar; se sigue usando la copia guardada.", "info");
     }
 };
 
-// ---------------- RENDER UI (LAZY & ACORDEÓN) ----------------
+// ---------------- RENDER UI (ACORDEÓN + DETALLES LAZY) ----------------
+// Solo se maquetan las líneas resumen en el arranque. El panel de edición de
+// cada cliente se genera la primera vez que se abre, para no cristalizar miles
+// de inputs en el DOM.
 function buildUI() {
+    indexar();
+    const term = termActual;
+    const palabras = term.split(' ').filter(Boolean);
+    const coincide = palabras.length
+        ? r => palabras.every(w => r._search.includes(w))
+        : () => true;
+
     const agrupado = {};
     GLOBAL_CATEGORIAS.forEach(c => agrupado[c] = []);
     agrupado['OTRO'] = [];
 
-    rows.forEach((r, idx) => {
+    rows.forEach(r => {
         let cat = r.categoria || r.tipo || 'OTRO'; // Tolerancia a como venga del TSV
         if(!agrupado[cat]) cat = 'OTRO';
-        r._idx = idx; 
-        agrupado[cat].push(r);
+        if (coincide(r)) agrupado[cat].push(r);
     });
 
     let html = '';
+    let visibles = 0;
     for (const cat in agrupado) {
         if(agrupado[cat].length === 0) continue;
+        visibles += agrupado[cat].length;
         
         html += `
-        <div class="category-group" id="grp-${cat.replace(/\s+/g, '')}">
+        <div class="category-group ${palabras.length ? 'open' : ''}" id="grp-${cat.replace(/\s+/g, '')}">
            <div class="category-header" onclick="this.parentElement.classList.toggle('open')">
               <span>📂 ${cat}</span>
               <span class="count" style="background:var(--accent); color:#000; padding:2px 8px; border-radius:10px;">${agrupado[cat].length}</span>
            </div>
-           <div class="category-content">`;
-        
-        agrupado[cat].forEach(r => {
-            const vig = esAcuerdoVigente(r.vencimiento);
-            const badge = vig ? '<span class="badge-acuerdo" title="Acuerdo Activo"></span>' : '';
-            const mapClass = r.coordenadas ? 'active' : 'inactive';
-            const mapLink = r.coordenadas ? `href="https://maps.google.com/?q=${r.coordenadas}" target="_blank"` : `href="javascript:void(0)"`;
-
-            html += `
-            <div class="cli-item search-target" data-search="${removeAccents((r.nombre||'')+' '+(r.direccion||'')+' '+(r.cuit_dni||'')+' '+(r.zona||''))}">
-                <div class="cli-summary" onclick="window.toggleRow(this)">
-                    <div class="cli-id">${r.id_cliente||'N/A'}</div>
-                    <div class="cli-name">${badge} ${r.nombre||''}</div>
-                    <div class="cli-phone">${r.telefono||''}</div>
-                    <a ${mapLink} class="cli-map ${mapClass}" onclick="event.stopPropagation()">📍</a>
-                </div>
-                
-                <div class="cli-details">
-                    <div class="detail-grid">
-                        <div class="input-group"><label>Zona</label><select onchange="window.syncData(${r._idx}, this, 'zona')">${llenarSelectHtml(GLOBAL_ZONAS, r.zona)}</select></div>
-                        <div class="input-group"><label>Categoría</label><select onchange="window.syncData(${r._idx}, this, 'categoria')">${llenarSelectHtml(GLOBAL_CATEGORIAS, r.categoria || r.tipo)}</select></div>
-                        <div class="input-group"><label>Dirección</label><input type="text" value="${r.direccion||''}" oninput="window.syncData(${r._idx}, this, 'direccion')"></div>
-                        <div class="input-group"><label>Teléfono</label><input type="text" value="${r.telefono||''}" oninput="window.syncData(${r._idx}, this, 'telefono')"></div>
-                        <div class="input-group"><label>CUIT/DNI</label><input type="text" value="${r.cuit_dni||''}" oninput="window.syncData(${r._idx}, this, 'cuit_dni')"></div>
-                        <div class="input-group"><label>Coordenadas</label><input type="text" value="${r.coordenadas||''}" placeholder="-29.418, -66.875" oninput="window.syncData(${r._idx}, this, 'coordenadas')"></div>
-                    </div>
-                    
-                    <div class="prices-box">
-                        <div class="prices-title">ACUERDO COMERCIAL ${vig?'<span style="color:var(--success); font-size:9px;">(VIGENTE)</span>':''}</div>
-                        <div class="prices-grid">
-                           <div class="input-group"><label>Gas 10k</label><input type="number" value="${r.p_esp_10||''}" oninput="window.syncData(${r._idx}, this, 'p_esp_10')"></div>
-                           <div class="input-group"><label>Gas 15k</label><input type="number" value="${r.p_esp_15||''}" oninput="window.syncData(${r._idx}, this, 'p_esp_15')"></div>
-                           <div class="input-group"><label>Gas 45k</label><input type="number" value="${r.p_esp_45||''}" oninput="window.syncData(${r._idx}, this, 'p_esp_45')"></div>
-                           <div class="input-group"><label>C/Env 10k</label><input type="number" value="${r.p_esp_env_10||''}" oninput="window.syncData(${r._idx}, this, 'p_esp_env_10')"></div>
-                           <div class="input-group"><label>C/Env 15k</label><input type="number" value="${r.p_esp_env_15||''}" oninput="window.syncData(${r._idx}, this, 'p_esp_env_15')"></div>
-                           <div class="input-group"><label>C/Env 45k</label><input type="number" value="${r.p_esp_env_45||''}" oninput="window.syncData(${r._idx}, this, 'p_esp_env_45')"></div>
-                        </div>
-                        <div class="input-group">
-                           <label>Vencimiento Acuerdo</label>
-                           <input type="date" value="${formatDateForInput(r.vencimiento)}" onchange="window.syncData(${r._idx}, this, 'vencimiento')">
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-        });
-        html += `</div></div>`;
+           <div class="category-content">` + agrupado[cat].map(renderFila).join('') + `</div></div>`;
     }
 
-    requestAnimationFrame(() => {
-        document.getElementById('gridContainer').innerHTML = html;
-        requestAnimationFrame(() => toggleLoader(false));
-    });
+    if (!visibles && palabras.length) html = `<div style="text-align:center; padding:30px; color:var(--text-muted)">Sin resultados para “${esc(term)}”</div>`;
+
+    document.getElementById('gridContainer').innerHTML = html;
+    if (document.getElementById('loadingOverlay').classList.contains('active')) toggleLoader(false);
+}
+
+function renderFila(r) {
+    const mapClass = r.coordenadas ? 'active' : 'inactive';
+    const mapLink = r.coordenadas ? `href="https://maps.google.com/?q=${esc(r.coordenadas)}" target="_blank"` : `href="javascript:void(0)"`;
+
+    return `
+    <div class="cli-item" data-id="${esc(r.id)}">
+        <div class="cli-summary" onclick="window.toggleRow(this)">
+            <div class="cli-id">${esc(r.id_cliente || r.id)}</div>
+            <div class="cli-name">${r.vencimiento && esAcuerdoVigente(r.vencimiento) ? '<span class="badge-acuerdo" title="Acuerdo Activo"></span>' : ''} ${esc(r.nombre || '')}</div>
+            <div class="cli-phone">${esc(r.telefono || '')}</div>
+            <a ${mapLink} class="cli-map ${mapClass}" onclick="event.stopPropagation()">📍</a>
+        </div>
+        <div class="cli-details"></div>
+    </div>`;
+}
+
+function renderDetalle(r) {
+    const vig = esAcuerdoVigente(r.vencimiento);
+    return `
+        <div class="detail-grid">
+            <div class="input-group" style="grid-column: 1 / -1;"><label>Nombre</label><input type="text" value="${esc(r.nombre || '')}" oninput="window.syncData('${r.id}', this, 'nombre')"></div>
+            <div class="input-group"><label>Zona</label><select onchange="window.syncData('${r.id}', this, 'zona')">${llenarSelectHtml(GLOBAL_ZONAS, r.zona)}</select></div>
+            <div class="input-group"><label>Categoría</label><select onchange="window.syncData('${r.id}', this, 'categoria')">${llenarSelectHtml(GLOBAL_CATEGORIAS, r.categoria || r.tipo)}</select></div>
+            <div class="input-group"><label>Dirección</label><input type="text" value="${esc(r.direccion || '')}" oninput="window.syncData('${r.id}', this, 'direccion')"></div>
+            <div class="input-group"><label>Teléfono</label><input type="text" value="${esc(r.telefono || '')}" oninput="window.syncData('${r.id}', this, 'telefono')"></div>
+            <div class="input-group"><label>CUIT/DNI</label><input type="text" value="${esc(r.cuit_dni || '')}" oninput="window.syncData('${r.id}', this, 'cuit_dni')"></div>
+            <div class="input-group"><label>CUIL</label><input type="text" value="${esc(r.cuil || '')}" placeholder="20-29418675-6" oninput="window.syncData('${r.id}', this, 'cuil')"></div>
+            <div class="input-group"><label>CUIL PAGO</label><input type="text" value="${esc(r.cuil_pago || '')}" placeholder="CUIL de quien paga" oninput="window.syncData('${r.id}', this, 'cuil_pago')"></div>
+            <div class="input-group"><label>Coordenadas</label><input type="text" value="${esc(r.coordenadas || '')}" placeholder="-29.418, -66.875" oninput="window.syncData('${r.id}', this, 'coordenadas')"></div>
+        </div>
+        
+        <div class="prices-box">
+            <div class="prices-title">ACUERDO COMERCIAL ${vig?'<span style="color:var(--success); font-size:9px;">(VIGENTE)</span>':''}</div>
+            <div class="prices-grid">
+               <div class="input-group"><label>Gas 10k</label><input type="number" value="${esc(r.p_esp_10 || '')}" oninput="window.syncData('${r.id}', this, 'p_esp_10')"></div>
+               <div class="input-group"><label>Gas 15k</label><input type="number" value="${esc(r.p_esp_15 || '')}" oninput="window.syncData('${r.id}', this, 'p_esp_15')"></div>
+               <div class="input-group"><label>Gas 45k</label><input type="number" value="${esc(r.p_esp_45 || '')}" oninput="window.syncData('${r.id}', this, 'p_esp_45')"></div>
+               <div class="input-group"><label>C/Env 10k</label><input type="number" value="${esc(r.p_esp_env_10 || '')}" oninput="window.syncData('${r.id}', this, 'p_esp_env_10')"></div>
+               <div class="input-group"><label>C/Env 15k</label><input type="number" value="${esc(r.p_esp_env_15 || '')}" oninput="window.syncData('${r.id}', this, 'p_esp_env_15')"></div>
+               <div class="input-group"><label>C/Env 45k</label><input type="number" value="${esc(r.p_esp_env_45 || '')}" oninput="window.syncData('${r.id}', this, 'p_esp_env_45')"></div>
+            </div>
+            <div class="input-group">
+               <label>Vencimiento Acuerdo</label>
+               <input type="date" value="${formatDateForInput(r.vencimiento)}" onchange="window.syncData('${r.id}', this, 'vencimiento')">
+            </div>
+        </div>`;
 }
 
 window.toggleRow = function(el) {
     const details = el.nextElementSibling;
     const isVisible = details.style.display === 'block';
     el.closest('.category-content').querySelectorAll('.cli-details').forEach(d => d.style.display = 'none');
-    if(!isVisible) details.style.display = 'block';
+    if(!isVisible) {
+        // Detalles lazy: se maquetan solo la primera vez que se abren
+        if (!details.dataset.ready) {
+            const r = byId.get(el.parentElement.dataset.id);
+            if (r) { details.innerHTML = renderDetalle(r); details.dataset.ready = '1'; }
+        }
+        details.style.display = 'block';
+        el.scrollIntoView({ block: 'nearest' });
+    }
 };
 
-window.syncData = function(idx, input, field) {
+window.syncData = function(id, input, field) {
+    const r = byId.get(id);
+    if (!r) return;
     let val = input.value.trim();
     if (field === 'nombre' || field === 'direccion') val = val.toUpperCase();
     if (field === 'vencimiento' && val.includes('-')) {
         let p = val.split('-'); val = `${p[2]}/${p[1]}/${p[0]}`;
     }
-    rows[idx][field] = val;
+    r[field] = val;
+    r._search = armarBusqueda(r);
 
     if (field === 'coordenadas') {
         const mapIcon = input.closest('.cli-item').querySelector('.cli-map');
@@ -497,29 +559,15 @@ window.syncData = function(idx, input, field) {
     }
 };
 
+// Buscador: filtrado en memoria sobre índice precomputado (sin tocar el DOM
+// completo por cada letra) + anti-rebote de 130 ms.
+let tBuscar;
 window.filterData = function() {
-    const term = removeAccents(document.getElementById('txtBuscar').value);
-    const groups = document.querySelectorAll('.category-group');
-    
-    groups.forEach(grp => {
-        let hasVisible = false;
-        const items = grp.querySelectorAll('.search-target');
-        items.forEach(item => {
-            const dataSearch = item.getAttribute('data-search');
-            const words = term.split(' ').filter(w => w);
-            const match = words.every(w => dataSearch.includes(w));
-            
-            if(match) { item.classList.remove('hidden'); hasVisible = true; } 
-            else { item.classList.add('hidden'); }
-        });
-        
-        if(hasVisible || term === '') {
-            grp.classList.remove('hidden');
-            if(term !== '') grp.classList.add('open'); else grp.classList.remove('open');
-        } else {
-            grp.classList.add('hidden');
-        }
-    });
+    clearTimeout(tBuscar);
+    tBuscar = setTimeout(() => {
+        termActual = removeAccents(document.getElementById('txtBuscar').value || '');
+        buildUI();
+    }, 130);
 };
 
 // ---------------- MODAL LOGIC ----------------
@@ -554,6 +602,8 @@ window.agregarCliente = function() {
         id: nuevoRef.id,
         id_cliente: nuevoRef.id, // Lo clonamos como dato operativo visible
         cuit_dni: document.getElementById('newCuit').value.trim(), 
+        cuil: document.getElementById('newCuil').value.trim(),
+        cuil_pago: document.getElementById('newCuilPago').value.trim(),
         nombre: document.getElementById('newNombre').value.trim().toUpperCase(),
         zona: document.getElementById('newZona').value,
         categoria: document.getElementById('newCategoria').value,
@@ -578,6 +628,9 @@ window.agregarCliente = function() {
 };
 
 // ---------------- GUARDAR A FIREBASE CON CHISMOSO ----------------
+// Al guardar cualquier cambio (edición, cuil o alta) se suma +1 a
+// seguridad/pin.version_datos: index4 detecta ese número y renueva la lista de
+// clientes; si no cambió, sigue trabajando con lo que tiene en memoria.
 window.save = async function() {
   const btn = document.getElementById('btnGuardar');
   btn.disabled = true;
@@ -589,7 +642,7 @@ window.save = async function() {
 
     rows.forEach(r => {
         // Copiamos el objeto para limpiarlo sin romper el frontend
-        const { id, _idx, _original, _isNew, ...cleanData } = r;
+        const { id, _idx, _original, _search, _isNew, ...cleanData } = r;
 
         if (_isNew) {
             // Documento completamente nuevo
@@ -621,11 +674,18 @@ window.save = async function() {
         return;
     }
 
+    // versión de datos: avisa a las demás pantallas que la base cambió
+    batch.update(doc(db, "seguridad", "pin"), {
+        version_datos: increment(1),
+        actualizadoPor: sessionStorage.getItem('usuarioActivo') || 'SISTEMA',
+        actualizadoTs: Date.now()
+    });
+
     await batch.commit();
     localStorage.setItem('vm_clientes_data', JSON.stringify(rows));
     
     toggleLoader(false);
-    showToast("¡BASE ACTUALIZADA CON ÉXITO!", "success");
+    showToast("¡BASE ACTUALIZADA! index4 renovará su lista en la próxima carga.", "success");
     btn.disabled = false;
   } catch(e){
     console.error(e);

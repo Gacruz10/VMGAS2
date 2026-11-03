@@ -326,6 +326,57 @@ guardando el `nombre_mostrar` en minúsculas; `choferId` guarda el id del token
   fallback. Si un movimiento viejo no tiene `E$`/`T$`, se usa `TOTAL` como efectivo
   (igual que `arqueo.html`). Los gastos viejos sin `GASTO_TOTAL` usan `abs(TOTAL)`.
 
+### Visor Pro (`treeview.html`)
+
+- **Colores por jerarquía**: bloque **DÍA** = borde azul (`--blue`), bloque
+  **TURNO** = fondo/borde rojizos (`--turnoBg` / `--turnoBd`, clase `.card.turno`),
+  bloque **CHOFER** = morado (`.purple`). "SIN TURNO" queda neutro (sin clase).
+- **Edición total de datos** (control total de modificaciones, con PIN + motivo +
+  registro en `auditoria`):
+  - Botón **✎ Editar** fuerza la vista Planilla; **todas las columnas excepto
+    `N` (N° operación)** son editables haciendo clic en la celda
+    (`EDIT_MAP` cubre `usuario, tipo, fecha, hora, cliente, L10-45, V10-45, total,
+    efe, tra, ID_CLIENTE, idTurno, idViaje, GASTO_TOTAL, COMISION_TOTAL,
+    clienteZona, clienteCategoria, operacionEnvase, esPagoDeuda, esFlotante,
+    ventaDesdePlanta, garrafas`).
+  - Los cambios quedan en la barra roja inferior (**pend**) hasta confirmar;
+    se escriben con `writeBatch` sobre `movimientos/{id}` + auditoría tipo
+    `EDITAR_PLANILLA`.
+  - Tipos de celda: `txt` (texto libre), `int` (admite negativos con `-`),
+    `bool` (S/N o SÍ/NO/1/0; vacío = no).
+- **Vínculos viaje/turno**: al editar `idViaje` o `idTurno` del movimiento se
+  escriben tanto el campo canónico `idViaje`/`idTurno` como la llave legacy
+  `ID_VIAJE`/`ID_TURNO` con el mismo valor. Al dejarlos vacíos se **borran los
+  cuatro campos** (`deleteField`), no se escriben strings vacíos. Igual en la
+  ficha (formulario completo) con los mismos campos.
+- **Asociación venta → viaje** en `cargar`: si `movimientos` trae `idViaje`
+  explícito, se busca solo ese viaje (`ccarga`) y **no hay fallback** por
+  chofer/ventana horaria (si el viaje no existe en el rango, la venta aparece
+  "sin camión"). Sin `idViaje` se mantiene la deducción por chofer y ventana.
+  `idTurno` explícito también anula el fallback por hora para asignar turno.
+- La ficha muestra los campos del sistema que no son editables en "solo lectura";
+  al ampliar `EDITABLE` esos campos dejaron de listarse ahí.
+
+### Gestión de Clientes (`clientes.html`)
+
+- **Velocidad**: al abrir, primero se maqueta la copia local
+  (`localStorage.vm_clientes_data`) y recién después se refresca contra Firebase
+  en segundo plano; el panel de edición de cada cliente se genera **al abrirlo**
+  (lazy), no junto con la lista completa. El buscador filtra en memoria sobre un
+  índice precomputado (`_search` sin tildes, incluye nombre, dirección, CUIT,
+  CUIL, CUIL de pago y zona) con anti-rebote de 130 ms.
+- **Edición**: además de zona/categoría/dirección/teléfono/coordenadas/precios
+  ahora son editables **nombre**, **cuil** y **cuil_pago** (con estos dos se
+  identifica a desconocidos en la cuenta bancaria de las transferencias).
+  Todo lo editable existe también en el alta de nuevo cliente.
+- **`seguridad/pin.version_datos`**: cada `Guardar cambios` con cambios reales
+  suma `+1` (y guarda `actualizadoPor`/`actualizadoTs`). El paquete offline de
+  `app.js` (`vm_paquete_offline`) guarda la `version_datos` con la que fue
+  descargado; `cargarDatos` (index4) lee `seguridad/pin` (1 lectura con
+  `getDoc`) y solo vuelve a descargar la colección `clientes` si la versión
+  cambió o no hay copia. Precios y parámetros se bajan siempre (livianos).
+- Respaldo pre-optimización: `clientes_backup_20261102.html`.
+
 ## Conciliación arqueos ↔ finanzas
 
 `controlfinanzas.html` lee `confinanzas` y `arqueos` en paralelo. Si la lectura de

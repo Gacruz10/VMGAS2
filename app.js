@@ -420,10 +420,26 @@ async function cargarDatos() {
 
         if (navigator.onLine) {
             try {
-                updateLoader("SINCRONIZANDO DB", "Descargando de Firebase...");
+                updateLoader("SINCRONIZANDO DB", "Verificando versión de datos...");
                 
-                const snapCli = await getDocs(collection(db, "clientes"));
-                clientesData = snapCli.docs.map(d => ({ id_cliente: d.id, ...d.data() }));
+                // version_datos (seguridad/pin): si coincide con la copia local,
+                // clientes se toma de memoria y no se descarga la colección.
+                const snapPin = await getDoc(doc(db, "seguridad", "pin"));
+                const verServidor = snapPin.exists() ? Number(snapPin.data().version_datos || 0) : 0;
+
+                let copia = null;
+                try { copia = JSON.parse(localStorage.getItem('vm_paquete_offline') || 'null'); } catch (e) { copia = null; }
+                const cacheValido = !!copia && Array.isArray(copia.clientes) && copia.clientes.length > 0
+                    && Number(copia.version_datos) === verServidor;
+
+                if (cacheValido) {
+                    updateLoader("SINCRONIZANDO DB", "Lista de clientes al día (memoria)...");
+                    clientesData = copia.clientes;
+                } else {
+                    updateLoader("SINCRONIZANDO DB", "Descargando clientes de Firebase...");
+                    const snapCli = await getDocs(collection(db, "clientes"));
+                    clientesData = snapCli.docs.map(d => ({ id_cliente: d.id, ...d.data() }));
+                }
 
                 const snapPrecios = await getDocs(collection(db, "precios"));
                 preciosData = snapPrecios.docs.map(d => d.data());
@@ -449,7 +465,8 @@ async function cargarDatos() {
                     clientes: clientesData,
                     precios: preciosData,
                     deudas: deudasData,
-                    comisiones: comisionesData
+                    comisiones: comisionesData,
+                    version_datos: verServidor
                 };
 
                 localStorage.setItem('vm_paquete_offline', JSON.stringify(paqueteOffline));
