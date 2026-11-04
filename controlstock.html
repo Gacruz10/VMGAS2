@@ -148,8 +148,19 @@
     .spinner { width: 50px; height: 50px; border: 4px solid var(--glass-border); border-left-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
   </style>
+  <script src="vm-core.js?v=20261104"></script>
 </head>
 <body>
+  <script>
+    /* VM_THEME_BOOT: un solo tema para todas las pantallas */
+    (function () {
+      var t = localStorage.getItem('vm_theme');
+      if (t !== 'light' && t !== 'dark') { t = 'light'; localStorage.setItem('vm_theme', t); }
+      document.body.classList.add(t === 'dark' ? 'dark' : 'light-mode');
+      if (t !== 'dark') document.body.classList.add('tema-claro');
+    })();
+  </script>
+
 
   <script>if(localStorage.getItem('vm_theme') === 'light') document.body.classList.add('light-mode');</script>
   <button class="theme-toggle" onclick="window.toggleTheme()" id="btnTheme">🌙</button>
@@ -158,7 +169,7 @@
   <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><div id="loaderText" style="color:var(--accent); font-weight:800; letter-spacing:1px;">SINCRONIZANDO...</div></div>
 
   <div class="header">
-    <button class="btn-volver" onclick="window.location.href='inicio.html'">⬅ VOLVER</button>
+    <button class="btn-volver" id="btnVolver">⬅ VOLVER</button>
     <h3>ESTADO DE STOCK</h3>
     <div id="lblTurno" style="font-size:11px; color:var(--text-muted); margin-top:2px; font-weight:bold; text-transform:uppercase;">Buscando turno...</div>
   </div>
@@ -264,7 +275,7 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  let k = new URLSearchParams(window.location.search).get('k') || sessionStorage.getItem('k');
+  let k = VM.tokenActual();
 
   const SIZES = [10, 15, 45];
   const num = (v) => Number(v) || 0;
@@ -280,11 +291,7 @@
       usuario: 'SISTEMA'
   };
 
-  window.toggleTheme = () => {
-    const isLight = document.body.classList.toggle('light-mode');
-    document.getElementById('btnTheme').textContent = isLight ? '☀️' : '🌙';
-    localStorage.setItem('vm_theme', isLight ? 'light' : 'dark');
-  };
+  window.toggleTheme = () => VM.alternarTema();
 
   const showToast = (msg, type='info') => {
     const c = document.getElementById('toast-container'); const t = document.createElement('div');
@@ -298,12 +305,7 @@
     document.getElementById('loadingOverlay').classList.toggle('active', show);
   };
 
-  let timer;
-  const resetTimer = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => { showToast('⏱️ Sesión expirada.', 'error'); setTimeout(()=>window.location.href='inicio.html',1500); }, 900000);
-  };
-  ['click','mousemove','keypress','touchstart'].forEach(e => document.addEventListener(e, resetTimer));
+  document.getElementById('btnVolver').onclick = () => VM.irInicio(k);
 
   // ---------- Helpers de fecha (mismo formato que usa app.js: es-AR, d/m/yyyy) ----------
   const fechaStr = (d = new Date()) => d.toLocaleDateString('es-AR');
@@ -384,15 +386,16 @@
   }
 
   async function init() {
-      if (!k) return window.location.href = 'inicio.html';
+      if (!k) return VM.expulsar();
       sessionStorage.setItem('k', k);
       window.history.replaceState({}, document.title, window.location.pathname);
-      resetTimer();
       try {
-          const tk = await getDoc(doc(db, "tokens", k));
-          if (!tk.exists() || (tk.data().expira && Date.now() > tk.data().expira)) return window.location.href = 'inicio.html';
-          state.usuario = tk.data().usuario || 'SISTEMA';
-      } catch (e) { return window.location.href = 'inicio.html'; }
+          const tk = await VM.validarToken(k);
+          if (!tk) return VM.expulsar();
+          state.usuario = tk.usuario || 'SISTEMA';
+          sessionStorage.setItem('usuarioActivo', state.usuario);
+          VM.iniciarSesion(k);
+      } catch (e) { return VM.expulsar(); }
       document.body.style.opacity = 1;
       await cargarDataFirebase();
   }

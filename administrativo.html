@@ -86,8 +86,19 @@
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .loading-text { color: var(--accent); font-size: 1rem; font-weight: 800; letter-spacing: 2px;}
   </style>
+  <script src="vm-core.js?v=20261104"></script>
 </head>
 <body>
+  <script>
+    /* VM_THEME_BOOT: un solo tema para todas las pantallas */
+    (function () {
+      var t = localStorage.getItem('vm_theme');
+      if (t !== 'light' && t !== 'dark') { t = 'light'; localStorage.setItem('vm_theme', t); }
+      document.body.classList.add(t === 'dark' ? 'dark' : 'light-mode');
+      if (t !== 'dark') document.body.classList.add('tema-claro');
+    })();
+  </script>
+
 
   <script>
     if(localStorage.getItem('vm_theme') === 'light') { document.body.classList.add('light-mode'); }
@@ -129,18 +140,6 @@
     </div>
   </div>
 
-<div id="capaMantenimiento" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,10,16,0.98); z-index:99999; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#fff; font-family:'Syne', sans-serif;">
-  <div style="font-size:40px; margin-bottom:20px;">🛠️</div>
-  <h2 style="color:var(--accent); letter-spacing:2px;">VENTANA DE MANTENIMIENTO</h2>
-  <p style="max-width:400px; color:var(--text-muted); font-family:'Inter', sans-serif; margin-top:10px;">
-    Estamos procesando los cierres y auditorías del día. <br>
-    El sistema volverá a estar operativo a las <b>00:06 AM</b>.
-  </p>
-  <div style="margin-top:30px; padding:10px 20px; border:1px solid var(--glass-border); border-radius:4px; font-size:12px; color:var(--accent);">
-    AGUARDE UN MOMENTO...
-  </div>
-</div>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -157,24 +156,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-window.toggleTheme = function() {
-    const isLight = document.body.classList.toggle('light-mode');
-    const btn = document.getElementById('btnTheme');
-    if (isLight) {
-        localStorage.setItem('vm_theme', 'light');
-        btn.textContent = '☀️';
-    } else {
-        localStorage.setItem('vm_theme', 'dark');
-        btn.textContent = '🌙';
-    }
-};
-document.getElementById('btnTheme').textContent = document.body.classList.contains('light-mode') ? '☀️' : '🌙';
+window.toggleTheme = function() { VM.alternarTema(); };
 
 const params = new URLSearchParams(window.location.search);
-let k = params.get('k') || params.get('token');
-if (!k) k = sessionStorage.getItem('k');
+let k = VM.tokenActual();
 
-function expulsar() { sessionStorage.clear(); window.location.replace('index.html'); }
+function expulsar() { VM.expulsar(); }
 
 if (!k) { 
     expulsar(); 
@@ -188,21 +175,15 @@ async function validarSesion() {
     try {
         document.body.style.opacity = 1;
         
-        const docRef = doc(db, "tokens", k);
-        const docSnap = await getDoc(docRef);
-        
-        if (!docSnap.exists()) throw new Error("Sesión inválida.");
-        
-        const tokenData = docSnap.data();
-        if (tokenData.expira && Date.now() > tokenData.expira) throw new Error("Sesión expirada.");
+        const tokenData = await VM.validarToken(k);
+        if (!tokenData) throw new Error("Sesión inválida.");
 
         const usuario = String(tokenData.usuario || '').trim();
         if (!usuario) throw new Error("El token no tiene un usuario asociado.");
         sessionStorage.setItem('usuarioActivo', usuario);
 
-        const userSnap = await getDoc(doc(db, "usuarios", usuario));
-        if (!userSnap.exists()) throw new Error("Usuario no encontrado.");
-        const u = userSnap.data();
+        const u = await VM.usuario(usuario);
+        if (!u) throw new Error("Usuario no encontrado.");
 
         const finanzas = u.FINANZAS === true || u.FINANZAS === "true";
         const confinanzas = u.CONFINANZAS === true || u.CONFINANZAS === "true";
@@ -227,30 +208,14 @@ async function validarSesion() {
         document.getElementById('linkRemitos').href = `controlremitos.html?k=${encodeURIComponent(k)}`;
         document.getElementById('linkTransferencias').href = `controltransferencias.html?k=${encodeURIComponent(k)}`;
 
+        VM.iniciarSesion(k);
+
     } catch (e) { 
         console.error(e);
         alert("Acceso denegado: " + e.message);
         expulsar(); 
     }
 }
-
-// Patovica
-function controlPatovica() {
-    const ahora = new Date();
-    const hora = ahora.getHours();
-    const min = ahora.getMinutes();
-    const capa = document.getElementById('capaMantenimiento');
-    const estaEnBloqueo = (hora === 23 && min >= 45) || (hora === 0 && min <= 5);
-    if (estaEnBloqueo) {
-      capa.style.display = 'flex';
-      document.onkeydown = function (e) { return false; };
-    } else {
-      capa.style.display = 'none';
-      document.onkeydown = null;
-    }
-}
-controlPatovica();
-setInterval(controlPatovica, 300000);
 </script>
 </body>
 </html>

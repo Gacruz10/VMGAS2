@@ -151,8 +151,19 @@ td.pend{background:rgba(232,130,12,.18)!important;font-weight:700}
 .cell-in{width:100%;min-width:90px;padding:3px 6px;min-height:28px;font-size:13px}
 #editHint{font-size:12px}
 </style>
+  <script src="vm-core.js?v=20261104"></script>
 </head>
 <body>
+  <script>
+    /* VM_THEME_BOOT: un solo tema para todas las pantallas */
+    (function () {
+      var t = localStorage.getItem('vm_theme');
+      if (t !== 'light' && t !== 'dark') { t = 'light'; localStorage.setItem('vm_theme', t); }
+      document.body.classList.add(t === 'dark' ? 'dark' : 'light-mode');
+      if (t !== 'dark') document.body.classList.add('tema-claro');
+    })();
+  </script>
+
 
 <div class="top">
   <div class="row">
@@ -375,17 +386,18 @@ const S = {
 };
 
 // ---------- Sesión ----------
-let TOKEN = new URLSearchParams(location.search).get('k') || sessionStorage.getItem('k');
+let TOKEN = VM.tokenActual();
 if (!TOKEN) { location.replace('inicio.html'); throw new Error('Sin sesión'); }
 sessionStorage.setItem('k', TOKEN);
 history.replaceState({}, document.title, location.pathname);
 
 async function validarSesion() {
   try {
-    const s = await getDoc(doc(db, 'tokens', TOKEN));
-    const d = s.exists() ? s.data() : null;
-    if (!d || (d.expira && Date.now() > d.expira)) { location.replace('inicio.html'); return false; }
+    const d = await VM.validarToken(TOKEN);
+    if (!d) { location.replace('inicio.html'); return false; }
     S.usuarioSesion = d.usuario || 'SISTEMA';
+    sessionStorage.setItem('usuarioActivo', S.usuarioSesion);
+    VM.iniciarSesion(TOKEN);
     return true;
   } catch (e) {
     console.error(e);
@@ -1262,12 +1274,8 @@ function setView(v) {
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.view === v));
   renderAll();
 }
-$('btnTheme').addEventListener('click', () => {
-  const dark = document.body.classList.toggle('dark');
-  localStorage.setItem('vm_theme', dark ? 'dark' : 'light');
-  $('btnTheme').textContent = dark ? '☀️' : '🌙';
-});
-$('btnVolver').addEventListener('click', () => location.href = `inicio.html?k=${TOKEN}`);
+$('btnTheme').addEventListener('click', VM.alternarTema);
+$('btnVolver').addEventListener('click', () => location.href = `inicio.html?k=${encodeURIComponent(TOKEN)}`);
 $('btnBuscar').addEventListener('click', cargar);
 $('btnFiltros').addEventListener('click', () => $('panelFiltros').classList.toggle('open'));
 $('fQ').addEventListener('input', e => { S.f.q = e.target.value.trim(); renderAll(); });
@@ -1326,8 +1334,7 @@ document.addEventListener('click', e => {
   const hoy = new Date();
   $('fDesde').value = ymd(hoy);
   $('fHasta').value = ymd(hoy);
-  if (localStorage.getItem('vm_theme') === 'dark') document.body.classList.add('dark');
-  $('btnTheme').textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+  VM.aplicarTema();
   const guardadas = JSON.parse(localStorage.getItem('vm_cols_mov') || 'null');
   S.cols = Array.isArray(guardadas) && guardadas.length
     ? guardadas.filter(k => COL_KEYS.includes(k))

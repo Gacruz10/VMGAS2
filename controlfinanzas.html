@@ -300,8 +300,19 @@
     .arqueo-table { min-width: 700px; }
   }
 </style>
+  <script src="vm-core.js?v=20261104"></script>
 </head>
 <body>
+  <script>
+    /* VM_THEME_BOOT: un solo tema para todas las pantallas */
+    (function () {
+      var t = localStorage.getItem('vm_theme');
+      if (t !== 'light' && t !== 'dark') { t = 'light'; localStorage.setItem('vm_theme', t); }
+      document.body.classList.add(t === 'dark' ? 'dark' : 'light-mode');
+      if (t !== 'dark') document.body.classList.add('tema-claro');
+    })();
+  </script>
+
 
   <div id="toast-container"></div>
   <div class="loading-overlay" id="loadingOverlay">
@@ -488,7 +499,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const TIMEOUT_SESION = 14400000; // 4 horas
 const TAX_TRANSFERENCIA = 0.006; // Ley 25413
 const MAX_BATCH = 450;
 
@@ -625,15 +635,14 @@ function setBtn(btn, busy, busyText, normalText) {
 
 // ---------------- Sesión ----------------
 const params = new URLSearchParams(window.location.search);
-const k = params.get('k') || params.get('token') || sessionStorage.getItem('k') || sessionStorage.getItem('vm_token');
+const k = VM.tokenActual();
 const deepArqueo = String(params.get('arqueo') || params.get('idCierre') || '').trim();
 
 function expulsar() {
-    sessionStorage.clear();
-    window.location.replace('index.html');
+    VM.expulsar();
 }
 
-window.volver = () => window.location.replace(`inicio.html?k=${encodeURIComponent(k || '')}`);
+window.volver = () => VM.irInicio(k);
 
 if (!k) {
     expulsar();
@@ -642,23 +651,6 @@ if (!k) {
     sessionStorage.setItem('vm_token', k);
     if (window.history.replaceState) window.history.replaceState({}, document.title, window.location.pathname);
     validarSesion();
-}
-
-let tIdle;
-function resetTimer() {
-    clearTimeout(tIdle);
-    tIdle = setTimeout(() => {
-        showToast('⏱️ Sesión expirada por inactividad.', 'info');
-        setTimeout(expulsar, 1200);
-    }, TIMEOUT_SESION);
-}
-['click', 'mousemove', 'keydown', 'touchstart', 'scroll'].forEach(evt =>
-    document.addEventListener(evt, resetTimer, { passive: true })
-);
-resetTimer();
-
-function expiraMs(v) {
-    return toMs(v);
 }
 
 function toMs(v) {
@@ -689,12 +681,9 @@ async function validarSesion() {
         document.body.style.opacity = 1;
         toggleLoader(true, 'VERIFICANDO SESIÓN...');
 
-        const snap = await getDoc(doc(db, 'tokens', k));
-        if (!snap.exists()) throw new Error('Sesión inválida en base de datos.');
-
-        const data = snap.data();
-        const exp = expiraMs(data.expira);
-        if (exp && Date.now() > exp) throw new Error('La sesión ha expirado.');
+        const data = await VM.validarToken(k);
+        if (!data) throw new Error('Sesión inválida en base de datos.');
+        VM.iniciarSesion(k);
 
         usuarioActivo = data.usuario || data.nombre_mostrar || 'SISTEMA';
         sessionStorage.setItem('usuarioActivo', usuarioActivo);
@@ -702,10 +691,8 @@ async function validarSesion() {
         // El tile de inicio se muestra con CONFINANZAS; validamos lo mismo acá
         // para que un acceso directo por URL no saltee el permiso.
         if (data.usuario) {
-            const userSnap = await getDoc(doc(db, 'usuarios', data.usuario));
-            if (!userSnap.exists()) throw new Error('Usuario no encontrado.');
-
-            const u = userSnap.data();
+            const u = await VM.usuario(data.usuario);
+            if (!u) throw new Error('Usuario no encontrado.');
             permisosUsuario = {
                 CONFINANZAS: u.CONFINANZAS === true || u.CONFINANZAS === 'true',
                 FINANZAS: u.FINANZAS === true || u.FINANZAS === 'true',
@@ -814,11 +801,7 @@ function wireUI() {
     $('btnTheme').textContent = document.body.classList.contains('light-mode') ? '☀️' : '🌙';
 }
 
-window.toggleTheme = function () {
-    const isLight = document.body.classList.toggle('light-mode');
-    localStorage.setItem('vm_theme', isLight ? 'light' : 'dark');
-    $('btnTheme').textContent = isLight ? '☀️' : '🌙';
-};
+window.toggleTheme = function () { VM.alternarTema(); };
 
 // ---------------- Carga y normalización ----------------
 function esDeArqueo(raw) {

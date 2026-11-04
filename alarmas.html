@@ -140,8 +140,19 @@
   .loading-text { color: var(--accent); font-size: 15px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; transition: color 0.3s; }
   .loading-text.success-mode { color: var(--chip-ok); }
 </style>
+  <script src="vm-core.js?v=20261104"></script>
 </head>
 <body>
+  <script>
+    /* VM_THEME_BOOT: un solo tema para todas las pantallas */
+    (function () {
+      var t = localStorage.getItem('vm_theme');
+      if (t !== 'light' && t !== 'dark') { t = 'light'; localStorage.setItem('vm_theme', t); }
+      document.body.classList.add(t === 'dark' ? 'dark' : 'light-mode');
+      if (t !== 'dark') document.body.classList.add('tema-claro');
+    })();
+  </script>
+
 
   <script>
     if (localStorage.getItem('vm_theme') === 'light') {
@@ -256,20 +267,8 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const API = "https://script.google.com/macros/s/AKfycbzi1x000HsPSQsWgz65jYWDWZI3cNQoKhoU5XCKagYcqs4en-d1YzO2sbnmzWlLIa9Vvw/exec";
-const TIMEOUT_SESION = 300000; 
 
-window.toggleTheme = function() {
-  const isLight = document.body.classList.toggle('light-mode');
-  const btn = document.getElementById('btnTheme');
-  if (isLight) {
-      localStorage.setItem('vm_theme', 'light');
-      btn.textContent = '☀️';
-  } else {
-      localStorage.setItem('vm_theme', 'dark');
-      btn.textContent = '🌙';
-  }
-};
-document.getElementById('btnTheme').textContent = document.body.classList.contains('light-mode') ? '☀️' : '🌙';
+window.toggleTheme = function() { VM.alternarTema(); };
 
 function showToast(msg, type = 'info') {
     const container = document.getElementById('toast-container');
@@ -291,14 +290,10 @@ function toggleLoader(show, text = 'CARGANDO...', isSuccess = false) {
     if (show) overlay.classList.add('active'); else overlay.classList.remove('active');
 }
 
-window.addEventListener('pageshow', (e) => { if (e.persisted || (window.performance && window.performance.navigation.type === 2)) window.location.reload(); });
-
 const params = new URLSearchParams(window.location.search);
-let k = params.get('k') || params.get('token');
+let k = params.get('k') || params.get('token') || sessionStorage.getItem('k') || sessionStorage.getItem('vm_token') || '';
 
-if (!k) k = sessionStorage.getItem('k');
-
-function expulsar() { sessionStorage.clear(); window.location.replace('inicio.html'); }
+function expulsar() { VM.expulsar(); }
 if (!k) { expulsar(); } 
 else { 
     sessionStorage.setItem('k', k);
@@ -311,17 +306,10 @@ async function validarSesionFirebase() {
         document.body.style.opacity = 1;
         toggleLoader(true, "VERIFICANDO SESIÓN...");
         
-        const docRef = doc(db, "tokens", k);
-        const docSnap = await getDoc(docRef);
-        
-        if (!docSnap.exists()) {
-            throw new Error("Sesión inválida en base de datos.");
-        }
-        
-        const tokenData = docSnap.data();
-        if (tokenData.expira && Date.now() > tokenData.expira) {
-            throw new Error("La sesión ha expirado.");
-        }
+        const tokenData = await VM.validarToken(k);
+        if (!tokenData) throw new Error("Sesión inválida en base de datos.");
+        sessionStorage.setItem('usuarioActivo', tokenData.usuario || 'SISTEMA');
+        VM.iniciarSesion(k);
 
         window.load(); 
     } catch (e) { 
@@ -330,12 +318,7 @@ async function validarSesionFirebase() {
     }
 }
 
-let tIdle;
-function resetTimer() { clearTimeout(tIdle); tIdle = setTimeout(expulsar, TIMEOUT_SESION); }
-['click','mousemove','keydown','touchstart'].forEach(ev => document.addEventListener(ev, resetTimer));
-resetTimer();
-
-document.getElementById('btnBack').onclick = () => { window.location.replace(`inicio.html?k=${k}`); };
+document.getElementById('btnBack').onclick = () => { VM.irInicio(k); };
 
 // ==========================================
 // LÓGICA DE ALARMAS DEL SISTEMA (FIREBASE)
@@ -448,7 +431,8 @@ window.save = async function(){
     }
 
     toggleLoader(true, "¡CAMBIOS GUARDADOS!", true);
-    setTimeout(() => { window.location.replace(`inicio.html?k=${k}`); }, 1000);
+    // Quedarse en esta pantalla; solo se sale con el botón Volver.
+    setTimeout(() => { window.location.reload(); }, 1000);
   } catch(e){ 
       console.error(e);
       toggleLoader(false);

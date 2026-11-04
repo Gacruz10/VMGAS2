@@ -268,14 +268,17 @@
   .loading-text { color: var(--accent); font-size: 15px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; transition: color 0.3s; }
   .loading-text.success-mode { color: var(--ok); }
 </style>
+  <script src="vm-core.js?v=20261104"></script>
 </head>
 <body>
   <script>
-    // Aplicar tema instantáneamente
-    if(localStorage.getItem('vm_theme') !== 'dark') {
-      document.body.classList.add('light-mode');
-      localStorage.setItem('vm_theme', 'light');
-    }
+    /* VM_THEME_BOOT: un solo tema para todas las pantallas */
+    (function () {
+      var t = localStorage.getItem('vm_theme');
+      if (t !== 'light' && t !== 'dark') { t = 'light'; localStorage.setItem('vm_theme', t); }
+      document.body.classList.add(t === 'dark' ? 'dark' : 'light-mode');
+      if (t !== 'dark') document.body.classList.add('tema-claro');
+    })();
   </script>
 
   <button class="theme-toggle" onclick="window.toggleTheme()" id="btnTheme">🌙</button>
@@ -377,12 +380,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// ================= CONFIGURACIÓN Y TIMEOUT =================
-const TIMEOUT_SESION_INACTIVIDAD = 14400000;  // 4 horas máximo de inactividad física
-
 // ================= SEGURIDAD DE ARRANQUE =================
 const params = new URLSearchParams(window.location.search);
-window.k = params.get('k') || sessionStorage.getItem('vm_token');
+window.k = VM.tokenActual();
 
 // Limpieza ninja de URL
 if (window.history.replaceState) {
@@ -414,85 +414,42 @@ window.toggleLoader = function(show, text = 'CARGANDO...', isSuccess = false) {
     if (show) overlay.classList.add('active'); else overlay.classList.remove('active');
 };
 
-window.toggleTheme = function() {
-    const isLight = document.body.classList.toggle('light-mode');
-    const btn = document.getElementById('btnTheme');
-    if (isLight) {
-        localStorage.setItem('vm_theme', 'light');
-        btn.textContent = '☀️';
-    } else {
-        localStorage.setItem('vm_theme', 'dark');
-        btn.textContent = '🌙';
-    }
-};
+window.toggleTheme = function() { VM.alternarTema(); };
 
-// Ajuste del icono inicial
-if(localStorage.getItem('vm_theme') !== 'dark') {
-    document.getElementById('btnTheme').textContent = '☀️';
-} else {
-    document.getElementById('btnTheme').textContent = '🌙';
-}
+VM.aplicarTema();
 
 window.expulsar = function() {
-    sessionStorage.clear();
-    window.location.replace('index.html');
+    VM.expulsar();
 };
 
 window.logout = function() { 
     window.toggleLoader(true, "CERRANDO SESIÓN...");
-    SessionManager.logout();
+    VM.expulsar();
 };
 
 window.navegar = function(pagina) {
     if(!window.k) return;
     window.toggleLoader(true, "CARGANDO MÓDULO...");
-    window.location.replace(`${pagina}?k=${window.k}`);
+    // href (no replace): el botón Atrás del navegador vuelve al menú.
+    window.location.href = `${pagina}?k=${encodeURIComponent(window.k)}`;
 };
 
-// ================= SISTEMA DE SESIÓN (SOLO ONLINE) =================
+// ================= SISTEMA DE SESIÓN (20 MINUTOS) =================
 const SessionManager = {
-    sessionStartTime: null,
-    lastActivityTime: null,
-    
     init() {
-        this.sessionStartTime = Date.now();
-        this.lastActivityTime = Date.now();
-        
-        // Caza la inactividad del mouse, tacto, etc.
-        ['mousemove', 'mousedown', 'touchstart', 'click', 'keydown', 'scroll'].forEach(evt => 
-            window.addEventListener(evt, () => this.recordActivity(), { passive: true })
-        );
-        
+        VM.iniciarSesion(window.k);
         window.addEventListener('offline', () => window.showToast('📴 Se cortó internet. Recuperando...', 'warning'));
         window.addEventListener('online', () => window.showToast('🔗 Conexión restaurada', 'success'));
-        
-        this.startWatchdog();
         this.updateStatus();
     },
-    
-    recordActivity() {
-        this.lastActivityTime = Date.now();
-    },
-    
-    startWatchdog() {
-        setInterval(() => {
-            const timeSinceActivity = Date.now() - this.lastActivityTime;
-            if (timeSinceActivity > TIMEOUT_SESION_INACTIVIDAD) {
-                window.showToast(`⏱️ Sesión expirada por inactividad.`, 'error');
-                this.logout();
-            }
-        }, 60000); 
-    },
-    
     updateStatus() {
         const text = document.getElementById('sessionStatus');
-        const horasDesdeInicio = Math.floor((Date.now() - this.sessionStartTime) / 3600000);
-        const minDesdeActividad = Math.floor((Date.now() - this.lastActivityTime) / 60000);
-        
-        text.textContent = `ONLINE • ${horasDesdeInicio}h activa • Inactividad: ${minDesdeActividad}m`;
+        if (!text) return;
+        const last = Number(sessionStorage.getItem('vm_last_activity')) || Date.now();
+        const minDesdeActividad = Math.floor((Date.now() - last) / 60000);
+        text.textContent = `ONLINE • Inactividad: ${minDesdeActividad}m / 20m`;
         setTimeout(() => this.updateStatus(), 30000);
     },
-    
     logout() {
         window.expulsar();
     }
@@ -503,55 +460,25 @@ let pinReal = null;
 
 async function iniciarSesion() {
     if (!window.k) return window.expulsar();
-    
-    if (!navigator.onLine) {
-        window.showToast("⛔ Sin internet. La aplicación debe operar online.", "error");
-        setTimeout(() => window.expulsar(), 2000);
-        return;
-    }
 
     try {
         document.body.style.opacity = 1;
         window.toggleLoader(true, "VERIFICANDO CREDENCIALES...");
-        
-        // 1. Buscamos el token en Firebase
-        const tokenRef = doc(db, "tokens", window.k);
-        const tokenSnap = await getDoc(tokenRef);
 
-        if (!tokenSnap.exists()) {
-            throw new Error("Token inválido o expirado");
-        }
-
-        const tokenData = tokenSnap.data();
-        const ahora = Date.now();
-
-        // 2. EL PATOVICA DEL TIEMPO (Control de expiración absoluto)
-        if (tokenData.expira && ahora > tokenData.expira) {
-            window.showToast("⏱️ El token ha vencido.", "error");
-            setTimeout(() => window.expulsar(), 1500);
-            return;
-        }
-
-        // 3. LA BOMBA DE TIEMPO (Si se vence mientras está con la pantalla abierta)
-        if (tokenData.expira) {
-            const tiempoRestante = tokenData.expira - ahora;
-            setTimeout(() => {
-                window.showToast("⏳ Sesión expirada por límite de tiempo.", "error");
-                window.expulsar();
-            }, Math.max(0, tiempoRestante));
-        }
+        // Token cacheado en sessionStorage: si está vigente no va a Firebase.
+        const tokenData = await VM.validarToken(window.k);
+        if (!tokenData || !tokenData.usuario) throw new Error("Token inválido o expirado");
 
         const username = tokenData.usuario;
 
-        // 4. Traemos los permisos del usuario de Firebase
-        const userRef = doc(db, "usuarios", username);
-        const userSnap = await getDoc(userRef);
+        // Permisos cacheados por sesión (se renuevan cada 30 minutos).
+        const userData = await VM.usuario(username);
+        if (!userData) throw new Error("Usuario no encontrado");
 
-        if (!userSnap.exists()) {
-            throw new Error("Usuario no encontrado");
+        if (sessionStorage.getItem('vm_session_expired') === '1') {
+            sessionStorage.removeItem('vm_session_expired');
+            window.showToast('⏱️ Sesión expirada por inactividad.', 'info');
         }
-
-        const userData = userSnap.data();
         
         // Guardamos el usuario en local para que el nuevo index4 lo pueda leer sin ir a Google Sheets
         localStorage.setItem('vm_usuario', userData.nombre_mostrar || username);
@@ -691,11 +618,6 @@ async function loadAlarmBadgeFromFirebase() {
       console.error("Error cargando contador de alarmas:", e);
   }
 }
-
-// Refrescar al volver del historial del navegador
-window.addEventListener('pageshow', function(event) {
-  if (event.persisted) window.location.reload();
-});
 
 iniciarSesion();
 </script>

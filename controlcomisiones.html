@@ -274,8 +274,19 @@
     .day-meta { display: none; }
   }
 </style>
+  <script src="vm-core.js?v=20261104"></script>
 </head>
 <body>
+  <script>
+    /* VM_THEME_BOOT: un solo tema para todas las pantallas */
+    (function () {
+      var t = localStorage.getItem('vm_theme');
+      if (t !== 'light' && t !== 'dark') { t = 'light'; localStorage.setItem('vm_theme', t); }
+      document.body.classList.add(t === 'dark' ? 'dark' : 'light-mode');
+      if (t !== 'dark') document.body.classList.add('tema-claro');
+    })();
+  </script>
+
 
 <header class="fixed-header">
   <div class="header-top">
@@ -400,7 +411,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const TIMEOUT_SESION = 14400000; // 4 horas
 const MAX_COMISIONES_PAGO = 180;
 const $ = (id) => document.getElementById(id);
 const pad2 = (n) => String(n).padStart(2, "0");
@@ -522,27 +532,13 @@ function setLoading(show, text = "CARGANDO...") {
 
 // ---------------- Sesión ----------------
 const params = new URLSearchParams(window.location.search);
-const k = params.get("k") || params.get("token") || sessionStorage.getItem("k") || sessionStorage.getItem("vm_token");
+const k = VM.tokenActual();
 
 function expulsar() {
-  sessionStorage.clear();
-  window.location.replace("index.html");
+  VM.expulsar();
 }
 
-window.volver = () => window.location.replace(`inicio.html?k=${encodeURIComponent(k || "")}`);
-
-let tIdle;
-function resetTimer() {
-  clearTimeout(tIdle);
-  tIdle = setTimeout(() => {
-    showToast("Sesión expirada por inactividad.", "info");
-    setTimeout(expulsar, 1200);
-  }, TIMEOUT_SESION);
-}
-["click", "mousemove", "keydown", "touchstart", "scroll"].forEach((evt) =>
-  document.addEventListener(evt, resetTimer, { passive: true })
-);
-resetTimer();
+window.volver = () => VM.irInicio(k);
 
 let usuarioActivo = "SISTEMA";
 let usuarioNombre = "SISTEMA";
@@ -577,19 +573,16 @@ async function validarSesion() {
     document.body.style.opacity = 1;
     setLoading(true, "VERIFICANDO SESIÓN...");
 
-    const snap = await getDoc(doc(db, "tokens", k));
-    if (!snap.exists()) throw new Error("Sesión inválida.");
-    const tokenData = snap.data();
-    const exp = toMs(tokenData.expira);
-    if (exp && Date.now() > exp) throw new Error("La sesión expiró.");
+    const tokenData = await VM.validarToken(k);
+    if (!tokenData) throw new Error("Sesión inválida.");
     if (!tokenData.usuario) throw new Error("El token no tiene un usuario asociado.");
+    VM.iniciarSesion(k);
 
     usuarioActivo = String(tokenData.usuario || tokenData.nombre_mostrar || "SISTEMA");
     sessionStorage.setItem("usuarioActivo", usuarioActivo);
 
-    const userSnap = await getDoc(doc(db, "usuarios", usuarioActivo));
-    if (!userSnap.exists()) throw new Error("Usuario no encontrado.");
-    const u = userSnap.data();
+    const u = await VM.usuario(usuarioActivo);
+    if (!u) throw new Error("Usuario no encontrado.");
 
     permisosUsuario = {
       CONFINANZAS: u.CONFINANZAS === true || u.CONFINANZAS === "true",
@@ -1272,15 +1265,8 @@ function mostrarPagoOk(pagoId, total) {
 function wireUI() {
   $("btnVolver").addEventListener("click", window.volver);
 
-  if (localStorage.getItem("vm_theme") === "light") {
-    document.body.classList.add("light-mode");
-  }
-  $("btnTheme").textContent = document.body.classList.contains("light-mode") ? "☀️" : "🌙";
-  $("btnTheme").addEventListener("click", () => {
-    const isLight = document.body.classList.toggle("light-mode");
-    localStorage.setItem("vm_theme", isLight ? "light" : "dark");
-    $("btnTheme").textContent = isLight ? "☀️" : "🌙";
-  });
+  VM.aplicarTema();
+  $("btnTheme").addEventListener("click", VM.alternarTema);
 
   document.querySelectorAll(".tab").forEach((b) => {
     b.addEventListener("click", () => switchTab(b.dataset.tab));

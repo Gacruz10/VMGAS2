@@ -16,24 +16,22 @@ const db = getFirestore(app);
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzi1x000HsPSQsWgz65jYWDWZI3cNQoKhoU5XCKagYcqs4en-d1YzO2sbnmzWlLIa9Vvw/exec";
 const params = new URLSearchParams(window.location.search);
-const k = params.get('k') || params.get('token');
+const k = VM.tokenActual();
 
-if (!k) window.location.replace('index.html');
+if (!k) VM.expulsar();
 if (window.history.replaceState) window.history.replaceState({}, document.title, window.location.pathname);
 
 window.addEventListener('online', function () {
     actualizarIndicadorOffline();
     sincronizarCola();
 });
-window.addEventListener('pageshow', function (event) {
-    if (event.persisted) window.location.reload();
+window.addEventListener('pageshow', function () {
     actualizarIndicadorOffline();
     if (navigator.onLine) sincronizarCola();
 });
 
 let clientesData = []; let preciosData = []; let zonasActivas = []; let clienteSeleccionado = null;
 let comisionesData = { "10": [], "15": [], "45": [] };
-let sessionTimeout = 180;
 let idClienteSeleccionado = '';
 let deudasData = {};
 let mediaRecorder = null;
@@ -218,16 +216,15 @@ function esAcuerdoVigente(fechaStr) {
     } catch (e) { return false; }
 }
 
-let expireTime = Date.now() + 300000;
 function startTimer() {
     const timerDisplay = document.getElementById('timerDisplay');
 
     const verificarTiempo = () => {
-        const timeLeft = Math.floor((expireTime - Date.now()) / 1000);
+        const limite = (window.VM && VM.TIMEOUT_MS) ? VM.TIMEOUT_MS : 20 * 60 * 1000;
+        const ultima = Number(sessionStorage.getItem('vm_last_activity')) || Date.now();
+        const timeLeft = Math.max(0, Math.floor((limite - (Date.now() - ultima)) / 1000));
 
-        if (timeLeft <= 0) {
-            window.location.replace('index.html');
-        } else if (timerDisplay) {
+        if (timerDisplay) {
             const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
             const s = (timeLeft % 60).toString().padStart(2, '0');
             timerDisplay.textContent = `${m}:${s}`;
@@ -235,6 +232,7 @@ function startTimer() {
     };
 
     setInterval(verificarTiempo, 1000);
+    verificarTiempo();
 
     document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible") {
@@ -287,8 +285,8 @@ async function calentarGPS() {
     );
 }
 
-function refreshSession() { expireTime = Date.now() + 300000; }
-['click', 'mousemove', 'keydown', 'touchstart'].forEach(evt => document.addEventListener(evt, refreshSession));
+// La actividad la registra VM.iniciarSesion (timeout de 20 minutos).
+// Se mantiene esta función sin efecto para no romper referencias históricas.
 
 const pad = (n) => n.toString().padStart(2, '0');
 function generarID() { const d = new Date(); return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds()) + Math.floor(100 + Math.random() * 900); }
@@ -374,14 +372,13 @@ async function init() {
         document.body.style.opacity = 1;
 
         if (navigator.onLine) {
-            const tokenSnap = await getDoc(doc(db, "tokens", k));
-            if (!tokenSnap.exists() || (tokenSnap.data().expira && Date.now() > tokenSnap.data().expira)) {
+            const tokenData = await VM.validarToken(k);
+            if (!tokenData) {
                 showToast("Token inválido o expirado", "error");
-                setTimeout(() => window.location.replace('index.html'), 1500);
+                setTimeout(() => VM.expulsar(), 1500);
                 return;
             }
-            const tokenData = tokenSnap.data();
-            window.idUsuarioFirebase = tokenData.usuario; 
+            window.idUsuarioFirebase = tokenData.usuario;
             window.nombreUsuarioMostrar = tokenData.nombre_mostrar || window.idUsuarioFirebase;
             localStorage.setItem('vm_usuario_id', window.idUsuarioFirebase);
             localStorage.setItem('vm_usuario_nombre', window.nombreUsuarioMostrar);
@@ -395,6 +392,7 @@ async function init() {
             window.nombreUsuarioMostrar = localStorage.getItem('vm_usuario_nombre') || 'MODO OFFLINE';
         }
 
+        VM.iniciarSesion(k);
         document.getElementById('welcomeMessage').textContent = `Usuario: ${window.nombreUsuarioMostrar.toUpperCase()}`;
         startTimer();
         actualizarIndicadorOffline();
@@ -410,7 +408,7 @@ async function init() {
 
     } catch (e) { 
         console.error("Init Error", e);
-        window.location.replace('index.html'); 
+        VM.expulsar();
     }
 }
 
@@ -1649,7 +1647,7 @@ async function guardar() {
     try {
         await conTimeout(enviarVentaFirestore(payload), 20000);
         mostrarExito("La operación se registró correctamente.");
-        setTimeout(() => window.location.replace(`inicio.html?k=${k}`), 1200);
+        setTimeout(() => window.location.reload(), 1200);
     } catch (e) {
         console.warn("Fallo al guardar:", e);
         if (esErrorDeRed(e)) {
@@ -1695,39 +1693,12 @@ function cerrarModalDeudas() {
 }
 
 document.getElementById('btnGuardar').onclick = guardar; 
-document.getElementById('btnVolver').onclick = () => window.location.replace(`inicio.html?k=${k}`); 
+document.getElementById('btnVolver').onclick = () => VM.irInicio(k);
 init();
 
 function toggleTema() {
-    var btn = document.getElementById('btnTema');
-    if (document.body.classList.toggle('tema-claro')) {
-        btn.textContent = '🌙 Oscuro';
-        localStorage.setItem('tema_repartos', 'claro');
-    } else {
-        btn.textContent = '☀️ Claro';
-        localStorage.setItem('tema_repartos', 'oscuro');
-    }
+    if (window.VM) VM.alternarTema();
 }
-
-function controlPatovica() {
-    const ahora = new Date();
-    const hora = ahora.getHours();
-    const min = ahora.getMinutes();
-    const capa = document.getElementById('capaMantenimiento');
-
-    const estaEnBloqueo = (hora === 23 && min >= 45) || (hora === 0 && min <= 5);
-
-    if (estaEnBloqueo) {
-        capa.style.display = 'flex';
-        document.onkeydown = function (e) { return false; };
-    } else {
-        capa.style.display = 'none';
-        document.onkeydown = null;
-    }
-}
-
-controlPatovica();
-setInterval(controlPatovica, 30000);
 
 window.toggleTema = toggleTema;
 window.sincronizarCola = sincronizarCola;

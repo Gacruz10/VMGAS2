@@ -208,8 +208,19 @@
   .loading-text { color: var(--accent); font-size: 15px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
   .loading-text.success-mode { color: var(--success); }
 </style>
+  <script src="vm-core.js?v=20261104"></script>
 </head>
 <body>
+  <script>
+    /* VM_THEME_BOOT: un solo tema para todas las pantallas */
+    (function () {
+      var t = localStorage.getItem('vm_theme');
+      if (t !== 'light' && t !== 'dark') { t = 'light'; localStorage.setItem('vm_theme', t); }
+      document.body.classList.add(t === 'dark' ? 'dark' : 'light-mode');
+      if (t !== 'dark') document.body.classList.add('tema-claro');
+    })();
+  </script>
+
 
   <div id="toast-container"></div>
   <div class="loading-overlay" id="loadingOverlay">
@@ -290,21 +301,15 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const params = new URLSearchParams(window.location.search);
-window.k = params.get('k') || sessionStorage.getItem('vm_token');
+window.k = VM.tokenActual();
 
-if (!window.k) window.location.replace('index.html');
+if (!window.k) VM.expulsar();
 if (window.history.replaceState) window.history.replaceState({}, document.title, window.location.pathname);
 
 // ================= TEMA =================
 const btnTheme = document.getElementById('btnTheme');
-btnTheme.onclick = () => {
-    const isLight = document.body.classList.toggle('light-mode');
-    localStorage.setItem('vm_theme', isLight ? 'light' : 'dark');
-    btnTheme.textContent = isLight ? '☀️' : '🌙';
-};
-if(localStorage.getItem('vm_theme') !== 'dark') {
-    document.body.classList.add('light-mode'); btnTheme.textContent = '☀️';
-} else { btnTheme.textContent = '🌙'; }
+btnTheme.onclick = VM.alternarTema;
+VM.aplicarTema();
 
 // ================= UTILS =================
 window.showToast = function(msg, type = 'info') {
@@ -324,13 +329,7 @@ window.toggleLoader = function(show, text = 'CARGANDO...', isSuccess = false) {
     else { sp.classList.remove('success-mode'); txt.classList.remove('success-mode'); }
     if (show) ov.classList.add('active'); else ov.classList.remove('active');
 }
-window.expulsar = function() { sessionStorage.clear(); window.location.replace('index.html'); };
-
-// ================= INACTIVIDAD =================
-let ultimaActividad = Date.now();
-const registrarActividad = () => ultimaActividad = Date.now();
-['click', 'mousemove', 'keydown', 'touchstart', 'scroll'].forEach(evt => document.addEventListener(evt, registrarActividad, { passive: true }));
-setInterval(() => { if (Date.now() - ultimaActividad > 900000) window.expulsar(); }, 10000);
+window.expulsar = function() { VM.expulsar(); };
 
 // ================= DATOS GLOBALES =================
 let preciosData = [];
@@ -340,16 +339,22 @@ let chismosoPrecios = {};
 // ================= ARRANQUE =================
 async function init() {
     try {
-        const permsLocales = JSON.parse(sessionStorage.getItem('vm_perms') || '{}');
-        if (permsLocales.precios !== true && permsLocales.PRECIOS !== true && permsLocales.precios !== "true") {
-            alert("⛔ Acceso denegado. No tienes permisos para gestionar Precios.");
-            return window.location.replace(`inicio.html?k=${window.k}`);
-        }
         document.body.style.opacity = 1;
         
         window.toggleLoader(true, "VERIFICANDO SESIÓN...");
-        const tokenSnap = await getDoc(doc(db, "tokens", window.k));
-        if (!tokenSnap.exists() || (tokenSnap.data().expira && Date.now() > tokenSnap.data().expira)) throw new Error("Sesión inválida");
+        const tokenData = await VM.validarToken(window.k);
+        if (!tokenData || !tokenData.usuario) throw new Error("Sesión inválida");
+
+        const userData = await VM.usuario(tokenData.usuario);
+        const puede = userData && (userData.PRECIOS === true || userData.PRECIOS === "true");
+        if (!puede) {
+            alert("⛔ Acceso denegado. No tienes permisos para gestionar Precios.");
+            VM.irInicio(window.k);
+            return;
+        }
+
+        sessionStorage.setItem('usuarioActivo', tokenData.usuario || 'SISTEMA');
+        VM.iniciarSesion(window.k);
         
         window.toggleLoader(true, "LEYENDO BASE DE DATOS...");
         await cargarTodoFirebase();
@@ -558,7 +563,7 @@ document.getElementById('btnEditarComisiones').onclick = () => {
     window.location.href = `parametroscomisiones.html?k=${encodeURIComponent(window.k)}`;
 };
 
-document.getElementById('btnVolver').onclick = () => window.location.replace(`inicio.html?k=${window.k}`);
+document.getElementById('btnVolver').onclick = () => VM.irInicio(window.k);
 
 init();
 </script>

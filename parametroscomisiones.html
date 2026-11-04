@@ -594,8 +594,19 @@
     #toast-container { bottom: 148px; }
   }
 </style>
+  <script src="vm-core.js?v=20261104"></script>
 </head>
 <body>
+  <script>
+    /* VM_THEME_BOOT: un solo tema para todas las pantallas */
+    (function () {
+      var t = localStorage.getItem('vm_theme');
+      if (t !== 'light' && t !== 'dark') { t = 'light'; localStorage.setItem('vm_theme', t); }
+      document.body.classList.add(t === 'dark' ? 'dark' : 'light-mode');
+      if (t !== 'dark') document.body.classList.add('tema-claro');
+    })();
+  </script>
+
 
   <div id="toast-container"></div>
 
@@ -660,16 +671,13 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const TIPOS = ["10", "15", "45"];
-const TIMEOUT_SESION = 15 * 60 * 1000;
 const params = new URLSearchParams(window.location.search);
-const k = params.get("k") || params.get("token") || sessionStorage.getItem("k") || sessionStorage.getItem("vm_token");
+const k = VM.tokenActual();
 
 let escalas = { "10": [], "15": [], "45": [] };
 let originalJSON = "";
 let dirty = false;
 let guardando = false;
-let ultimaActividad = Date.now();
-let avisoInactividad = false;
 
 function toMs(valor) {
   if (valor === null || valor === undefined || valor === "") return 0;
@@ -732,8 +740,7 @@ function toggleLoader(show, texto = null, exito = false) {
 }
 
 function expulsar() {
-  sessionStorage.clear();
-  window.location.replace("index.html");
+  VM.expulsar();
 }
 
 function normalizarRangos(raw) {
@@ -1171,24 +1178,19 @@ async function cargarEscalas() {
 async function iniciar() {
   try {
     toggleLoader(true, "VERIFICANDO SESIÓN...");
-    const tokenSnap = await getDoc(doc(db, "tokens", k));
-    if (!tokenSnap.exists()) throw new Error("El token no existe o venció.");
-
-    const token = tokenSnap.data();
-    const exp = toMs(token.expira);
-    if (exp && Date.now() > exp) throw new Error("La sesión venció. Volvé a iniciar sesión.");
+    const token = await VM.validarToken(k);
+    if (!token) throw new Error("El token no existe o venció.");
     if (!token.usuario) throw new Error("El token no tiene un usuario asociado.");
+    VM.iniciarSesion(k);
 
-    const userSnap = await getDoc(doc(db, "usuarios", token.usuario));
-    if (!userSnap.exists()) throw new Error("Usuario no encontrado.");
-
-    const user = userSnap.data();
+    const user = await VM.usuario(token.usuario);
+    if (!user) throw new Error("Usuario no encontrado.");
     const puede = user.PRECIOS === true || user.PRECIOS === "true";
     if (!puede) {
       alert("⛔ Tu usuario no tiene permiso PRECIOS para editar las escalas de comisión.");
       sessionStorage.setItem("k", k);
       sessionStorage.setItem("vm_token", k);
-      window.location.replace(`inicio.html?k=${encodeURIComponent(k)}`);
+      VM.irInicio(k);
       return;
     }
 
@@ -1202,23 +1204,15 @@ async function iniciar() {
     console.error(e);
     toggleLoader(false);
     alert("⛔ " + (e.message || "No se pudo validar la sesión."));
-    sessionStorage.clear();
-    window.location.replace("index.html");
+    expulsar();
   }
 }
 
 function aplicarTema() {
-  const light = localStorage.getItem("vm_theme") === "light";
-  document.body.classList.toggle("light-mode", light);
-  const btnTheme = document.getElementById("btnTheme");
-  if (btnTheme) btnTheme.textContent = light ? "☀️" : "🌙";
+  VM.aplicarTema();
 }
 
-document.getElementById("btnTheme").addEventListener("click", () => {
-  const light = document.body.classList.toggle("light-mode");
-  localStorage.setItem("vm_theme", light ? "light" : "dark");
-  document.getElementById("btnTheme").textContent = light ? "☀️" : "🌙";
-});
+document.getElementById("btnTheme").addEventListener("click", VM.alternarTema);
 
 document.getElementById("btnVolver").addEventListener("click", volver);
 document.getElementById("btnGuardar").addEventListener("click", guardar);
@@ -1236,25 +1230,6 @@ window.addEventListener("beforeunload", (e) => {
   e.preventDefault();
   e.returnValue = "";
 });
-
-["click", "mousemove", "keydown", "touchstart", "scroll"].forEach((evt) => {
-  document.addEventListener(evt, () => {
-    ultimaActividad = Date.now();
-    avisoInactividad = false;
-  }, { passive: true });
-});
-
-setInterval(() => {
-  if (Date.now() - ultimaActividad <= TIMEOUT_SESION) return;
-  if (dirty) {
-    if (!avisoInactividad) {
-      showToast("Sesión inactiva. Guardá o descartá los cambios.", "info");
-      avisoInactividad = true;
-    }
-    return;
-  }
-  expulsar();
-}, 30000);
 
 aplicarTema();
 

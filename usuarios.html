@@ -227,16 +227,19 @@
     .loading-text { color: var(--accent); font-size: 15px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; transition: color 0.3s; }
     .loading-text.success-mode { color: var(--success); }
   </style>
+  <script src="vm-core.js?v=20261104"></script>
 </head>
 <body>
+  <script>
+    /* VM_THEME_BOOT: un solo tema para todas las pantallas */
+    (function () {
+      var t = localStorage.getItem('vm_theme');
+      if (t !== 'light' && t !== 'dark') { t = 'light'; localStorage.setItem('vm_theme', t); }
+      document.body.classList.add(t === 'dark' ? 'dark' : 'light-mode');
+      if (t !== 'dark') document.body.classList.add('tema-claro');
+    })();
+  </script>
 
-<script>
-  // Aplicar tema instantáneamente
-  if(localStorage.getItem('vm_theme') !== 'dark') {
-    document.body.classList.add('light-mode');
-    localStorage.setItem('vm_theme', 'light');
-  }
-</script>
 
 <div id="toast-container"></div>
 
@@ -313,51 +316,29 @@ window.toggleLoader = function(show, text = 'CARGANDO...', isSuccess = false) {
     if (show) overlay.classList.add('active'); else overlay.classList.remove('active');
 };
 
-window.toggleTheme = function() {
-    const isLight = document.body.classList.toggle('light-mode');
-    const btn = document.getElementById('btnTheme');
-    if (isLight) {
-        localStorage.setItem('vm_theme', 'light');
-        btn.textContent = '☀️';
-    } else {
-        localStorage.setItem('vm_theme', 'dark');
-        btn.textContent = '🌙';
-    }
-};
+window.toggleTheme = function() { VM.alternarTema(); };
 
-if(localStorage.getItem('vm_theme') !== 'dark') {
-    document.getElementById('btnTheme').textContent = '☀️';
-} else {
-    document.getElementById('btnTheme').textContent = '🌙';
-}
+VM.aplicarTema();
 
-// ================= SEGURIDAD Y PATOVICA =================
+// ================= SEGURIDAD =================
 const params = new URLSearchParams(window.location.search);
-const k = params.get('k') || sessionStorage.getItem('vm_token');
+const k = VM.tokenActual();
 
 window.expulsar = function() {
-  sessionStorage.clear();
-  window.location.replace('index.html');
+  VM.expulsar();
 };
 
 document.getElementById('btnInicio').onclick = () => {
-  window.location.replace(`inicio.html?k=${k}`);
+  VM.irInicio(k);
 };
 
 if (!k) {
   window.expulsar();
 } else {
-    // EL PATOVICA 1: Verifica si tiene permiso "usuarios" en memoria
-    const permsLocales = JSON.parse(sessionStorage.getItem('vm_perms') || '{}');
-    if (permsLocales.usuarios !== true && permsLocales.usuarios !== "true") {
-        alert("⛔ Acceso denegado. No tienes permisos de Administrador.");
-        window.location.replace(`inicio.html?k=${k}`);
-    } else {
-        if (window.history.replaceState) {
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
-        validarSesion();
+    if (window.history.replaceState) {
+        window.history.replaceState({}, document.title, window.location.pathname);
     }
+    validarSesion();
 }
 
 async function validarSesion() {
@@ -366,30 +347,21 @@ async function validarSesion() {
     // Solo levantamos el loader inicial cortito
     window.toggleLoader(true, "VERIFICANDO SESIÓN...");
     
-    // Verificamos el token directo en Firebase
-    const tokenRef = doc(db, "tokens", k);
-    const tokenSnap = await getDoc(tokenRef);
-    
-    if (!tokenSnap.exists()) throw new Error("Token expirado");
-    
-    const tokenData = tokenSnap.data();
-    const ahora = Date.now();
+    // Verificamos el token con caché local (sin consultar Firebase en cada ingreso)
+    const tokenData = await VM.validarToken(k);
+    if (!tokenData || !tokenData.usuario) throw new Error("Token expirado");
 
-    // EL PATOVICA DEL TIEMPO (Control de expiración absoluto)
-    if (tokenData.expira && ahora > tokenData.expira) {
-        window.showToast("⏱️ El token ha vencido.", "error");
-        setTimeout(() => window.expulsar(), 1500);
+    // Permisos desde la caché de usuario (se renueva cada 30 minutos).
+    const userData = await VM.usuario(tokenData.usuario);
+    const puede = userData && (userData.USUARIOS === true || userData.USUARIOS === "true");
+    if (!puede) {
+        alert("⛔ Acceso denegado. No tienes permisos de Administrador.");
+        VM.irInicio(k);
         return;
     }
 
-    // LA BOMBA DE TIEMPO (Primer plano)
-    if (tokenData.expira) {
-        const tiempoRestante = tokenData.expira - ahora;
-        setTimeout(() => {
-            window.showToast("⏳ Sesión expirada por límite de tiempo.", "error");
-            window.expulsar();
-        }, Math.max(0, tiempoRestante));
-    }
+    sessionStorage.setItem('usuarioActivo', tokenData.usuario || 'SISTEMA');
+    VM.iniciarSesion(k);
     
     // Todo legal, cargamos la grilla sin cambiar el texto del loader para no perder tiempo
     cargar();

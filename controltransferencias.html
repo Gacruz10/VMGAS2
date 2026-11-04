@@ -286,8 +286,19 @@
     .page-title { font-size: .82rem; }
   }
 </style>
+  <script src="vm-core.js?v=20261104"></script>
 </head>
 <body>
+  <script>
+    /* VM_THEME_BOOT: un solo tema para todas las pantallas */
+    (function () {
+      var t = localStorage.getItem('vm_theme');
+      if (t !== 'light' && t !== 'dark') { t = 'light'; localStorage.setItem('vm_theme', t); }
+      document.body.classList.add(t === 'dark' ? 'dark' : 'light-mode');
+      if (t !== 'dark') document.body.classList.add('tema-claro');
+    })();
+  </script>
+
 <header class="fixed-header">
   <div class="header-top">
     <button class="btn-icon" id="btnVolver" title="Volver">←</button>
@@ -367,7 +378,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const TIMEOUT_SESION = 14400000; // 4 horas
 const TAX_TRANSFERENCIA = 0.006; // Ley 25413
 const MAX_DIAS = 120;
 const MAX_LOTE = 40;
@@ -490,14 +500,13 @@ function setLoading(show, text = "CARGANDO...") {
 
 // ---------------- Sesión ----------------
 const params = new URLSearchParams(window.location.search);
-const k = params.get("k") || params.get("token") || sessionStorage.getItem("k") || sessionStorage.getItem("vm_token");
+const k = VM.tokenActual();
 
 function expulsar() {
-  sessionStorage.clear();
-  window.location.replace("index.html");
+  VM.expulsar();
 }
 
-window.volver = () => window.location.replace(`inicio.html?k=${encodeURIComponent(k || "")}`);
+window.volver = () => VM.irInicio(k);
 
 let usuarioActivo = "SISTEMA";
 let permisosUsuario = { CONFINANZAS: false, FINANZAS: false };
@@ -506,38 +515,21 @@ function permisoActivo(nombre) {
   return permisosUsuario[String(nombre || "").toUpperCase()] === true;
 }
 
-let tIdle;
-function resetTimer() {
-  clearTimeout(tIdle);
-  tIdle = setTimeout(() => {
-    showToast("Sesión expirada por inactividad.", "info");
-    setTimeout(expulsar, 1200);
-  }, TIMEOUT_SESION);
-}
-["click", "mousemove", "keydown", "touchstart", "scroll"].forEach((evt) =>
-  document.addEventListener(evt, resetTimer, { passive: true })
-);
-resetTimer();
-
 async function validarSesion() {
   try {
     document.body.style.opacity = 1;
     setLoading(true, "VERIFICANDO SESIÓN...");
 
-    const snap = await getDoc(doc(db, "tokens", k));
-    if (!snap.exists()) throw new Error("Sesión inválida.");
-    const data = snap.data();
-    const exp = toMs(data.expira);
-    if (exp && Date.now() > exp) throw new Error("La sesión expiró.");
-
+    const data = await VM.validarToken(k);
+    if (!data) throw new Error("Sesión inválida.");
     if (!data.usuario) throw new Error("El token no tiene un usuario asociado.");
+    VM.iniciarSesion(k);
 
     usuarioActivo = data.usuario || data.nombre_mostrar || "SISTEMA";
     sessionStorage.setItem("usuarioActivo", usuarioActivo);
 
-    const userSnap = await getDoc(doc(db, "usuarios", data.usuario));
-    if (!userSnap.exists()) throw new Error("Usuario no encontrado.");
-    const u = userSnap.data();
+    const u = await VM.usuario(data.usuario);
+    if (!u) throw new Error("Usuario no encontrado.");
     permisosUsuario = {
       CONFINANZAS: u.CONFINANZAS === true || u.CONFINANZAS === "true",
       FINANZAS: u.FINANZAS === true || u.FINANZAS === "true"
@@ -1312,11 +1304,7 @@ function openAdjust(id) {
 // ---------------- UI ----------------
 function wireUI() {
   $("btnVolver").onclick = () => window.volver();
-  $("btnTheme").onclick = () => {
-    const light = document.body.classList.toggle("light-mode");
-    localStorage.setItem("vm_theme", light ? "light" : "dark");
-    $("btnTheme").textContent = light ? "☀️" : "🌙";
-  };
+  $("btnTheme").onclick = VM.alternarTema;
 
   document.querySelectorAll(".tab").forEach((btn) => {
     btn.onclick = () => {
@@ -1432,9 +1420,7 @@ async function init() {
   $("fStart").value = isoFromDate(desde);
   $("fEnd").value = isoFromDate(hoy);
 
-  if (localStorage.getItem("vm_theme") === "light") {
-    document.body.classList.add("light-mode");
-  }
+  VM.aplicarTema();
 
   wireUI();
   await cargar();

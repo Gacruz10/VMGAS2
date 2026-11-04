@@ -167,8 +167,19 @@
     .success-actions .btn-action:hover { border-color: var(--accent); }
     .success-copy { font-size: 0.6rem; color: var(--text-muted); background: none; border: none; cursor: pointer; text-decoration: underline; }
   </style>
+  <script src="vm-core.js?v=20261104"></script>
 </head>
 <body>
+  <script>
+    /* VM_THEME_BOOT: un solo tema para todas las pantallas */
+    (function () {
+      var t = localStorage.getItem('vm_theme');
+      if (t !== 'light' && t !== 'dark') { t = 'light'; localStorage.setItem('vm_theme', t); }
+      document.body.classList.add(t === 'dark' ? 'dark' : 'light-mode');
+      if (t !== 'dark') document.body.classList.add('tema-claro');
+    })();
+  </script>
+
 
   <script>
     if (localStorage.getItem('vm_theme') === 'light') {
@@ -308,18 +319,6 @@
   </div>
 </div>
 
-<div id="capaMantenimiento" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,10,16,0.98); z-index:99999; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#fff; font-family:'Inter', sans-serif;">
-  <div style="font-size:40px; margin-bottom:20px;">🛠️</div>
-  <h2 style="color:var(--accent); letter-spacing:2px;">VENTANA DE MANTENIMIENTO</h2>
-  <p style="max-width:400px; color:var(--text-muted); font-family:'Inter', sans-serif; margin-top:10px;">
-    Estamos procesando los cierres y auditorías del día. <br>
-    El sistema volverá a estar operativo a las <b>00:06 AM</b>.
-  </p>
-  <div style="margin-top:30px; padding:10px 20px; border:1px solid var(--glass-border); border-radius:4px; font-size:12px; color:var(--accent);">
-    AGUARDE UN MOMENTO...
-  </div>
-</div>
-
 <script type="module">
 // ============================================================
 // ARQUEO DE CAJA - VMGAS2 (Firestore directo)
@@ -343,7 +342,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const TIMEOUT_SESION = 14400000; // 4 horas de inactividad
 const MAX_OPERACIONES_BATCH = 450;
 
 // ---------------- Utilidades ----------------
@@ -428,18 +426,7 @@ function ultimasFechas(dias) {
 }
 
 // ---------------- UI base ----------------
-window.toggleTheme = function () {
-    const isLight = document.body.classList.toggle('light-mode');
-    const btn = $('btnTheme');
-    if (isLight) {
-        localStorage.setItem('vm_theme', 'light');
-        btn.textContent = '☀️';
-    } else {
-        localStorage.setItem('vm_theme', 'dark');
-        btn.textContent = '🌙';
-    }
-};
-$('btnTheme').textContent = document.body.classList.contains('light-mode') ? '☀️' : '🌙';
+window.toggleTheme = function () { VM.alternarTema(); };
 
 function showToast(msg, type = 'info') {
     const container = $('toast-container');
@@ -468,14 +455,15 @@ function toggleLoader(show, text = 'CARGANDO...', isSuccess = false) {
 
 // ---------------- Sesión ----------------
 const params = new URLSearchParams(window.location.search);
-const k = params.get('k') || params.get('token') || sessionStorage.getItem('vm_token');
+const k = VM.tokenActual();
 
 function expulsar() {
-    sessionStorage.clear();
-    window.location.replace('index.html');
+    VM.expulsar();
 }
 
-window.volver = () => window.location.replace(`administrativo.html?k=${k}`);
+window.volver = () => {
+    window.location.href = `administrativo.html?k=${encodeURIComponent(k)}`;
+};
 
 if (!k) {
     expulsar();
@@ -484,17 +472,6 @@ if (!k) {
     validarSesion();
 }
 
-let tIdle;
-function resetTimer() {
-    clearTimeout(tIdle);
-    tIdle = setTimeout(() => {
-        showToast('⏱️ Sesión expirada por inactividad.', 'info');
-        setTimeout(expulsar, 1200);
-    }, TIMEOUT_SESION);
-}
-['click', 'mousemove', 'keydown', 'touchstart', 'scroll'].forEach(evt => document.addEventListener(evt, resetTimer, { passive: true }));
-resetTimer();
-
 $('btnBack').onclick = () => window.volver();
 
 async function validarSesion() {
@@ -502,18 +479,12 @@ async function validarSesion() {
         document.body.style.opacity = 1;
         toggleLoader(true, 'VERIFICANDO SESIÓN...');
 
-        const snap = await getDoc(doc(db, 'tokens', k));
-        if (!snap.exists()) throw new Error('Sesión inválida en base de datos.');
-
-        const data = snap.data();
-        const exp = toMs(data.expira);
-        if (exp && Date.now() > exp) throw new Error('La sesión ha expirado.');
+        const data = await VM.validarToken(k);
+        if (!data) throw new Error('Sesión inválida en base de datos.');
         if (!data.usuario) throw new Error('El token no tiene usuario asociado.');
 
-        const userSnap = await getDoc(doc(db, 'usuarios', data.usuario));
-        if (!userSnap.exists()) throw new Error('Usuario no encontrado.');
-
-        const u = userSnap.data();
+        const u = await VM.usuario(data.usuario);
+        if (!u) throw new Error('Usuario no encontrado.');
         const puedeFinanzas = u.FINANZAS === true || u.FINANZAS === 'true';
         if (!puedeFinanzas) {
             toggleLoader(false);
@@ -525,6 +496,7 @@ async function validarSesion() {
         sessionStorage.setItem('usuarioActivo', data.usuario || data.nombre_mostrar || 'SISTEMA');
         sessionStorage.setItem('vm_token', k);
         sessionStorage.setItem('k', k);
+        VM.iniciarSesion(k);
         await cargarDatos();
     } catch (e) {
         console.error(e);
@@ -1155,7 +1127,8 @@ function cerrarSuccessModal() {
 
 $('successClose').onclick = () => {
     cerrarSuccessModal();
-    cargarDatos();
+    // Al finalizar un cierre se recarga esta misma pantalla (no se sale a inicio).
+    window.location.reload();
 };
 
 $('successCopy').onclick = async () => {
@@ -1171,7 +1144,7 @@ $('successCopy').onclick = async () => {
 $('successModal').addEventListener('click', (e) => {
     if (e.target.id === 'successModal') {
         cerrarSuccessModal();
-        cargarDatos();
+        window.location.reload();
     }
 });
 
@@ -1373,25 +1346,7 @@ $('btnCerrarCaja').onclick = async () => {
     }
 };
 
-// ---------------- Patovica ----------------
-function controlPatovica() {
-    const ahora = new Date();
-    const hora = ahora.getHours();
-    const min = ahora.getMinutes();
-    const capa = $('capaMantenimiento');
 
-    const estaEnBloqueo = (hora === 23 && min >= 45) || (hora === 0 && min <= 5);
-
-    if (estaEnBloqueo) {
-        capa.style.display = 'flex';
-        document.onkeydown = function (e) { return false; };
-    } else {
-        capa.style.display = 'none';
-        document.onkeydown = null;
-    }
-}
-controlPatovica();
-setInterval(controlPatovica, 300000);
 </script>
 </body>
 </html>

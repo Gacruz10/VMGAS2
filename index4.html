@@ -7,9 +7,20 @@
     <title>Registro de Entrega</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+  <script src="vm-core.js?v=20261104"></script>
 </head>
 
 <body>
+  <script>
+    /* VM_THEME_BOOT: un solo tema para todas las pantallas */
+    (function () {
+      var t = localStorage.getItem('vm_theme');
+      if (t !== 'light' && t !== 'dark') { t = 'light'; localStorage.setItem('vm_theme', t); }
+      document.body.classList.add(t === 'dark' ? 'dark' : 'light-mode');
+      if (t !== 'dark') document.body.classList.add('tema-claro');
+    })();
+  </script>
+
 
     <button id="btnTema" onclick="toggleTema()" title="Cambiar tema">☀️ Claro</button>
     
@@ -26,7 +37,7 @@
 
     <div class="header">
         <button class="btn-volver" id="btnVolver">⬅ VOLVER</button>
-        <div id="timerDisplay" class="timer-display">05:00</div>
+        <div id="timerDisplay" class="timer-display">20:00</div>
         <div class="welcome-message" id="welcomeMessage">Cargando...</div>
         <h1>REGISTRO DE VENTA</h1>
     </div>
@@ -238,18 +249,6 @@
             <div class="modal-deudas-title">⚠️ ALERTA: DEUDA PENDIENTE</div>
             <div class="modal-deudas-content" id="modalDeudasContent"></div>
             <button class="btn-entendido" onclick="cerrarModalDeudas()">ENTENDIDO</button>
-        </div>
-    </div>
-
-    <div id="capaMantenimiento" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(6,10,16,0.98); z-index:99999; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#fff; font-family:'Syne', sans-serif;">
-        <div style="font-size:40px; margin-bottom:20px;">🛠️</div>
-        <h2 style="color:var(--accent); letter-spacing:2px;">VENTANA DE MANTENIMIENTO</h2>
-        <p style="max-width:400px; color:var(--dim); font-family:'Inter', sans-serif; margin-top:10px;">
-            Estamos procesando los closures y auditorías del día. <br>
-            El sistema volverá a estar operativo a las <b>00:06 AM</b>.
-        </p>
-        <div style="margin-top:30px; padding:10px 20px; border:1px solid var(--border); border-radius:4px; font-size:12px; color:var(--warn);">
-            AGUARDE UN MOMENTO...
         </div>
     </div>
 

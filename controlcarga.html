@@ -151,8 +151,19 @@
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .loading-text { color: var(--accent); font-size: 15px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
   </style>
+  <script src="vm-core.js?v=20261104"></script>
 </head>
 <body>
+  <script>
+    /* VM_THEME_BOOT: un solo tema para todas las pantallas */
+    (function () {
+      var t = localStorage.getItem('vm_theme');
+      if (t !== 'light' && t !== 'dark') { t = 'light'; localStorage.setItem('vm_theme', t); }
+      document.body.classList.add(t === 'dark' ? 'dark' : 'light-mode');
+      if (t !== 'dark') document.body.classList.add('tema-claro');
+    })();
+  </script>
+
 
   <script>if(localStorage.getItem('vm_theme') === 'light') document.body.classList.add('light-mode');</script>
   <button class="theme-toggle" onclick="window.toggleTheme()" id="btnTheme">🌙</button>
@@ -257,13 +268,10 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const params = new URLSearchParams(window.location.search);
-let k = params.get('k') || sessionStorage.getItem('k');
+let k = VM.tokenActual();
 
 // UI Globals
-window.toggleTheme = function() {
-    const isLight = document.body.classList.toggle('light-mode');
-    document.getElementById('btnTheme').textContent = isLight ? '☀️' : '🌙';
-};
+window.toggleTheme = function() { VM.alternarTema(); };
 const showToast = (msg, type='info') => {
     const c = document.getElementById('toast-container'); const t = document.createElement('div');
     t.className = `toast ${type}`; t.textContent = msg; c.appendChild(t);
@@ -275,21 +283,8 @@ const toggleLoader = (show, text='CARGANDO...') => {
     document.getElementById('loadingOverlay').classList.toggle('active', show);
 };
 
-function logout() { sessionStorage.removeItem('k'); window.location.replace('inicio.html'); }
-document.getElementById('btnBack').addEventListener('click', () => { window.location.href = `inicio.html?k=${k}`; });
-
-// --- TIMER INACTIVIDAD (15 MIN) ---
-let timerInterval = null;
-function refreshSession() {
-    if(timerInterval) clearTimeout(timerInterval);
-    timerInterval = setTimeout(() => { 
-        showToast('⏱️ Sesión expirada por 15 min de inactividad.', 'error'); 
-        setTimeout(logout, 1500); 
-    }, 900000); // 15 minutos en ms
-}
-['click','mousemove','keydown','touchstart'].forEach(ev => document.addEventListener(ev, refreshSession));
-refreshSession(); // Inicia el timer apenas carga
-// -----------------------------------
+function logout() { VM.irInicio(k); }
+document.getElementById('btnBack').addEventListener('click', () => { VM.irInicio(k); });
 
 function normalizarStr(str) { return str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim() : ""; }
 const pad2 = (n) => String(n).padStart(2, '0');
@@ -319,9 +314,12 @@ async function init() {
     sessionStorage.setItem('k', k); window.history.replaceState({}, document.title, window.location.pathname);
 
     try {
-        const tokenSnap = await getDoc(doc(db, "tokens", k));
-        if (!tokenSnap.exists() || (tokenSnap.data().expira && Date.now() > tokenSnap.data().expira)) return logout();
-        usuarioActivo = tokenSnap.data().usuario || 'SISTEMA';
+        // Token cacheado: no consulta Firebase en cada ingreso.
+        const tokenData = await VM.validarToken(k);
+        if (!tokenData) return VM.expulsar();
+        usuarioActivo = tokenData.usuario || 'SISTEMA';
+        sessionStorage.setItem('usuarioActivo', usuarioActivo);
+        VM.iniciarSesion(k);
 
         // BUSCAR TURNO (AHORA SIN BLOQUEO)
         const qTurnos = query(collection(db, "turnos"), orderBy("timestampAperturaMs", "desc"), limit(1));
@@ -335,7 +333,7 @@ async function init() {
             idTurnoActivo = "SIN_TURNO_ABIERTO";
             document.getElementById('lblTurnoActivo').textContent = `⚠️ SIN TURNO ABIERTO`;
         }
-    } catch(e) { return logout(); }
+    } catch(e) { return VM.expulsar(); }
 
     renderGrid('gridSalida', 'S'); renderGrid('gridLlegada', 'L'); document.getElementById('gridRetro').innerHTML = renderRetroInputs();
     setupCalc('S', updateSalidaTotal); setupCalc('L', calcLlegadaDiff); setupCalc('R', calcRetroDiff);

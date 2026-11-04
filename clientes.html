@@ -171,8 +171,19 @@
 
   .hidden { display: none !important; }
 </style>
+  <script src="vm-core.js?v=20261104"></script>
 </head>
 <body>
+  <script>
+    /* VM_THEME_BOOT: un solo tema para todas las pantallas */
+    (function () {
+      var t = localStorage.getItem('vm_theme');
+      if (t !== 'light' && t !== 'dark') { t = 'light'; localStorage.setItem('vm_theme', t); }
+      document.body.classList.add(t === 'dark' ? 'dark' : 'light-mode');
+      if (t !== 'dark') document.body.classList.add('tema-claro');
+    })();
+  </script>
+
 
 <script>
   if(localStorage.getItem('vm_theme') === 'light') document.body.classList.add('light-mode');
@@ -285,20 +296,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const TIMEOUT_SESION = 300000;
-
 let GLOBAL_ZONAS = ["ZONA1", "ZONA2"];
 let GLOBAL_CATEGORIAS = ["USUARIO (PUBLICO)", "COMERCIO", "SUBDISTRIBUIDOR", "ROT. Y PAN."];
 let rows = [];
 let byId = new Map();
 let termActual = '';
 
-window.toggleTheme = function() {
-    const isLight = document.body.classList.toggle('light-mode');
-    document.getElementById('btnTheme').textContent = isLight ? '☀️' : '🌙';
-    localStorage.setItem('vm_theme', isLight ? 'light' : 'dark');
-};
-document.getElementById('btnTheme').textContent = document.body.classList.contains('light-mode') ? '☀️' : '🌙';
+window.toggleTheme = function() { VM.alternarTema(); };
 
 function showToast(msg, type = 'info') {
     const c = document.getElementById('toast-container');
@@ -316,10 +320,10 @@ function toggleLoader(show, text = 'CARGANDO...') {
 }
 
 const params = new URLSearchParams(window.location.search);
-const k = params.get('k') || params.get('token') || sessionStorage.getItem('vm_token');
+const k = VM.tokenActual();
 
-function expulsar() { sessionStorage.clear(); window.location.replace('index.html'); }
-window.volver = () => window.location.replace(`inicio.html?k=${k}`);
+function expulsar() { VM.expulsar(); }
+window.volver = () => VM.irInicio(k);
 
 if (!k) expulsar();
 else {
@@ -327,22 +331,20 @@ else {
     validarSesion();
 }
 
-let tIdle;
-function resetTimer() { clearTimeout(tIdle); tIdle = setTimeout(expulsar, TIMEOUT_SESION); }
-['click','mousemove','keydown'].forEach(ev => document.addEventListener(ev, resetTimer));
-resetTimer();
-
 async function validarSesion() {
   try {
     document.body.style.opacity = 1;
+    VM.iniciarSesion(k);
     if (!navigator.onLine) return window.iniciarCargaDatos();
     toggleLoader(true, "VERIFICANDO SESIÓN...");
-    const docRef = doc(db, "tokens", k);
-    const docSnap = await getDoc(docRef);
-    if (!docSnap.exists() || (docSnap.data().expira && Date.now() > docSnap.data().expira)) throw new Error();
-    sessionStorage.setItem('usuarioActivo', docSnap.data().usuario || 'SISTEMA');
+    const data = await VM.validarToken(k);
+    if (!data) throw new Error();
+    sessionStorage.setItem('usuarioActivo', data.usuario || 'SISTEMA');
     window.iniciarCargaDatos();
-  } catch (e) { expulsar(); }
+  } catch (e) {
+    if (!navigator.onLine) return window.iniciarCargaDatos();
+    expulsar();
+  }
 }
 
 // ---------------- UTILIDADES ----------------
