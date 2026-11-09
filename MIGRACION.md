@@ -1,7 +1,7 @@
 # Migración VMGAS → VMGAS2 (Firebase)
 
 Documento de trabajo para mantener consistentes los módulos que se van migrando.
-Última actualización: 2026-11-02.
+Última actualización: 2026-11-09.
 
 ## Estado
 
@@ -20,7 +20,7 @@ Documento de trabajo para mantener consistentes los módulos que se van migrando
 | `arqueo.html` | **Migrado + historial y permiso `FINANZAS`** |
 | `controlfinanzas.html` | **Migrado a Firestore directo + conciliación de arqueos** |
 | `controlcomisiones.html` | **Migrado (escalas, pendientes y liquidación)** |
-| `controltransferencias.html` | **Migrado (auditoría manual v1)** |
+| `controltransferencias.html` | **Migrado (verificación bancaria, lote y reversión)** |
 | `controlremitos.html` | **Migrado (conciliación de compras v1)** |
 | `flota.html` | Pendiente |
 | `tablero.html` | Pendiente |
@@ -39,6 +39,31 @@ Documento de trabajo para mantener consistentes los módulos que se van migrando
   `G`, `GASTO_TOTAL`, `COMISION_TOTAL`, `ID_CLIENTE`, etc.
 - Los módulos nuevos escriben con `writeBatch` / `runTransaction` y validan el token contra `tokens/{k}`.
 - Para textos que luego se renderizan con `innerHTML`, escapar o limpiar (`<` y `>`).
+
+## Tema, sesión y navegación (2026-11-09)
+
+Todas las pantallas activas cargan `vm-core.js` y comparten el mismo comportamiento:
+
+- **Tema único**: se guarda en `localStorage.vm_theme` (`light` o `dark`). El botón de
+  tema de cualquier pantalla cambia el mismo valor y las demás lo respetan al abrirse.
+  `VM_THEME_BOOT` aplica la clase antes de pintar para evitar el parpadeo.
+- **Token cacheado**: `sessionStorage.vm_token_cache_v1` guarda `{ token, data, checkedAt }`.
+  `VM.validarToken(k)` usa la copia si sigue vigente y tiene menos de 10 minutos; recién
+  entonces consulta `tokens/{k}`. Si no hay red, acepta la copia local mientras `expira`
+  no haya pasado.
+- **Permisos cacheados**: `sessionStorage.vm_user_cache_v1` guarda `usuarios/{id}` y se
+  revalida cada 30 minutos.
+- **Inactividad**: 20 minutos sin actividad. La marca está en
+  `sessionStorage.vm_last_activity`; al vencer, `VM.expirarSesion()` sale a
+  `inicio.html?k=<token>` conservando la sesión. También se controla al volver a la
+  pestaña (`visibilitychange`).
+- **Navegación**: los botones normales usan `location.href`; la expiración y el logout
+  usan `location.replace` para no dejar la pantalla protegida en el historial.
+- **Token inválido**: sale a `index.html` y limpia `sessionStorage`.
+- **Sin bloqueos horarios**: se eliminó el mantenimiento automático de las 00:00 y el
+  bloqueo de “no se puede volver atrás”. Cada módulo decide su navegación.
+- **Sin fundido de entrada**: se quitó `body { opacity: 0 }` de todas las pantallas
+  activas para que el contenido esté visible desde el primer render.
 
 ## Colecciones usadas
 
@@ -415,6 +440,7 @@ Las páginas nuevas leen y escriben directo desde el navegador. Hay que asegurar
 - `tokens/{k}`: lectura permitida solo para validar la sesión (o vía API).
 - `configuracion/parametros`: lectura/escritura solo para usuarios con permiso `PRECIOS`; el panel de comisiones actualiza únicamente `comisiones_10/15/45` y `precios.html` solo precios y `recargo_flotante`.
 - `movimientos`: lectura para usuarios autenticados; update limitado a `ARQUEO_ID`, `ARQUEO_FECHA`, `ARQUEO_TS` desde el módulo de arqueo.
+- `transferencias_auditoria`: lectura/escritura solo para `FINANZAS` / `CONFINANZAS`; el update de `movimientos` para `TRF_ESTADO`, `TRF_FECHA`, `TRF_USUARIO`, `TRF_TS`, `TRF_REVERTIDA`, `VERIFICADO_BANCO` y `DETALLE_BANCO` sale del mismo flujo.
 - `arqueos`: lectura para usuarios con permiso `FINANZAS` o `CONFINANZAS`; escritura solo desde arqueo.
 - `comisiones`: lectura y update solo para `FINANZAS` / `CONFINANZAS`; `create` lo hace `app.js` al vender (usuario con `FORMULARIO`). El chofer no necesita leerla para Mi Caja.
 - `comisiones_pagos`: lectura/escritura solo para `FINANZAS` / `CONFINANZAS`.
@@ -429,15 +455,16 @@ Las páginas nuevas leen y escriben directo desde el navegador. Hay que asegurar
 3. Terminar la migración de `alarmas.html` y del audio de `app.js` (todavía usan Apps Script).
 4. Revisar el tope de lectura de `controlfinanzas` (hoy lee toda la colección `confinanzas`); si crece, paginar o consultar por rango de fechas con un campo índice.
 
-## Alcance v1: transferencias y compras (2026-10-30)
+## Alcance v1: transferencias y compras (actualizado 2026-11-09)
 
 Estas decisiones cierran la primera versión. No incluyen conciliación bancaria automática
 ni rentabilidad diaria; quedan para una etapa posterior.
 
-### Transferencias (manual)
+### Transferencias (verificación bancaria)
 
 - La fuente es `movimientos` con `T$ > 0`. No se crea una colección paralela de
-  movimientos ni se duplican los importes.
+  movimientos ni se duplican los importes. El arqueo es **solo de efectivo**: la
+  transferencia se revisa manualmente y se registra en Finanzas al verificarla.
 - La auditoría vive en `transferencias_auditoria/{movimientoId}`:
 
 ```js
@@ -449,24 +476,50 @@ ni rentabilidad diaria; quedan para una etapa posterior.
   montoE, montoT, montoTotal,
   estado: "PENDIENTE" | "ACREDITADA" | "REVERTIDA" | "RECHAZADA",
   detalles: [{ monto, referencia, pagador }], // terceros o pagos desdoblados
-  detalleBanco,
+  detalleBanco,                 // nota compuesta + referencias/pagadores
+  notaUsuario,                  // solo la nota escrita por el usuario
+  verificadoBanco,              // copia de VERIFICADO_BANCO
   aprobadoPor, aprobadoTs,
+  revertidoPor, revertidoTs, motivoReversion,
   finIngresoId, finImpuestoId,
-  historial: [{ estado, usuario, ts, motivo, antes, despues }],
+  historial: [{ estado, usuario, ts, nota, notaUsuario, detalles, motivo }],
   creado, timestampMs
 }
 ```
 
-- Aprobar una transferencia crea en `confinanzas`, en la misma transacción:
+- Aprobar una transferencia escribe en `movimientos`, en la misma transacción:
+  - `TRF_ESTADO: "ACREDITADA"`, `TRF_FECHA`, `TRF_USUARIO`, `TRF_TS`;
+  - `VERIFICADO_BANCO` con el formato legacy
+    `OK: <usuario> - [TRF-<movimientoId>] dd/mm/yyyy HH:mm`;
+  - `DETALLE_BANCO` con la nota del usuario y las referencias/pagadores/montos de
+    cada línea.
+- También crea en `confinanzas`, en la misma transacción:
   - `TRF-{movimientoId}`: `INGRESO`, rubro `GAS`, subrubro `TRANSFERENCIA`.
   - `TRF-{movimientoId}-IMP`: `EGRESO`, rubro `CUENTA BANCARIA`,
     subrubro `IMPUESTO LEY 25413` (0,6 %).
 - Los pagos por terceros o desdoblados se registran en `detalles`; la suma debe
   coincidir con `T$` (tolerancia de un centavo).
-- Si el movimiento tiene `ARQUEO_ID` distinto de vacío o `S/D`, no se puede aprobar,
-  revertir ni ajustar.
-- Revertir elimina los dos documentos de finanzas, deja el snapshot en la auditoría y
-  vuelve el movimiento a pendiente. No se permite revertir si está arqueado.
+- **Vista compacta**: cada fila muestra en una línea cliente, fecha, CUIL, CUIT/DNI,
+  CUIL pago, monto y estado, con checkbox y chevron. Al tocar la fila se despliega el
+  resto (chofer, viaje, hora, efectivo, arqueo, verificación, detalle bancario y
+  acciones). Los datos del cliente salen de `clientes` cruzando `ID_CLIENTE`; se usa
+  la caché `localStorage.vm_clientes_data` y se refresca en segundo plano.
+- Si `cuil_pago` trae varios CUIL separados por `;`, la fila compacta muestra el
+  primero y `+N`; al expandir se listan completos.
+- Se puede verificar **una o varias** transferencias con los checkboxes. En el lote se
+  carga una nota/referencia **individual por fila** y se graban todos los movimientos,
+  auditorías y asientos de Finanzas.
+- `VERIFICADO_BANCO` vacío significa **pendiente**. El estado verificado guarda fecha,
+  hora y usuario. Se puede **deshacer y volver a verificar**; `REVERTIDA` vuelve a
+  contar como pendiente y muestra el botón **VOLVER A VERIFICAR**.
+- Aprobar y revertir se permiten aunque el movimiento tenga `ARQUEO_ID`; el ajuste de
+  `E$`/`T$` sí queda bloqueado cuando está arqueado.
+- Revertir elimina los dos documentos de Finanzas, limpia `VERIFICADO_BANCO` y
+  `DETALLE_BANCO`, deja `TRF_ESTADO: "PENDIENTE"` y `TRF_REVERTIDA: true`, y conserva
+  el historial en la auditoría. También admite registros legacy verificados que no
+  tengan `transferencias_auditoria`.
+- Al volver a verificar se precarga `notaUsuario`, no el `detalleBanco` compuesto, para
+  no duplicar referencias.
 - Ajustar `E$`/`T$` solo se permite en pendientes, con motivo y auditoría. Recalcula
   `TOTAL = E$ + T$`; no toca `COMISION_TOTAL`.
 - No hay importación de resumen bancario en v1.

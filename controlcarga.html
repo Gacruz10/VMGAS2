@@ -52,7 +52,7 @@
                   radial-gradient(at 100% 100%, var(--bg-grad-3) 0%, transparent 50%),
                   radial-gradient(at 0% 100%, var(--bg-grad-4) 0%, transparent 50%);
       background-color: var(--bg-color); background-attachment: fixed;
-      min-height: 100vh; padding: 20px; opacity: 0; transition: all 0.5s ease;
+      min-height: 100vh; padding: 20px;
     }
     
     .theme-toggle {
@@ -354,16 +354,16 @@ async function init() {
 
 async function cargarTodoFirebase() {
     try {
-        const qsUsuarios = await getDocs(collection(db, "usuarios"));
+        const [qsUsuarios, qsViajes] = await Promise.all([
+            getDocs(collection(db, "usuarios")),
+            getDocs(query(collection(db, "ccarga"), where("estado", "in", ["EN_RUTA", "COMPRA_EN_RUTA"])))
+        ]);
         listaChoferes = [];
         qsUsuarios.forEach(d => {
             const u = d.data();
             listaChoferes.push({ usuario: d.id, nombreMostrar: u.nombre_mostrar || u.nombre_completo || d.id });
         });
 
-        // Solo trae camiones en ruta
-        const qViajes = query(collection(db, "ccarga"), where("estado", "in", ["EN_RUTA", "COMPRA_EN_RUTA"]));
-        const qsViajes = await getDocs(qViajes);
         viajesPendientes = [];
         enRutaSet = new Set();
 
@@ -382,11 +382,15 @@ async function cargarTodoFirebase() {
         if (salidasReparto.length) {
             const dia = new Date(Math.min(...salidasReparto)); dia.setHours(0, 0, 0, 0);
             const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+            const fechas = [];
             for (let g = 0; dia <= hoy && g < 7; g++) {
-                const snapM = await getDocs(query(collection(db, "movimientos"), where("FECHA", "==", dia.toLocaleDateString('es-AR'))));
-                snapM.forEach(x => movsViajes.push(x.data()));
+                fechas.push(dia.toLocaleDateString('es-AR'));
                 dia.setDate(dia.getDate() + 1);
             }
+            const snaps = await Promise.all(fechas.map(f =>
+                getDocs(query(collection(db, "movimientos"), where("FECHA", "==", f)))
+            ));
+            snaps.forEach(snap => snap.forEach(x => movsViajes.push(x.data())));
         }
 
         for (const vDoc of qsViajes.docs) {

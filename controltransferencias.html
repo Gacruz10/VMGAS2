@@ -53,8 +53,7 @@
     background-image: radial-gradient(circle at 10% 20%, rgba(76,29,149,0.16), transparent 38%),
                       radial-gradient(circle at 90% 10%, rgba(255,215,0,0.06), transparent 34%);
     background-attachment: fixed;
-    opacity: 0;
-    transition: opacity .35s, background-color .25s;
+    transition: background-color .25s;
   }
   body.light-mode { background-image: none; }
   .fixed-header {
@@ -151,20 +150,53 @@
   .t-card.pending { border-left: 3px solid var(--warn); }
   .t-card.done { border-left: 3px solid var(--ok); }
   .t-card.reverted { border-left: 3px solid var(--muted); opacity: .82; }
-  .t-head { display: flex; align-items: center; gap: 8px; padding: 9px 11px; }
-  .t-who { flex: 1; min-width: 0; }
-  .t-chofer { font-weight: 800; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .t-sub { color: var(--muted); font-size: 10px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .t-card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-soft); }
+  .t-head {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    cursor: pointer; user-select: none;
+  }
+  .t-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .t-head .cbx { width: 17px; height: 17px; accent-color: var(--accent); flex: 0 0 auto; cursor: pointer; }
+  .t-compact { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; }
+  .t-client {
+    font-weight: 800; font-size: 12px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; max-width: 220px;
+  }
+  .t-date { color: var(--muted); font-size: 10px; font-weight: 600; white-space: nowrap; }
+  .t-ids {
+    color: var(--muted); font-size: 9.5px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0;
+  }
+  .t-ids b { color: var(--text); font-weight: 600; }
   .t-amount { font-weight: 800; font-size: 13px; color: var(--accent); white-space: nowrap; }
+  .t-chev { color: var(--muted); font-size: 11px; flex: 0 0 auto; transition: transform .15s; }
+  .t-card.open .t-chev { transform: rotate(180deg); }
   .badge {
     display: inline-block; padding: 2px 7px; border-radius: 999px;
-    font-size: 9px; font-weight: 800; letter-spacing: .3px;
+    font-size: 9px; font-weight: 800; letter-spacing: .3px; white-space: nowrap;
   }
   .badge.pending { background: var(--warn-soft); color: var(--warn); }
   .badge.done { background: var(--ok-soft); color: var(--ok); }
   .badge.reverted { background: rgba(148,163,184,.14); color: var(--muted); }
   .badge.danger { background: var(--danger-soft); color: var(--danger); }
-  .t-body { padding: 0 11px 10px; }
+  .t-body { display: none; padding: 0 11px 10px; }
+  .t-card.open .t-body { display: block; }
+  .batch-note-row {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, 220px);
+    gap: 8px; align-items: center; padding: 7px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .batch-note-row:last-child { border-bottom: 0; }
+  .batch-note-row .bn-info { min-width: 0; font-size: 11px; line-height: 1.45; }
+  .batch-note-row .bn-info b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .batch-note-row .bn-info span { color: var(--muted); font-size: 10px; }
+  .batch-note-row input {
+    width: 100%; background: var(--panel); border: 1px solid var(--border);
+    color: var(--text); border-radius: 7px; padding: 7px 8px;
+    font-family: inherit; font-size: 11px; min-width: 0;
+  }
+  .grid .wide { grid-column: 1 / -1; }
+  .grid b.wrap { white-space: normal; overflow-wrap: anywhere; line-height: 1.4; }
   .grid {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
     border-top: 1px dashed var(--border); padding-top: 8px;
@@ -284,6 +316,10 @@
     .line-edit-row { grid-template-columns: 1fr 1fr 28px; }
     .line-edit-row input:nth-child(3) { grid-column: 1 / 3; }
     .page-title { font-size: .82rem; }
+    .t-compact { flex-wrap: wrap; gap: 1px 8px; }
+    .t-client { max-width: calc(100% - 66px); }
+    .t-ids { flex-basis: 100%; order: 3; white-space: nowrap; }
+    .batch-note-row { grid-template-columns: 1fr; }
   }
 </style>
   <script src="vm-core.js?v=20261104"></script>
@@ -328,7 +364,7 @@
   </section>
 
   <div class="search-row">
-    <input id="search" type="text" placeholder="Buscar chofer, cliente, viaje, monto o nota...">
+    <input id="search" type="text" placeholder="Buscar cliente, CUIL/CUIT, chofer, viaje, monto o nota...">
   </div>
 
   <div id="list"></div>
@@ -452,6 +488,24 @@ function fechaMs(iso) {
   return new Date(p[0], p[1] - 1, p[2]).getTime();
 }
 
+function listaCuils(valor) {
+  return String(valor || "")
+    .split(/[;,|]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function resumenCuils(valor) {
+  const arr = listaCuils(valor);
+  if (!arr.length) return "—";
+  return arr.length === 1 ? arr[0] : `${arr[0]} +${arr.length - 1}`;
+}
+
+function detalleCuils(valor) {
+  const arr = listaCuils(valor);
+  return arr.length ? arr.join(" · ") : "—";
+}
+
 function toMs(v) {
   if (!v) return 0;
   if (v instanceof Date) return v.getTime();
@@ -496,6 +550,59 @@ function setLoading(show, text = "CARGANDO...") {
   if (!o) return;
   if (text) $("loaderText").textContent = text;
   o.classList.toggle("active", !!show);
+}
+
+// ---------------- Clientes (CUIL / CUIT / CUIL pago) ----------------
+let clientesMap = new Map();
+let clientesTarea = null;
+
+function indexarClientes(list) {
+  const map = new Map();
+  (Array.isArray(list) ? list : []).forEach((c) => {
+    if (!c || typeof c !== "object") return;
+    const id = String(c.id_cliente || c.id || "").trim();
+    if (!id) return;
+    map.set(id, {
+      cuil: String(c.cuil ?? c.CUIL ?? "").trim(),
+      cuitDni: String(c.cuit_dni ?? c.CUIT_DNI ?? c.cuit ?? c.CUIT ?? "").trim(),
+      cuilPago: String(c.cuil_pago ?? c.CUIL_PAGO ?? "").trim()
+    });
+  });
+  if (map.size) clientesMap = map;
+}
+
+function aplicarClientes() {
+  rows.forEach((r) => {
+    const c = clientesMap.get(r.idCliente);
+    if (!c) return;
+    if (c.cuil) r.cuil = c.cuil;
+    if (c.cuitDni) r.cuitDni = c.cuitDni;
+    if (c.cuilPago) r.cuilPago = c.cuilPago;
+  });
+}
+
+async function cargarClientes() {
+  try {
+    const cache = JSON.parse(localStorage.getItem("vm_clientes_data") || "null");
+    if (Array.isArray(cache) && cache.length) indexarClientes(cache);
+  } catch (e) { /* caché corrupta: se ignora */ }
+
+  // La copia local se usa al instante; la red se refresca en segundo plano.
+  clientesTarea = (async () => {
+    try {
+      const snap = await getDocs(collection(db, "clientes"));
+      const list = snap.docs.map((d) => ({ id_cliente: d.id, ...d.data() }));
+      indexarClientes(list);
+      if (rows.length) {
+        aplicarClientes();
+        render();
+      }
+    } catch (e) {
+      console.warn("No se pudo actualizar la base de clientes:", e);
+    }
+  })();
+
+  if (!clientesMap.size) await clientesTarea;
 }
 
 // ---------------- Sesión ----------------
@@ -559,10 +666,19 @@ let selected = new Set();
 let modalAction = null;
 let modalLines = [];
 let loadSeq = 0;
+let openRows = new Set();
 
-function puedeAprobar(r) {
-  const a = String(r.arqueoId || "").trim().toUpperCase();
-  return !a || a === "S/D";
+function estaArqueado(r) {
+  const a = String(r?.arqueoId || "").trim().toUpperCase();
+  return !!a && a !== "S/D";
+}
+
+function esAcreditada(r) {
+  return String(r?.estado || "").toUpperCase() === "ACREDITADA";
+}
+
+function esPendiente(r) {
+  return !esAcreditada(r);
 }
 
 function estadoBadge(estado) {
@@ -579,7 +695,23 @@ function normalizarMovimiento(id, m, audit) {
   const montoE = round2(num(m["E$"] ?? m.E));
   const montoT = round2(num(m["T$"] ?? m.T));
   const montoTotal = round2(num(m.TOTAL) || (montoE + montoT));
-  const estado = String(audit?.estado || "PENDIENTE").toUpperCase();
+  const legacyVerificado = String(m.VERIFICADO_BANCO ?? "").trim();
+  const legacyDetalle = String(m.DETALLE_BANCO ?? "").trim();
+
+  let estado = String(audit?.estado || "").trim().toUpperCase();
+  if (!estado) estado = /^OK\b/i.test(legacyVerificado) ? "ACREDITADA" : "PENDIENTE";
+
+  let aprobadoPor = String(audit?.aprobadoPor || "").trim();
+  if (!aprobadoPor && /^OK\b/i.test(legacyVerificado)) {
+    const mm = legacyVerificado.match(/^OK\s*:\s*(.+?)\s*[-–]\s*/i);
+    if (mm) aprobadoPor = mm[1].trim();
+  }
+
+  const nota = String(audit?.detalleBanco || "").trim() || legacyDetalle;
+  const tieneNotaUsuario = audit && Object.prototype.hasOwnProperty.call(audit, "notaUsuario");
+  const notaUsuario = tieneNotaUsuario
+    ? String(audit.notaUsuario || "").trim()
+    : String(audit?.detalleBanco || "").trim();
 
   return {
     id,
@@ -588,6 +720,10 @@ function normalizarMovimiento(id, m, audit) {
     hora: String(m.HORA ?? "").trim(),
     chofer: String(m.USUARIO ?? "").trim(),
     cliente: String(m.C ?? m.NOMBRE_CLIENTE ?? "").trim(),
+    idCliente: String(m.ID_CLIENTE ?? "").trim(),
+    cuil: String(m.CUIL ?? "").trim(),
+    cuitDni: String(m.CUIT_DNI ?? m.CUIT ?? "").trim(),
+    cuilPago: String(m.CUIL_PAGO ?? "").trim(),
     viaje: String(m.ID_VIAJE ?? m.viaje ?? "").trim(),
     tipo: String(m.TIPO ?? "").trim(),
     montoE,
@@ -595,9 +731,12 @@ function normalizarMovimiento(id, m, audit) {
     montoTotal,
     arqueoId: String(m.ARQUEO_ID ?? "").trim(),
     estado,
-    nota: String(audit?.detalleBanco || "").trim(),
+    legacyVerificado,
+    legacyDetalle,
+    nota,
+    notaUsuario,
     detalles: Array.isArray(audit?.detalles) ? audit.detalles : [],
-    aprobadoPor: String(audit?.aprobadoPor || "").trim(),
+    aprobadoPor,
     aprobadoTs: audit?.aprobadoTs || 0,
     finIngresoId: String(audit?.finIngresoId || "").trim(),
     finImpuestoId: String(audit?.finImpuestoId || "").trim(),
@@ -622,10 +761,28 @@ function datesBetween(startISO, endISO) {
   return out;
 }
 
+function variantesFecha(fecha) {
+  const p = String(fecha || "").split("/");
+  if (p.length !== 3) return [fecha];
+  const sinCeros = `${Number(p[0])}/${Number(p[1])}/${p[2]}`;
+  return sinCeros === fecha ? [fecha] : [fecha, sinCeros];
+}
+
 async function fetchMovimientos(dates) {
   const out = [];
-  for (let i = 0; i < dates.length; i += 30) {
-    const chunk = dates.slice(i, i + 30);
+  const variantes = [];
+  const vistas = new Set();
+  dates.forEach((fecha) => {
+    variantesFecha(fecha).forEach((v) => {
+      if (!vistas.has(v)) {
+        vistas.add(v);
+        variantes.push(v);
+      }
+    });
+  });
+
+  for (let i = 0; i < variantes.length; i += 30) {
+    const chunk = variantes.slice(i, i + 30);
     const snap = await getDocs(query(collection(db, "movimientos"), where("FECHA", "in", chunk)));
     snap.forEach((d) => {
       const m = d.data();
@@ -665,8 +822,10 @@ async function cargar() {
     if (seq !== loadSeq) return;
 
     rows = movs.map((x) => normalizarMovimiento(x.id, x.m, audits.get(x.id) || null));
+    aplicarClientes();
     rows.sort((a, b) => (fechaMs(b.fechaISO) - fechaMs(a.fechaISO)) || String(b.hora).localeCompare(String(a.hora)));
     selected.clear();
+    openRows.clear();
     render();
   } catch (e) {
     console.error(e);
@@ -679,8 +838,8 @@ async function cargar() {
 }
 
 function updateKPIs() {
-  const pend = rows.filter((r) => r.estado === "PENDIENTE");
-  const hist = rows.filter((r) => r.estado === "ACREDITADA");
+  const pend = rows.filter(esPendiente);
+  const hist = rows.filter(esAcreditada);
   $("kpiPendCount").textContent = String(pend.length);
   $("kpiPendMonto").textContent = "$ " + fmtMoney(pend.reduce((a, r) => a + r.montoT, 0));
   $("kpiHistCount").textContent = String(hist.length);
@@ -688,20 +847,18 @@ function updateKPIs() {
 }
 
 function render() {
-  const base = rows.filter((r) => currentTab === "PENDIENTES" ? r.estado === "PENDIENTE" : r.estado !== "PENDIENTE");
+  const base = rows.filter((r) => currentTab === "PENDIENTES" ? esPendiente(r) : esAcreditada(r));
   const q = normText($("search").value);
   const filtered = q
     ? base.filter((r) => normText([
-        r.chofer, r.cliente, r.viaje, r.nota, r.estado,
-        r.montoT, r.montoE, r.montoTotal, r.fechaCorta
+        r.chofer, r.cliente, r.idCliente, r.cuil, r.cuitDni, r.cuilPago,
+        r.viaje, r.nota, r.estado, r.montoT, r.montoE, r.montoTotal, r.fechaCorta
       ].join(" ")).includes(q))
     : base;
 
-  // La selección solo puede incluir pendientes visibles y aprobables.
+  // La selección solo puede incluir transferencias pendientes visibles.
   const seleccionables = new Set(
-    filtered
-      .filter((r) => r.estado === "PENDIENTE" && puedeAprobar(r))
-      .map((r) => r.id)
+    filtered.filter(esPendiente).map((r) => r.id)
   );
   for (const id of [...selected]) {
     if (!seleccionables.has(id)) selected.delete(id);
@@ -745,9 +902,10 @@ function renderList(list) {
       <div class="date-body">`;
 
     items.forEach((r) => {
-      const pending = r.estado === "PENDIENTE";
-      const cardClass = pending ? "pending" : (r.estado === "REVERTIDA" ? "reverted" : "done");
-      const check = pending && puedeAprobar(r)
+      const pending = esPendiente(r);
+      const cardClass = pending ? (r.estado === "REVERTIDA" ? "reverted" : "pending") : "done";
+      const abierta = openRows.has(r.id);
+      const check = pending
         ? `<input type="checkbox" class="cbx" data-id="${esc(r.id)}" ${selected.has(r.id) ? "checked" : ""} title="Seleccionar">`
         : "";
 
@@ -761,38 +919,58 @@ function renderList(list) {
 
       const note = r.nota ? `<div class="note">📝 ${esc(r.nota)}</div>` : "";
 
+      const ids = [
+        `CUIL <b>${esc(r.cuil || "—")}</b>`,
+        `CUIT/DNI <b>${esc(r.cuitDni || "—")}</b>`,
+        `CUIL pago <b>${esc(resumenCuils(r.cuilPago))}</b>`
+      ].join(" · ");
+
       const actions = pending
         ? `<div class="actions">
-            ${puedeAprobar(r)
-              ? `<button class="btn ok" data-action="approve" data-id="${esc(r.id)}">APROBAR</button>
-                 <button class="btn" data-action="adjust" data-id="${esc(r.id)}">AJUSTAR E/T</button>`
-              : `<span class="badge danger">ARQUEADO · INMODIFICABLE</span>`}
+            <button class="btn ok" data-action="approve" data-id="${esc(r.id)}">${r.estado === "REVERTIDA" ? "VOLVER A VERIFICAR" : "APROBAR"}</button>
+            ${estaArqueado(r)
+              ? `<span class="badge danger">ARQUEADO · SOLO VERIFICACIÓN</span>`
+              : `<button class="btn" data-action="adjust" data-id="${esc(r.id)}">AJUSTAR E/T</button>`}
            </div>`
         : `<div class="audit-box">
-            ${r.aprobadoPor ? `Acreditada por <b>${esc(r.aprobadoPor)}</b> · ${esc(fmtTs(r.aprobadoTs))}<br>` : ""}
+            ${r.aprobadoPor
+              ? `Acreditada por <b>${esc(r.aprobadoPor)}</b> · ${esc(fmtTs(r.aprobadoTs))}<br>`
+              : (r.legacyVerificado ? `Verificada: <b>${esc(r.legacyVerificado)}</b><br>` : "")}
             ${r.finIngresoId ? `Finanzas: <b>${esc(r.finIngresoId)}</b>${r.finImpuestoId ? ` · ${esc(r.finImpuestoId)}` : ""}<br>` : ""}
-            ${r.estado === "ACREDITADA" && puedeAprobar(r)
+            ${r.estado === "ACREDITADA"
               ? `<button class="btn danger" style="margin-top:6px" data-action="reverse" data-id="${esc(r.id)}">REVERTIR</button>`
               : ""}
            </div>`;
 
-      html += `<div class="t-card ${cardClass}">
-        <div class="t-head">
-          <div class="t-who">
-            <div class="t-chofer">👤 ${esc(r.chofer || "—")} ${estadoBadge(r.estado)}</div>
-            <div class="t-sub">🛒 ${esc(r.cliente || "C. FINAL")} · 🚚 ${esc(r.viaje || "S/D")} · ${esc(r.hora || "—")}</div>
-          </div>
-          <div class="t-amount">$ ${fmtMoney(r.montoT)}</div>
+      html += `<div class="t-card ${cardClass}${abierta ? " open" : ""}${selected.has(r.id) ? " selected" : ""}" data-card-id="${esc(r.id)}">
+        <div class="t-head" data-toggle-row="${esc(r.id)}" role="button" tabindex="0" aria-expanded="${abierta ? "true" : "false"}" title="Tocar para ver el detalle">
           ${check}
+          <div class="t-compact">
+            <span class="t-client">${esc(r.cliente || "C. FINAL")}</span>
+            <span class="t-date">${esc(r.fechaCorta)}</span>
+            <span class="t-ids">${ids}</span>
+          </div>
+          ${estadoBadge(r.estado)}
+          <span class="t-amount">$ ${fmtMoney(r.montoT)}</span>
+          <span class="t-chev">▾</span>
         </div>
         <div class="t-body">
           <div class="grid">
+            <div><span>Chofer</span><b>${esc(r.chofer || "—")}</b></div>
+            <div><span>Cliente</span><b>${esc(r.cliente || "C. FINAL")}</b></div>
+            <div><span>Viaje</span><b>${esc(r.viaje || "S/D")}</b></div>
+            <div><span>Fecha / hora</span><b>${esc(r.fechaCorta)} ${esc(r.hora || "")}</b></div>
+            <div><span>Tipo</span><b>${esc(r.tipo || "VENTA")}</b></div>
+            <div><span>Arqueo</span><b>${esc(r.arqueoId || "S/D")}</b></div>
+            <div><span>CUIL</span><b>${esc(r.cuil || "—")}</b></div>
+            <div><span>CUIT / DNI</span><b>${esc(r.cuitDni || "—")}</b></div>
+            <div class="wide"><span>CUIL pago</span><b class="wrap" title="${esc(r.cuilPago || "")}">${esc(detalleCuils(r.cuilPago))}</b></div>
             <div><span>Efectivo</span><b>$ ${fmtMoney(r.montoE)}</b></div>
             <div><span>Transferencia</span><b>$ ${fmtMoney(r.montoT)}</b></div>
             <div><span>Total</span><b>$ ${fmtMoney(r.montoTotal)}</b></div>
-            <div><span>Tipo</span><b>${esc(r.tipo || "VENTA")}</b></div>
-            <div><span>Arqueo</span><b>${esc(r.arqueoId || "S/D")}</b></div>
-            <div><span>Fecha</span><b>${esc(r.fechaCorta)}</b></div>
+            <div><span>Estado</span><b>${esc(r.estado)}</b></div>
+            <div><span>Movimiento</span><b>${esc(r.id)}</b></div>
+            <div><span>Verificación</span><b title="${esc(r.legacyVerificado || "")}">${esc(r.legacyVerificado || "—")}</b></div>
           </div>
           ${lines}
           ${note}
@@ -839,6 +1017,26 @@ function normalizarDetalles(detalles, montoT, cliente) {
   return out;
 }
 
+function componerDetalleBanco(nota, detalles, cliente) {
+  const partes = [];
+  const n = String(nota || "").trim();
+  if (n) partes.push(n);
+
+  const refs = (Array.isArray(detalles) ? detalles : [])
+    .filter((d) => d && (d.referencia || (d.pagador && normText(d.pagador) !== normText(cliente))))
+    .map((d) => {
+      const trozos = [];
+      if (d.referencia) trozos.push(`Ref ${d.referencia}`);
+      if (d.pagador) trozos.push(`Pagador ${d.pagador}`);
+      if (num(d.monto) > 0) trozos.push(`$${fmtMoney(d.monto)}`);
+      return trozos.join(" · ");
+    })
+    .filter(Boolean);
+
+  if (refs.length) partes.push(refs.join(" | "));
+  return partes.join(" | ");
+}
+
 async function leerAprobacion(tx, id) {
   const movRef = doc(db, "movimientos", id);
   const auditRef = doc(db, "transferencias_auditoria", id);
@@ -849,11 +1047,6 @@ async function leerAprobacion(tx, id) {
 
   const montoT = round2(num(m["T$"] ?? m.T));
   if (montoT <= 0) throw new Error(`El movimiento ${id} no tiene transferencia.`);
-
-  const arqueo = String(m.ARQUEO_ID ?? "").trim();
-  if (arqueo && arqueo.toUpperCase() !== "S/D") {
-    throw new Error(`El movimiento ${id} ya fue arqueado y no se puede modificar.`);
-  }
 
   const auditSnap = await tx.get(auditRef);
   const prev = auditSnap.exists() ? auditSnap.data() : {};
@@ -884,7 +1077,9 @@ function escribirAprobacion(tx, data, detalles, nota, now) {
   const finId = `TRF-${data.id}`;
   const taxId = `TRF-${data.id}-IMP`;
   const tax = round2(data.montoT * TAX_TRANSFERENCIA);
-  const detalleBanco = String(nota || "").trim();
+  const detalleBanco = componerDetalleBanco(nota, detalles, data.cliente);
+  const fechaVerif = new Date(ts);
+  const firmaBanco = `OK: ${usuarioActivo} - [${finId}] ${pad2(fechaVerif.getDate())}/${pad2(fechaVerif.getMonth() + 1)}/${fechaVerif.getFullYear()} ${pad2(fechaVerif.getHours())}:${pad2(fechaVerif.getMinutes())}`;
   const detalle = `Transferencia ${data.fechaCorta} | ${data.chofer || "S/D"} | ${data.cliente || "S/D"} | Tot $${fmtMoney(data.montoTotal)} | Ef $${fmtMoney(data.montoE)} | Tr $${fmtMoney(data.montoT)}${detalleBanco ? ` | ${detalleBanco}` : ""}`;
 
   tx.set(doc(db, "confinanzas", finId), {
@@ -934,6 +1129,7 @@ function escribirAprobacion(tx, data, detalles, nota, now) {
     usuario: usuarioActivo,
     ts,
     nota: detalleBanco,
+    notaUsuario: String(nota || "").trim(),
     detalles
   });
 
@@ -951,10 +1147,15 @@ function escribirAprobacion(tx, data, detalles, nota, now) {
     estado: "ACREDITADA",
     detalles,
     detalleBanco,
+    notaUsuario: String(nota || "").trim(),
+    verificadoBanco: firmaBanco,
     aprobadoPor: usuarioActivo,
     aprobadoTs: ts,
     finIngresoId: finId,
     finImpuestoId: tax > 0 ? taxId : "",
+    revertidoPor: "",
+    revertidoTs: 0,
+    motivoReversion: "",
     historial,
     creado: data.prev.creado || serverTimestamp(),
     timestampMs: ts
@@ -964,7 +1165,9 @@ function escribirAprobacion(tx, data, detalles, nota, now) {
     TRF_ESTADO: "ACREDITADA",
     TRF_FECHA: data.fechaISO,
     TRF_USUARIO: usuarioActivo,
-    TRF_TS: ts
+    TRF_TS: ts,
+    VERIFICADO_BANCO: firmaBanco,
+    DETALLE_BANCO: detalleBanco
   });
 }
 
@@ -977,7 +1180,7 @@ async function aprobarUna(id, detalles, nota) {
   });
 }
 
-async function aprobarLote(ids) {
+async function aprobarLote(ids, notas = null) {
   const unique = [...new Set(ids)];
   if (!unique.length) return;
   if (unique.length > MAX_LOTE) {
@@ -991,8 +1194,9 @@ async function aprobarLote(ids) {
     }
     const now = Date.now();
     for (const data of items) {
+      const nota = String((notas instanceof Map ? notas.get(data.id) : notas?.[data.id]) || "").trim();
       const lines = normalizarDetalles([], data.montoT, data.cliente);
-      escribirAprobacion(tx, data, lines, "Aprobación por lote", now);
+      escribirAprobacion(tx, data, lines, nota, now);
     }
   });
 }
@@ -1009,28 +1213,39 @@ async function revertirUna(id, motivo) {
     if (!movSnap.exists()) throw new Error("El movimiento no existe.");
     const m = movSnap.data();
 
-    const arqueo = String(m.ARQUEO_ID ?? "").trim();
-    if (arqueo && arqueo.toUpperCase() !== "S/D") {
-      throw new Error("El movimiento ya fue arqueado; no se puede revertir.");
-    }
-
     const auditSnap = await tx.get(auditRef);
-    if (!auditSnap.exists()) throw new Error("No hay una auditoría para revertir.");
-    const a = auditSnap.data();
-    if (String(a.estado || "").toUpperCase() !== "ACREDITADA") {
+    const prev = auditSnap.exists() ? auditSnap.data() : {};
+    const legacyFirma = String(m.VERIFICADO_BANCO ?? "").trim();
+    const legacyOk = /^OK\b/i.test(legacyFirma);
+    const estadoPrevio = String(prev.estado || "").toUpperCase();
+    if (estadoPrevio !== "ACREDITADA" && !legacyOk) {
       throw new Error("La transferencia no está acreditada.");
     }
 
-    const finId = String(a.finIngresoId || `TRF-${id}`).trim();
-    const taxId = String(a.finImpuestoId || "").trim();
+    // Si viene del flujo legacy, el ID de finanzas está dentro de VERIFICADO_BANCO.
+    const legacyIdMatch = legacyFirma.match(/\[(.*?)\]/);
+    const finId = String(prev.finIngresoId || legacyIdMatch?.[1] || `TRF-${id}`).trim();
+    const taxId = String(prev.finImpuestoId || `TRF-${id}-IMP`).trim();
+
     const finSnap = await tx.get(doc(db, "confinanzas", finId));
-    const taxSnap = taxId ? await tx.get(doc(db, "confinanzas", taxId)) : null;
+    const taxSnap = taxId && taxId !== finId ? await tx.get(doc(db, "confinanzas", taxId)) : null;
 
     if (finSnap.exists()) tx.delete(doc(db, "confinanzas", finId));
     if (taxSnap && taxSnap.exists()) tx.delete(doc(db, "confinanzas", taxId));
 
     const now = Date.now();
-    const historial = Array.isArray(a.historial) ? a.historial.slice() : [];
+    const historial = Array.isArray(prev.historial) ? prev.historial.slice() : [];
+    if (!auditSnap.exists() && legacyOk) {
+      const mm = legacyFirma.match(/^OK\s*:\s*(.+?)\s*[-–]\s*/i);
+      historial.push({
+        estado: "ACREDITADA",
+        usuario: mm ? mm[1].trim() : "LEGACY",
+        ts: 0,
+        nota: String(m.DETALLE_BANCO ?? "").trim(),
+        firma: legacyFirma,
+        origen: "LEGACY"
+      });
+    }
     historial.push({
       estado: "REVERTIDA",
       usuario: usuarioActivo,
@@ -1038,19 +1253,35 @@ async function revertirUna(id, motivo) {
       motivo: razon
     });
 
-    tx.update(auditRef, {
+    const montoE = round2(num(m["E$"] ?? m.E));
+    const montoT = round2(num(m["T$"] ?? m.T));
+
+    tx.set(auditRef, {
+      movimientoId: id,
+      fecha: normFecha(m.FECHA ?? m.fecha),
+      fechaCorta: String(m.FECHA ?? "").trim(),
+      hora: String(m.HORA ?? "").trim(),
+      chofer: String(m.USUARIO ?? "").trim(),
+      cliente: String(m.C ?? m.NOMBRE_CLIENTE ?? "").trim(),
+      viaje: String(m.ID_VIAJE ?? m.viaje ?? "").trim(),
+      montoE,
+      montoT,
+      montoTotal: round2(num(m.TOTAL) || (montoE + montoT)),
       estado: "REVERTIDA",
       revertidoPor: usuarioActivo,
       revertidoTs: now,
       motivoReversion: razon,
       historial,
+      creado: prev.creado || serverTimestamp(),
       timestampMs: now
-    });
+    }, { merge: true });
 
     tx.update(movRef, {
       TRF_ESTADO: "PENDIENTE",
       TRF_TS: now,
-      TRF_REVERTIDA: true
+      TRF_REVERTIDA: true,
+      VERIFICADO_BANCO: "",
+      DETALLE_BANCO: ""
     });
   });
 }
@@ -1176,21 +1407,29 @@ function updateLinesTotal() {
 function openApprove(id) {
   const r = rows.find((x) => x.id === id);
   if (!r) return showToast("No se encontró la transferencia.", "error");
-  if (!puedeAprobar(r)) return showToast("La transferencia ya fue arqueada.", "error");
 
-  modalLines = [{
-    monto: r.montoT,
-    referencia: "",
-    pagador: r.cliente || ""
-  }];
+  const previas = Array.isArray(r.detalles)
+    ? r.detalles.map((d) => ({
+        monto: round2(num(d?.monto)),
+        referencia: String(d?.referencia ?? d?.ref ?? "").trim(),
+        pagador: String(d?.pagador ?? "").trim()
+      })).filter((d) => d.monto > 0)
+    : [];
+  const sumaPrev = round2(previas.reduce((a, d) => a + d.monto, 0));
+  modalLines = (previas.length && Math.abs(sumaPrev - r.montoT) <= 0.01)
+    ? previas
+    : [{ monto: r.montoT, referencia: "", pagador: r.cliente || "" }];
 
   const body = `
     <div class="summary-box">
       <b>${esc(r.chofer || "—")}</b> · ${esc(r.cliente || "C. FINAL")}<br>
       Movimiento: <b>${esc(r.id)}</b> · ${esc(r.fechaCorta)} ${esc(r.hora)}<br>
       Total cobrado: <b>$ ${fmtMoney(r.montoTotal)}</b> · Efectivo: <b>$ ${fmtMoney(r.montoE)}</b> ·
-      Transferencia: <b>$ ${fmtMoney(r.montoT)}</b>
+      Transferencia: <b>$ ${fmtMoney(r.montoT)}</b><br>
+      CUIL: <b>${esc(r.cuil || "—")}</b> · CUIT/DNI: <b>${esc(r.cuitDni || "—")}</b> ·
+      CUIL pago: <b>${esc(r.cuilPago || "—")}</b>
       <input type="hidden" id="approveTarget" value="${r.montoT}">
+      ${estaArqueado(r) ? `<div class="note">⚠️ Movimiento arqueado (${esc(r.arqueoId)}). La verificación bancaria se registra igual; el arqueo es solo de efectivo.</div>` : ""}
     </div>
     <div class="form-row">
       <label>Transferencias recibidas (podés dividir o cargar terceros)</label>
@@ -1202,8 +1441,8 @@ function openApprove(id) {
       <b id="linesTotal">$ 0,00</b>
     </div>
     <div class="form-row" style="margin-top:10px">
-      <label>Nota / detalle bancario</label>
-      <input type="text" id="approveNote" placeholder="Nº de operación, banco, observación...">
+      <label>Nota / detalle bancario (acepta referencias y datos extra)</label>
+      <input type="text" id="approveNote" value="${esc(r.notaUsuario || "")}" placeholder="Nº de operación, referencia, banco, CUIL del pagador...">
     </div>
   `;
 
@@ -1234,7 +1473,9 @@ function openApprove(id) {
 function openReverse(id) {
   const r = rows.find((x) => x.id === id);
   if (!r) return showToast("No se encontró la transferencia.", "error");
-  if (!puedeAprobar(r)) return showToast("La transferencia ya fue arqueada.", "error");
+  if (!esAcreditada(r) && !/^OK\b/i.test(r.legacyVerificado || "")) {
+    return showToast("La transferencia no está acreditada.", "error");
+  }
 
   const body = `
     <div class="summary-box">
@@ -1242,6 +1483,7 @@ function openReverse(id) {
       Transferencia: <b>$ ${fmtMoney(r.montoT)}</b> · ${esc(r.fechaCorta)} ${esc(r.hora)}<br>
       Se eliminarán el ingreso y el impuesto asociados en finanzas. La operación quedará
       registrada en la auditoría y volverá a pendientes.
+      ${estaArqueado(r) ? `<div class="note">⚠️ El movimiento está arqueado (${esc(r.arqueoId)}). El arqueo es solo de efectivo: la reversión bancaria no lo modifica.</div>` : ""}
     </div>
     <div class="form-row">
       <label>Motivo de la reversión</label>
@@ -1262,7 +1504,8 @@ function openReverse(id) {
 function openAdjust(id) {
   const r = rows.find((x) => x.id === id);
   if (!r) return showToast("No se encontró la transferencia.", "error");
-  if (!puedeAprobar(r)) return showToast("La transferencia ya fue arqueada.", "error");
+  if (esAcreditada(r)) return showToast("Primero revertí la transferencia para poder ajustar los montos.", "error");
+  if (estaArqueado(r)) return showToast("El movimiento ya fue arqueado; el ajuste de efectivo está bloqueado.", "error");
 
   const body = `
     <div class="summary-box">
@@ -1301,6 +1544,47 @@ function openAdjust(id) {
   });
 }
 
+function openBatchApprove(ids) {
+  const items = ids
+    .map((id) => rows.find((r) => r.id === id))
+    .filter((r) => r && esPendiente(r));
+  if (!items.length) return showToast("No hay transferencias pendientes para aprobar.", "error");
+  if (items.length > MAX_LOTE) {
+    return showToast(`Podés aprobar hasta ${MAX_LOTE} transferencias por lote.`, "error");
+  }
+
+  const total = items.reduce((a, r) => a + r.montoT, 0);
+  const body = `
+    <div class="summary-box">
+      Vas a acreditar <b>${items.length}</b> transferencia(s) por <b>$ ${fmtMoney(total)}</b>.
+      Cada una se registra en finanzas con su monto y el impuesto del 0,6 %.
+      Podés cargar una nota o referencia bancaria distinta por fila.
+    </div>
+    <div class="batch-note-list">
+      ${items.map((r) => `
+        <div class="batch-note-row">
+          <div class="bn-info">
+            <b>${esc(r.cliente || "C. FINAL")}</b>
+            <span>${esc(r.fechaCorta)} · $ ${fmtMoney(r.montoT)} · ${esc(r.id)}</span>
+          </div>
+          <input type="text" data-batch-note="${esc(r.id)}" value="${esc(r.notaUsuario || "")}" placeholder="Nº op. / ref., banco...">
+        </div>`).join("")}
+    </div>
+  `;
+
+  openModal("Aprobar lote de transferencias", body, `ACREDITAR ${items.length}`, async () => {
+    const notas = new Map();
+    $("modalBody").querySelectorAll("[data-batch-note]").forEach((inp) => {
+      notas.set(inp.dataset.batchNote, String(inp.value || "").trim());
+    });
+    await aprobarLote(items.map((r) => r.id), notas);
+    selected.clear();
+    closeModal();
+    showToast(`✅ ${items.length} transferencia(s) acreditada(s) y registradas en finanzas.`, "success");
+    await cargar();
+  });
+}
+
 // ---------------- UI ----------------
 function wireUI() {
   $("btnVolver").onclick = () => window.volver();
@@ -1322,11 +1606,34 @@ function wireUI() {
 
   $("list").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-action]");
-    if (!btn) return;
-    const id = btn.dataset.id;
-    if (btn.dataset.action === "approve") openApprove(id);
-    else if (btn.dataset.action === "reverse") openReverse(id);
-    else if (btn.dataset.action === "adjust") openAdjust(id);
+    if (btn) {
+      const id = btn.dataset.id;
+      if (btn.dataset.action === "approve") openApprove(id);
+      else if (btn.dataset.action === "reverse") openReverse(id);
+      else if (btn.dataset.action === "adjust") openAdjust(id);
+      return;
+    }
+
+    if (e.target.closest(".cbx")) return;
+    const head = e.target.closest("[data-toggle-row]");
+    if (!head) return;
+
+    const id = head.dataset.toggleRow;
+    const card = head.closest(".t-card");
+    if (!card) return;
+    const abierta = card.classList.toggle("open");
+    if (abierta) openRows.add(id);
+    else openRows.delete(id);
+    head.setAttribute("aria-expanded", abierta ? "true" : "false");
+  });
+
+  $("list").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    if (e.target.closest(".cbx")) return;
+    const head = e.target.closest("[data-toggle-row]");
+    if (!head) return;
+    e.preventDefault();
+    head.click();
   });
 
   $("list").addEventListener("change", (e) => {
@@ -1334,28 +1641,17 @@ function wireUI() {
     if (!cb) return;
     if (cb.checked) selected.add(cb.dataset.id);
     else selected.delete(cb.dataset.id);
+    cb.closest(".t-card")?.classList.toggle("selected", cb.checked);
     updateBatchBar();
   });
 
-  $("btnBatchApprove").onclick = async () => {
+  $("btnBatchApprove").onclick = () => {
     const ids = [...selected];
     if (!ids.length) return;
     if (ids.length > MAX_LOTE) {
       return showToast(`Podés aprobar hasta ${MAX_LOTE} transferencias por lote.`, "error");
     }
-    if (!confirm(`¿Aprobar ${ids.length} transferencia(s) por lote?\n\nSe registrarán en finanzas con el monto completo de cada una.`)) return;
-    setLoading(true, "APROBANDO LOTE...");
-    try {
-      await aprobarLote(ids);
-      selected.clear();
-      showToast(`✅ ${ids.length} transferencia(s) acreditada(s).`, "success");
-      await cargar();
-    } catch (e) {
-      console.error(e);
-      showToast("Error al aprobar el lote: " + (e.message || e.code || "desconocido"), "error", 6000);
-    } finally {
-      setLoading(false);
-    }
+    openBatchApprove(ids);
   };
 
   $("modalClose").onclick = closeModal;
@@ -1423,6 +1719,7 @@ async function init() {
   VM.aplicarTema();
 
   wireUI();
+  await cargarClientes();
   await cargar();
 }
 
