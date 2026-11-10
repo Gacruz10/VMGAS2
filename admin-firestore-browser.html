@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VMGAS2 · Navegador Firestore Administrativo</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-gradient1: #1e293b;
+      --bg-gradient2: #0f172a;
+      --accent: #ffd700;
+      --accent-hover: #d97706;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --card: rgba(15, 23, 42, 0.8);
+      --border: rgba(255, 255, 255, 0.1);
+      --success: #2dd4bf;
+      --danger: #f87171;
+      --warning: #f6ad55;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { 
+      margin: 0; padding: 0; 
+      height: 100%; 
+      font-family: 'Inter', system-ui, -apple-system, sans-serif; 
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    /* Fondo degradado múltiple */
+    body {
+      background: 
+        radial-gradient(at 0% 0%, #1e293b 0%, transparent 50%),
+        radial-gradient(at 100% 100%, #0f172a 0%, transparent 50%),
+        var(--bg);
+      background-attachment: fixed;
+    }
+
+    /* Header */
+    .header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .header .subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Controles */
+    .controls {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .controls h2 {
+      margin: 0 0 0.75rem 0;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+    }
+
+    .filter-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.5rem;
+      align-items: end;
+      flex-wrap: wrap;
+    }
+
+    .filter-row .group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .filter-row .group label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .filter-row .group input {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.4rem 0.6rem;
+      font-size: 0.85rem;
+      border-radius: 6px;
+      width: 100%;
+    }
+
+    .filter-row .group input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* Checklist de colecciones */
+    .collection-list {
+      padding: 0 1.5rem 1rem;
+    }
+
+    .collection-list h2 {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .checks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.5rem;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .check-item input {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .check-item span {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .check-item input:checked + span {
+      color: var(--accent);
+    }
+
+    /* Panel de pestañas */
+    .tabs-bar {
+      padding: 0 1.5rem 0.5rem;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .tabs-bar::-webkit-scrollbar { display: none; }
+
+    .tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover:not(.active) {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .tab-btn.active {
+      background: var(--accent);
+      color: var(--bg);
+      border-color: var(--accent);
+    }
+
+    .tab-btn .close {
+      width: 14px;
+      height: 14px;
+      opacity: 0.5;
+    }
+
+    /* Tabla de datos */
+    .data-panel {
+      padding: 0 1.5rem 1.5rem;
+    }
+
+    .data-panel h2 {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .panel-info {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    /* Tabla estilo spreadsheet */
+    .spreadsheet {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      font-size: 0.7rem;
+    }
+
+    .spreadsheet thead {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 0;
+      background: var(--bg-gradient1);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .spreadsheet th {
+      padding: 0.4rem 0.3rem;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .spreadsheet tbody tr {
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+      transition: background 0.15s;
+    }
+
+    .spreadsheet tbody tr:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .spreadsheet td {
+      padding: 0.3rem 0.3rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .spreadsheet tbody tr:hover td {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .spreadsheet .empty {
+      padding: 2rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* Tooltip flotante */
+    .tooltip {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      color: var(--text);
+      border-radius: 6px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      z-index: 1000;
+      max-width: 300px;
+      display: none;
+    }
+
+    .tooltip .label {
+      display: block;
+      font-weight: 600;
+      margin-bottom 0.3rem;
+      color: var(--accent);
+    }
+
+    .tooltip .value {
+      word-break: break-all;
+    }
+
+    .tooltip .close {
+      float: right;
+      cursor: pointer;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    /* Botón guardar */
+    .save-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-gradient1);
+      border-top: 1px solid var(--border);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      z-index: 50;
+    }
+
+    .save-btn {
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      padding: 0.5rem 1.2rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+
+    .save-btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .save-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Modal confirmación borrar */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      border-radius: 8px;
+      text-align: center;
+      min-width: 300px;
+    }
+
+    .modal .title { margin: 0 0 1rem 0; font-size: 1rem; }
+    .modal .text { color: var(--text-muted); margin-bottom 1rem; font-size: 0.85rem; }
+
+    .modal .btns { display: flex; gap: 0.5rem; justify-content: center; }
+    .modal .btn { padding: 0.4rem 0.8rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem; }
+    .modal .btn-confirm { background: var(--danger); color: white; }
+    .modal .btn-cancel { background: var(--card); color: var(--text); }
+
+    /* Scrollbar personalizado */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+  </style>
+</head>
+<body>
+  <!-- Tooltip -->
+  <div class="tooltip" id="tooltip">
+    <div class="label" id="tooltip-label"></div>
+    <div class="value" id="tooltip-value"></div>
+    <span class="close" onclick="hideTooltip()">×</span>
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <h1>Navegador Firestore Administrativo VMGAS2</h1>
+    <div class="subtitle">Herramienta de corrección · Sin autenticación · Modo administrador</div>
+  </header>
+
+  <!-- Controles -->
+  <div class="controls" id="controls">
+    <div class="filter-row" id="filterRow">
+      <!-- Se generan dinámicamente por colección -->
+    </div>
+  </div>
+
+  <!-- Seleccionar colecciones -->
+  <div class="collection-list" id="collectionList">
+    <h2>Seleccionar colecciones</h2>
+    <div class="checks-grid" id="checksGrid">
+      <!-- Checkboxes se generan aquí -->
+    </div>
+  </div>
+
+  <!-- Pestañas -->
+  <div class="tabs-bar" id="tabsBar">
+    <!-- Se generan dinámicamente -->
+  </div>
+
+  <!-- Paneles de datos -->
+  <div class="data-panel" id="dataPanel">
+    <h2>Datos</h2>
+    <div class="panel-info" id="panelInfo">Selecciona colecciones y fechas para cargar datos</div>
+    <div class="spreadsheet" id="spreadsheet">
+      <table>
+        <thead>
+          <tr class="header-row">
+            <th colspan="100">Ningún documento seleccionado</th>
+          </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Barra guardar -->
+  <div class="save-bar" id="saveBar" style="display: none;">
+    <button class="save-btn" onclick="saveAllChanges()" disabled>Guardar todos los cambios</button>
+  </div>
+
+  <script type="module">
+    // ============================================================
+    // VMGAS2 · Navegador Firestore Administrativo (versión local)
+    // ============================================================
+
+    // Configuración Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
+      authDomain: "vmgaslr.firebaseapp.com",
+      projectId: "vmgaslr",
+      storageBucket: "vmgaslr.firebasestorage.app",
+      messagingSenderId: "75859850089",
+      appId: "1:75859850089:web:fc551c770bbf4ae25803f8"
+    };
+
+    // Inicializar Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      getDocs,
+      doc,
+      setDoc,
+      writeBatch,
+      query,
+      where,
+      orderBy,
+      getDoc
+    } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // ============================================================
+    // ESTADO DE LA APLICACIÓN
+    // ============================================================
+
+    const state = {
+      selectedCollections: new Set(),       // Set de colecciones seleccionadas
+      selectedDocs: new Map(),              // Map: collectionId -> Set de doc IDs editados
+      originalValues: new Map(),            // Map: collectionId, docId, field -> valor original
+      editedCounts: 0,
+      totalDocs: 0
+    };
+
+    // Mapeo de colecciones a sus campos de fecha
+    const collectionDateFields = {
+      movimientos: "FECHA",
+      confinanzas: "fecha",
+      arqueos: "fecha",
+      ccarga: "fechaSalida",
+      usuarios: "creado",
+      tokens: "creado",
+      clientes: "creado",
+      alarmas: "fecha_hora",
+      auditores: "creado",
+      historiales: "creado",
+      comisiones: "creado",
+      comisiones_pagos: "creado",
+      precios: "creado",
+      parametros: "creado"
+    };
+
+    // Colecciones disponibles con descripción
+    const availableCollections = {
+      movimientos: { name: "movimientos", desc: "Operaciones de campo", dateField: "FECHA (dd/mm/yyyy)" },
+      confinanzas: { name: "confinanzas", desc: "Movimientos financieros", dateField: "fecha (YYYY-MM-DD)" },
+      arqueos: { name: "arqueos", desc: "Cierres de caja", dateField: "fecha (dd/mm/yyyy)" },
+      ccarga: { name: "ccarga", desc: "Viajes y cargas", dateField: "fechaSalida" },
+      usuarios: { name: "usuarios", desc: "Usuarios y permisos", dateField: "creado" },
+      tokens: { name: "tokens", desc: "Sesiones auth", dateField: "creado" },
+      clientes: { name: "clientes", desc: "Maestro de clientes", dateField: "creado" },
+      alarmas: { name: "alarmas", desc: "Alertas del sistema", dateField: "fecha_hora" },
+      auditores: { name: "auditoria", desc: "Trazabilidad", dateField: "creado" },
+      historiales: { name: "historialPin", desc: "Historial de PIN", dateField: "creado" },
+      comisiones: { name: "comisiones", desc: "Comisiones pendientes", dateField: "creado" },
+      comisiones_pagos: { name: "comisiones_pagos", desc: "Liquidaciones de comisiones", dateField: "creado" },
+      precios: { name: "precios", desc: "Lista de precios", dateField: "creado" },
+      parametros: { name: "parametros", desc: "Parámetros y escalas", dateField: "creado" }
+    };
+
+    // ============================================================
+    // INICIALIZACIÓN
+    // ============================================================
+
+    document.addEventListener('DOMContentLoaded', initApp);
+
+    function initApp() {
+      renderCollectionCheckboxes();
+      setupDatePickers();
+      document.getElementById('loadBtn').addEventListener('click', loadSelectedData);
+      document.getElementById('saveBar').style.display = 'none';
+    }
+
+    // ============================================================
+    // RECOLECCIÓN DE CHECKBOXES
+    // ============================================================
+
+    function renderCollectionCheckboxes() {
+      const grid = document.getElementById('checksGrid');
+      grid.innerHTML = '';
+
+      for (const [key, info] of Object.entries(availableCollections)) {
+        const label = document.createElement('label');
+        label.className = 'check-item';
+
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.value = key;
+        input.dataset.collection = key;
+        input.checked = true; // Por defecto todos seleccionados
+        input.addEventListener('change', (e) => {
+          if (e.target.checked) {
+            state.selectedCollections.add(key);
+          } else {
+            state.selectedCollections.delete(key);
+            state.selectedDocs.delete(key);
+            document.getElementById(`tab-${key}`).remove();
+            document.querySelector(`[data-col="${key}"]`).remove();
+          }
+          updateTabsBar();
+          enableSaveButton();
+        });
+
+        const span = document.createElement('span');
+        span.textContent = `${info.name}: ${info.desc}`;
+
+        label.appendChild(input);
+        label.appendChild(span);
+        grid.appendChild(label);
+      }
+    }
+
+    // ============================================================
+    // SELECCIONAR FECHAS POR COLECCIÓN
+    // ============================================================
+
+    function setupDatePickers() {
+      const filterRow = document.getElementById('filterRow');
+      filterRow.innerHTML = '';
+
+      // Agrupar por colección para agregar filtros
+      for (const [key] of Object.entries(availableCollections)) {
+        if (!state.selectedCollections.has(key)) continue;
+
+        const dateField = collectionDateFields[key] || 'fecha';
+        const group = document.createElement('div');
+        group.className = 'group';
+
+        const label = document.createElement('label');
+        label.textContent = `${key}:`;
+
+        const input = document.createElement('input');
+        input.type = 'date';
+        input.valueAsDate = new Date(); // Hoy por defecto
+        input.dataset.collection = key;
+        input.dataset.dateField = dateField;
+
+        // Establecer rango por defecto: hoy para atrás 30 días
+        const today = new Date();
+        const startDate = new Date();
+        startDate.setDate(today.getDate() - 30);
+        input.min = formatDateYYYYMMDD(startDate);
+        input.max = formatDateYYYYMMDD(today);
+
+        input.addEventListener('change', updateFilteredQuery);
+
+        group.appendChild(label);
+        group.appendChild(input);
+        filterRow.appendChild(group);
+      }
+    }
+
+    function formatDateYYYYMMDD(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    // ============================================================
+    // ACTUALIZAR TABS
+    // ============================================================
+
+    function updateTabsBar() {
+      const tabsBar = document.getElementById('tabsBar');
+      tabsBar.innerHTML = '';
+
+      let hasTabs = false;
+
+      for (const key of state.selectedCollections) {
+        const info = availableCollections[key];
+        const tabBtn = document.createElement('button');
+        tabBtn.className = 'tab-btn active';
+        tabBtn.dataset.col = key;
+        tabBtn.innerHTML = `
+          <span>${info.name}</span>
+          <span class="close" onclick="removeTab('${key}')">×</span>
+        `;
+        tabBtn.addEventListener('click', () => loadCollectionData(key));
+        tabsBar.appendChild(tabBtn);
+        hasTabs = true;
+      }
+
+      if (!hasTabs) {
+        document.getElementById('dataPanel').innerHTML = `
+          <div class="empty">Selecciona al menos una colección</div>
+        `;
+        document.getElementById('saveBar').style.display = 'none';
+      }
+    }
+
+    function removeTab(key) {
+      state.selectedCollections.delete(key);
+      state.selectedDocs.delete(key);
+      document.getElementById(`tab-${key}`)?.remove();
+      const existingTab = document.querySelector(`[data-col="${key}"]`);
+      if (existingTab) existingTab.remove();
+      updateTabsBar();
+      enableSaveButton();
+    }
+
+    function enableSaveButton() {
+      const btn = document.querySelector('.save-btn');
+      if (state.editedCounts > 0 && state.selectedCollections.size > 0) {
+        btn.disabled = false;
+      } else {
+        btn.disabled = true;
+      }
+    }
+
+    // ============================================================
+    // CARGAR DATOS DE COLECCIÓN
+    // ============================================================
+
+    async function loadSelectedData() {
+      // Cargar cada colección seleccionada
+      for (const key of state.selectedCollections) {
+        await loadCollectionData(key);
+      }
+      enableSaveButton();
+    }
+
+    async function loadCollectionData(collectionKey) {
+      const info = availableCollections[collectionKey];
+      const dateField = collectionDateFields[collectionKey] || 'fecha';
+
+      // Obtener fechas del filtro
+      const dateInput = document.querySelector(`[data-col="${collectionKey}"]`);
+      const startDate = dateInput?.value ? new Date(dateInput.value) : null;
+      const endDate = startDate ? null : new Date(); // Si solo hay una fecha, es el valor seleccionado
+
+      // Construir query con filtro de fecha
+      let q;
+      const colRef = collection(db, collectionKey);
+
+      try {
+        // Primero intentamos sin filtro de fecha para ver qué hay
+        const snap = await getDocs(qRef(q, where(dateField, '>=', '')));
+
+        // Mostrar en pestaña
+        renderCollectionPanel(collectionKey, info, snap.docs);
+        state.totalDocs += snap.docs.length;
+
+        // Crear pestaña si no existe
+        if (!document.getElementById(`tab-${collectionKey}`)) {
+          const tabBtn = document.createElement('button');
+          tabBtn.className = 'tab-btn active';
+          tabBtn.dataset.col = collectionKey;
+          tabBtn.innerHTML = `
+            <span>${info.name}</span>
+            <span class="close" onclick="removeTab('${collectionKey}')">×</span>
+          `;
+          tabBtn.addEventListener('click', () => scrollToPanel(collectionKey));
+          document.getElementById('tabsBar').appendChild(tabBtn);
+        }
+
+      } catch (err) {
+        console.error(`Error cargando ${collectionKey}:`, err);
+        showPanelError(collectionKey, info, err.message);
+      }
+    }
+
+    // Query sin restricción compleja inicialmente - mostraremos los primeros 50 docs
+    function qRef(col, field, value) {
+      return query(col, where(field, '>=', value || ''), limit(50));
+    }
+
+    // ============================================================
+    // RENDERIZAR PANEL DE COLECCIÓN
+    // ============================================================
+
+    function renderCollectionPanel(collectionKey, info, docs) {
+      const panelId = `panel-${collectionKey}`;
+      const existing = document.getElementById(panelId);
+      if (existing) existing.remove();
+
+      // Crear botón de tab
+      const tabBtn = document.createElement('button');
+      tabBtn.className = 'tab-btn active';
+      tabBtn.dataset.col = collectionKey;
+      tabBtn.innerHTML = `
+        <span>${info.name}</span>
+        <span class="close" onclick="removeTab('${collectionKey}')">×</span>
+      `;
+      tabBtn.addEventListener('click', () => scrollToPanel(collectionKey));
+
+      // Agregar tab
+      document.getElementById('tabsBar').appendChild(tabBtn);
+
+      // Crear panel
+      const panel = document.createElement('div');
+      panel.id = panelId;
+      panel.className = 'data-panel';
+
+      // Info
+      let docInfo = `Mostrando ${docs.length} documento(s)`;
+      if (docs.length === 0) docInfo = 'No hay documentos con el filtro actual';
+
+      // Headers y filas
+      if (docs.length === 0) {
+        panel.innerHTML = `
+          <div class="empty">No hay documentos con el filtro de fecha actual</div>
+          <div class="panel-info">${docInfo}</div>
+        `;
+      } else {
+        // Obtener todos los campos posibles
+        const allFields = new Set();
+        docs.forEach(d => {
+          Object.keys(d.data()).forEach(f => allFields.add(f));
+        });
+
+        // Ordenar fields: system fields first, then data
+        const systemFields = ['__collections__', '__doc_id__', '__updated__'];
+        const sortedFields = [...allFields].filter(f => !systemFields.includes(f)).sort();
+
+        // Construir tabla
+        const theadHtml = `
+          <tr class="header-row">
+            <th style="width: 40px;">#</th>
+            ${sortedFields.map(f => `<th title="${f}">${f.slice(0, 20)}...</th>`).join('')}
+          </tr>
+        `;
+
+        let tbodyHtml = '';
+        docs.forEach((doc, docIdx) => {
+          const data = doc.data();
+          const docId = doc.id;
+
+          // Marcar si ya fue editado
+          const isEdited = state.selectedDocs.get(collectionKey)?.has(docId) || false;
+
+          // Crear celdas
+          const cells = sortedFields.map(field => {
+            const value = data[field];
+            const type = typeof value;
+            const formatted = formatValueForDisplay(value, type);
+
+            // Agregar event listeners para edición
+            const cellHtml = `
+              <td data-field="${field}" data-docid="${docId}" data-coll="${collectionKey}" 
+                  class="cell ${isEdited ? 'edited' : ''}"
+                  onclick="toggleCellEdit('${collectionKey}', '${docId}', '${field}')"
+                  onmouseover="showCellTooltip(event, this)"
+                  onmouseout="hideCellTooltip()">
+                ${formatted}
+              </td>
+            `;
+            return cellHtml;
+          }).join('');
+
+          tbodyHtml += `
+            <tr data-docid="${docId}" data-coll="${collectionKey}" 
+                style="cursor:pointer;"
+                onclick="event.stopPropagation(); toggleCellEdit('${collectionKey}', '${docId}', '${sortedFields[0]}')">
+              <td>${docIdx + 1}</td>
+              ${cells}
+            </tr>
+          `;
+        });
+
+        panel.innerHTML = `
+          <div class="panel-info">${docInfo}</div>
+          <div class="spreadsheet">
+            <table>
+              <thead>
+                ${theadHtml}
+              </thead>
+              <tbody>
+                ${tbodyHtml}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      // Insertar después del h2 del panel
+      const panelsContainer = document.getElementById('dataPanel');
+      const h2 = panelsContainer.querySelector('h2');
+      if (h2) {
+        h2.parentNode.insertBefore(panel, h2.nextSibling);
+      } else {
+        panelsContainer.appendChild(panel);
+      }
+    }
+
+    function formatValueForDisplay(value, type) {
+      if (value === null || value === undefined) return '—';
+      if (type === 'boolean') return value ? '✓' : '✗';
+      if (type === 'number') return Number.isInteger(value) ? value.toString() : value.toFixed(2);
+      if (type === 'object') {
+        try {
+          const json = JSON.stringify(value);
+          return json.length > 80 ? json.slice(0, 80) + '…' : json;
+        } catch { return String(value).slice(0, 50); }
+      }
+      return String(value).slice(0, 60);
+    }
+
+    // ============================================================
+    // EDITAR CELDA (modo edición)
+    // ============================================================
+
+    // Diccionario de tipos por colección (campo -> tipo esperado)
+    const cellTypes = {
+      movimientos: {
+        T$: 'number', E$: 'number', total: 'number',
+        ID_CLIENTE: 'text', CUIL: 'text', cuil_pago: 'text',
+        FECHA: 'date', HORA: 'time'
+      },
+      confinanzas: {
+        monto: 'number', rubro: 'text', subrubro: 'text',
+        detalle: 'text', tipo: 'select'
+      },
+      arqueos: {
+        sisEfectivo: 'number', sisTransf: 'number',
+        realEfectivo: 'number', realTransf: 'number'
+      },
+      ccarga: {
+        sL10: 'number', sL15: 'number', sL45: 'number',
+        v10: 'number', v15: 'number', v45: 'number'
+      }
+    };
+
+    let activeEdit = null; // { collectionKey, docId, field, originalValue, inputElement }
+
+    function toggleCellEdit(collectionKey, docId, field) {
+      // Si ya está editando este mismo, cancelar
+      if (activeEdit && activeEdit.collectionKey === collectionKey && activeEdit.docId === docId && activeEdit.field === field) {
+        cancelCellEdit();
+        return;
+      }
+
+      // Cancelar edición previa
+      if (activeEdit) cancelCellEdit();
+
+      // Crear elemento input
+      const cell = document.querySelector(`[data-docid="${docId}"][data-coll="${collectionKey}"][data-field="${field}"]`);
+      if (!cell) return;
+
+      const originalValue = cell.textContent.trim();
+      activeEdit = { collectionKey, docId, field, originalValue };
+
+      // Determinar tipo de input
+      const typeHints = cellTypes[collectionKey];
+      const expectedType = typeHints ? typeHints[field] : 'text';
+      const isNumber = expectedType === 'number';
+      const isBoolean = expectedType === 'boolean';
+
+      const input = document.createElement('input');
+      input.type = isBoolean ? 'checkbox' : 'text';
+      input.value = originalValue;
+      input.style.width = '100%';
+      input.style.padding = '0.2rem 0.3rem';
+      input.style.border = '1px solid var(--accent)';
+      input.style.borderRadius = '4px';
+      input.style.background = var(--card);
+      input.style.color = var(--text);
+      input.style.fontSize = '0.7rem';
+      input.style.boxSizing = 'border-box';
+
+      if (isBoolean) {
+        input.checked = originalValue === '✓' || originalValue === 'true' || originalValue === 1;
+        input.indeterminate = originalValue === '↕';
+      } else if (isNumber) {
+        // Parse number, handle formatted numbers
+        const numVal = parseFloat(originalValue.replace(/[^\d.-]/g, ''));
+        input.type = 'number';
+        input.value = isNaN(numVal) ? '' : numVal;
+      } else {
+        input.type = 'text';
+        input.value = originalValue;
+      }
+
+      // Reemplazar contenido de la celda
+      cell.innerHTML = '';
+      cell.appendChild(input);
+      input.focus();
+      input.select();
+
+      // Eventos
+      input.addEventListener('change', (e) => saveCellEdit(collectionKey, docId, field, e.target));
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') cancelCellEdit();
+        if (e.key === 'Enter') saveCellEdit(collectionKey, docId, field, e.target);
+      });
+
+      // Tooltip informativo
+      showEditTooltip(cell, originalValue, expectedType);
+    }
+
+    function saveCellEdit(collectionKey, docId, field, newInput) {
+      const newValue = newInput.type === 'checkbox' ? (newInput.checked ? 'true' : 'false') :
+                       newInput.type === 'number' ? String(newInput.value) : newInput.value.trim();
+
+      if (newValue === '' || newValue === activeEdit.originalValue) {
+        cancelCellEdit();
+        return;
+      }
+
+      // Guardar en Firebase
+      const docRef = doc(db, collectionKey, docId);
+      const updateData = {};
+      updateData[field] = parseNewValue(newValue, field, collectionKey);
+
+      // Registrar valor original para posible deshacer
+      const key = `${collectionKey}|${docId}|${field}`;
+      state.originalValues.set(key, activeEdit.originalValue);
+
+      // Actualizar UI
+      const cell = document.querySelector(`[data-docid="${docId}"][data-coll="${collectionKey}"][data-field="${field}"]`);
+      if (cell) {
+        cell.textContent = '';
+        const display = formatValueForDisplay(updateData[field], typeof updateData[field]);
+        cell.textContent = display;
+        cell.classList.add('edited');
+      }
+
+      // Escribir en Firebase
+      setDoc(docRef, updateData, { merge: true })
+        .then(() => {
+          state.editedCounts++;
+          enableSaveButton();
+          showToast('Cambio guardado');
+        })
+        .catch(err => {
+          console.error('Error guardando:', err);
+          showToast('Error guardando: ' + err.message, 'error');
+          // Revertir UI
+          if (cell) {
+            cell.textContent = '';
+            cell.textContent = activeEdit.originalValue;
+            cell.classList.remove('edited');
+          }
+        });
+
+      activeEdit = null;
+    }
+
+    function parseNewValue(value, field, collectionKey) {
+      // Intentar convertir a número si es posible
+      const num = Number(value);
+      if (!isNaN(num)) return num;
+
+      // Booleanos
+      if (['true', 'false', '1', '0'].includes(value.toLowerCase())) {
+        return value.toLowerCase() === 'true' || value === '1';
+      }
+
+      // Fechas simples (dejamos como string)
+      return value;
+    }
+
+    function cancelCellEdit() {
+      if (!activeEdit) return;
+
+      const { collectionKey, docId, field, originalValue } = activeEdit;
+      const cell = document.querySelector(`[data-docid="${docId}"][data-coll="${collectionKey}"][data-field="${field}"]`);
+      if (cell) {
+        cell.innerHTML = `<span>${originalValue}</span>`;
+        cell.classList.remove('edited');
+      }
+
+      activeEdit = null;
+      document.querySelectorAll('.edit-tooltip').forEach(t => t.remove());
+      enableSaveButton();
+    }
+
+    function showEditTooltip(cell, originalValue, expectedType) {
+      const tooltip = document.createElement('div');
+      tooltip.className = 'edit-tooltip';
+      tooltip.style.position = 'absolute';
+      tooltip.style.bottom = '100%';
+      tooltip.style.left = '0';
+      tooltip.style.background = var(--card);
+      tooltip.style.border = '1px solid var(--border)';
+      tooltip.style.padding = '0.5rem 0.75rem';
+      tooltip.style.fontSize = '0.65rem';
+      tooltip.style.color = var(--text);
+      tooltip.style.zIndex = '1001';
+      tooltip.style.maxWidth = '200px';
+      tooltip.style.whiteSpace = 'normal';
+
+      const typeLabel = expectedType === 'boolean' ? 'Booleano' :
+                        expectedType === 'number' ? 'Número' : 'Texto';
+      tooltip.innerHTML = `<strong>Tipo:</strong> ${typeLabel}<br><strong>Original:</strong> ${originalValue}`;
+
+      cell.appendChild(tooltip);
+    }
+
+    // ============================================================
+    // TOOLTIPS DE CELDA (pasar cursor)
+    // ============================================================
+
+    function showCellTooltip(event, cell) {
+      const field = cell.dataset.field;
+      const docId = cell.dataset.docid;
+      const collectionKey = cell.dataset.coll;
+
+      // Ya tenemos tooltip global
+      const tooltip = document.getElementById('tooltip');
+      const label = document.getElementById('tooltip-label');
+      const value = document.getElementById('tooltip-value');
+
+      // Obtener el valor real del documento (simulación - en producción leeríamos de Firebase)
+      // Por ahora mostramos info de qué campo es
+      label.textContent = `Campo: ${field}`;
+      value.textContent = `Documento: ${docId}`;
+
+      tooltip.style.display = 'block';
+      tooltip.style.left = event.pageX + 10 + 'px';
+      tooltip.style.top = event.pageY + 10 + 'px';
+    }
+
+    function hideCellTooltip() {
+      const tooltip = document.getElementById('tooltip');
+      if (tooltip) tooltip.style.display = 'none';
+    }
+
+    function hideTooltip() {
+      const tooltip = document.getElementById('tooltip');
+      if (tooltip) tooltip.style.display = 'none';
+    }
+
+    // ============================================================
+    // BORRAR DOCUMENTO
+    // ============================================================
+
+    async function deleteDocument(collectionKey, docId) {
+      if (!confirm('¿Seguro que quieres borrar este documento?')) return;
+
+      try {
+        await setDoc(doc(db, collectionKey, docId), { _deleted: true }, { merge: true });
+        showToast('Documento marcado como eliminado');
+        // Recargar la colección
+        loadCollectionData(collectionKey);
+      } catch (err) {
+        showToast('Error borrando: ' + err.message, 'error');
+      }
+    }
+
+    // ============================================================
+    // GUARDAR TODOS LOS CAMBIOS
+    // ============================================================
+
+    async function saveAllChanges() {
+      if (state.editedCounts === 0) {
+        showToast('No hay cambios pendientes', 'info');
+        return;
+      }
+
+      if (!confirm(`Vas a guardar ${state.editedCounts} cambio(s). ¿Continuar?`)) return;
+
+      try {
+        const batch = writeBatch(db);
+
+        // Colectar todas las actualizaciones
+        const updates = [];
+
+        // Recorrer docs editados
+        // Nota: Esta es una simplificación - en producción guardaríamos un log de qué se editó
+        // Por ahora, recargamos y mostramos mensaje
+        state.editedCounts = 0;
+        enableSaveButton();
+
+        // Recargar todas las colecciones para reflejar cambios
+        for (const key of state.selectedCollections) {
+          loadCollectionData(key);
+        }
+
+        showToast('Cambios guardados exitosamente', 'success');
+      } catch (err) {
+        console.error('Error en lote:', err);
+        showToast('Error guardando cambios', 'error');
+      }
+    }
+
+    // ============================================================
+    // UTILIDADES
+    // ============================================================
+
+    function showToast(message, type = 'info') {
+      // Crear toast temporal
+      const toast = document.createElement('div');
+      toast.style.position = 'fixed';
+      toast.style.bottom = '80px';
+      toast.style.left = '50%';
+      toast.style.transform = 'translateX(-50%)';
+      toast.style.background = type === 'error' ? '#ff4444' : '#2dd4bf';
+      toast.style.color = 'white';
+      toast.style.padding = '0.75rem 1.2rem';
+      toast.style.borderRadius = '6px';
+      toast.style.zIndex = '9999';
+      toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      setTimeout(() => {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 3000);
+    }
+
+    function scrollToPanel(collectionKey) {
+      const panel = document.getElementById(`panel-${collectionKey}`);
+      if (panel) {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    function showPanelError(collectionKey, info, errorMsg) {
+      const panelId = `panel-${collectionKey}`;
+      const existing = document.getElementById(panelId);
+      if (existing) existing.remove();
+
+      const tabBtn = document.querySelector(`[data-col="${collectionKey}"]`);
+      if (tabBtn) tabBtn.remove();
+
+      const panel = document.createElement('div');
+      panel.id = panelId;
+      panel.className = 'data-panel';
+      panel.innerHTML = `
+        <div class="empty">Error cargando ${info.name}</div>
+        <div class="panel-info"> ${errorMsg}</div>
+      `;
+
+      document.getElementById('dataPanel').appendChild(panel);
+    }
+  </script>
+</body>
+</html>
