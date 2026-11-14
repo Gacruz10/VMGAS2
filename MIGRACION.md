@@ -1,7 +1,7 @@
 # Migración VMGAS → VMGAS2 (Firebase)
 
 Documento de trabajo para mantener consistentes los módulos que se van migrando.
-Última actualización: 2026-11-09.
+Última actualización: 2026-11-13.
 
 ## Estado
 
@@ -16,14 +16,14 @@ Documento de trabajo para mantener consistentes los módulos que se van migrando
 | `controlcarga.html` | Migrado |
 | `controlstock.html` | Migrado |
 | `treeview.html` | Migrado |
-| `alarmas.html` | Migrado (queda pendiente el envío de audio vía Apps Script) |
+| `alarmas.html` | Migrado en lista Firestore; **pendiente** el alta/vencimientos (revisión diaria) y el audio vía Apps Script |
 | `arqueo.html` | **Migrado + historial y permiso `FINANZAS`** |
 | `controlfinanzas.html` | **Migrado a Firestore directo + conciliación de arqueos** |
 | `controlcomisiones.html` | **Migrado (escalas, pendientes y liquidación)** |
 | `controltransferencias.html` | **Migrado (verificación bancaria, lote y reversión)** |
 | `controlremitos.html` | **Migrado (conciliación de compras v1)** |
-| `flota.html` | Pendiente |
-| `tablero.html` | Pendiente |
+| `flota.html` | Pendiente (sin efecto por ahora) |
+| `tablero.html` | **Migrado (Firestore directo + mapa OSM/Leaflet)** |
 | `micaja.html` | **Migrado (caja y transferencias, solo lectura)** |
 | `index_recepcion.html` | Pendiente |
 
@@ -39,6 +39,40 @@ Documento de trabajo para mantener consistentes los módulos que se van migrando
   `G`, `GASTO_TOTAL`, `COMISION_TOTAL`, `ID_CLIENTE`, etc.
 - Los módulos nuevos escriben con `writeBatch` / `runTransaction` y validan el token contra `tokens/{k}`.
 - Para textos que luego se renderizan con `innerHTML`, escapar o limpiar (`<` y `>`).
+
+## Ventas: coordenadas y trazabilidad (2026-11-13)
+
+- `index4.html` / `app.js` guarda la ubicación del cliente en `clientes/{id}.ubicacion`.
+  La coordenada es la del GPS del dispositivo al momento de la venta.
+- `PUNTO_GPS` sigue siendo **solo auditoría**: `SI` si la venta se hizo dentro de los
+  60 m del cliente, `NO` si fue fuera de ese radio. No define si se guarda o no la
+  coordenada.
+- Si el cliente nuevo no tiene coordenadas, se guarda `ubicacion` con el GPS de esa
+  primera venta. Si un cliente existente no tiene `ubicacion` ni `coordenadas`, la
+  próxima venta completa `ubicacion` con el GPS actual. Si ya tiene una coordenada,
+  no se pisa.
+- `clientes.html` usa `ubicacion` como campo canónico y tolera `coordenadas` de datos
+  viejos (lo muestra y lo migra a `ubicacion` al editar).
+- Cada movimiento de venta guarda el viaje y el turno activos:
+  - `ID_VIAJE` y `idViaje`;
+  - `ID_TURNO` y `idTurno`.
+- Si el chofer no tiene viaje activo, se guarda `ID_VIAJE = "Sin_Camion"`.
+  Si no hay turno abierto, se guarda `ID_TURNO = "SIN_TURNO"`.
+- El contexto se busca al momento de guardar: último `turnos` con `estado = ABIERTO`
+  y `ccarga` con `estado = EN_RUTA`/`COMPRA_EN_RUTA` del chofer. Si está offline se
+  usa la copia `localStorage.vm_contexto_operacion` (con usuario y vencimiento de 12 h).
+- `MOV_NETO_10/15/45` y `MOV_NETO_DINERO` actualizan los saldos del cliente en la misma
+  transacción de la venta:
+  - `env10/15/45` = deuda de envases;
+  - `flotante10/15/45` = envases a favor;
+  - `plata` = saldo de dinero con signo (positivo = debe, negativo = a favor).
+- Cada movimiento de saldo genera un documento en `historial_flotantes` con el antes/después
+  y el vínculo al movimiento, viaje y turno. `clientes.ultimaActualizacionMs` y
+  `ultimoMovimientoTipo` alimentan el tablero y los envases secuestrados.
+- `clientes` pasa a ser la foto de `SALDOS_FLOTANTES`; `historial_flotantes` reemplaza
+  `HISTORIAL_FLOTANTES`. No se crea una colección `saldos_flotantes` paralela para no
+  duplicar la fuente de verdad.
+- La venta sigue siendo idempotente: el documento `movimientos/{N}` se escribe una sola vez.
 
 ## Tema, sesión y navegación (2026-11-09)
 
@@ -71,9 +105,9 @@ Todas las pantallas activas cargan `vm-core.js` y comparten el mismo comportamie
 |---|---|---|
 | `usuarios` | Usuarios y permisos | doc id = usuario; `nombre_mostrar`, `FINANZAS`, `CONFINANZAS`, etc. |
 | `tokens` | Sesiones | `usuario`, `nombre_mostrar`, `creado`, `expira` |
-| `clientes` | Maestro de clientes | `nombre`, `zona`, `categoria`, `plata`, `env10/15/45` |
+| `clientes` | Maestro de clientes y saldos unificados | `nombre`, `zona`, `categoria`, `ubicacion`, `plata`, `env10/15/45`, `flotante10/15/45`, `ultimaActualizacionMs` |
 | `precios` | Lista de precios | `categoria`, `tipo`, `precio` |
-| `movimientos` | Operaciones de campo | `USUARIO`, `TIPO`, `FECHA`, `HORA`, `E$`, `T$`, `TOTAL`, `GASTO_TOTAL`, `ARQUEO_ID` |
+| `movimientos` | Operaciones de campo | `USUARIO`, `TIPO`, `FECHA`, `HORA`, `E$`, `T$`, `TOTAL`, `GASTO_TOTAL`, `ARQUEO_ID`, `ID_VIAJE`/`idViaje`, `ID_TURNO`/`idTurno`, `UBICACION` |
 | `ccarga` | Viajes / control de carga | `idViaje`, `chofer`, `estado`, `tipoViaje`, `timestampMs` |
 | `turnos` | Apertura/cierre de stock | `estado`, `timestampAperturaMs`, `timestampCierreMs` |
 | `patrimonio/totales` | Stock global | `env10`, `env15`, `env45` |
@@ -86,6 +120,7 @@ Todas las pantallas activas cargan `vm-core.js` y comparten el mismo comportamie
 | **`confinanzas`** | **Movimientos financieros** | `id`, `fecha` (YYYY-MM-DD), `rubro`, `subrubro`, `detalle`, `monto`, `tipo` (`INGRESO`/`EGRESO`) |
 | **`comisiones`** | **Comisión pendiente por venta** | `movimientoId`, `choferKey`, `comision`, `estado`, `pagoId` |
 | **`comisiones_pagos`** | **Liquidaciones de comisiones** | `pagoId`, `choferKey`, `total`, `efectivo`, `transferencia`, `detalle` |
+| **`historial_flotantes`** | **Historial de saldos de clientes** | `movimientoId`, `idCliente`, `tipoMov`, `movEnv10/15/45`, `movDinero`, `saldo10/15/45`, `saldoDinero`, `idViaje`, `idTurno`, `timestampMs` |
 
 ## Contrato de `arqueos`
 
@@ -351,6 +386,31 @@ guardando el `nombre_mostrar` en minúsculas; `choferId` guarda el id del token
   fallback. Si un movimiento viejo no tiene `E$`/`T$`, se usa `TOTAL` como efectivo
   (igual que `arqueo.html`). Los gastos viejos sin `GASTO_TOTAL` usan `abs(TOTAL)`.
 
+### Tablero (`tablero.html`, 2026-11-13)
+
+- Requiere token válido y permiso `TABLERO` (`usuarios/{id}.TABLERO`).
+- Se agregó el tile **Tablero de Comando** en `inicio.html` cuando el usuario tiene
+  el permiso.
+- Lee Firestore directo, sin Apps Script:
+  - `movimientos` por `FECHA` en bloques de 30 días (6 meses para promedios);
+  - `confinanzas`, `ccarga`, `clientes`, `usuarios`, `turnos` y `patrimonio/totales`.
+- Mantiene las tres vistas del tablero legacy:
+  - **Riesgo & Stock**: stock planta/calle, turno, flota en tránsito, cuenta corriente,
+    cauciones, envases secuestrados, transferencias adeudadas, arqueos pendientes y
+    remitos de compra sin conciliar.
+  - **Operativa**: kilos, unidades, facturación, viajes, promedios, mix, efecto
+    logístico, ventas por chofer/zona y mapa de calor.
+  - **Finanzas**: ingresos, egresos, renta, evolución diaria y gastos por rubro.
+- **Mapa**: Leaflet + `leaflet.heat` con tiles estándar de **OpenStreetMap** (sin API key)
+  y un filtro CSS oscuro para integrarlo al tablero. El mapa de calor prioriza
+  `clientes.ubicacion`/`coordenadas` y usa `movimientos.UBICACION` como respaldo. El
+  peso de cada punto es el kilos de la venta.
+- `PUNTO_GPS` se conserva como dato de auditoría, no como fuente del mapa.
+- La tarjeta de **Cauciones** queda visible con estado “sin datos” hasta que exista el
+  módulo; la cuenta corriente se arma con `clientes.env*` y `clientes.plata`.
+- Para volúmenes altos de OSM conviene pasar a un proveedor con key o self-host; el
+  tiles estándar de OSM es gratuito pero tiene política de uso moderado.
+
 ### Visor Pro (`treeview.html`)
 
 - **Colores por jerarquía**: bloque **DÍA** = borde azul (`--blue`), bloque
@@ -446,14 +506,18 @@ Las páginas nuevas leen y escriben directo desde el navegador. Hay que asegurar
 - `comisiones_pagos`: lectura/escritura solo para `FINANZAS` / `CONFINANZAS`.
 - `confinanzas`, `alarmas`: escritura solo para usuarios con permiso `FINANZAS` / `CONFINANZAS`.
 - `seguridad/pin`, `historialPin`, `auditoria`: las operaciones sensibles se hacen en transacción; las reglas deben impedir que un usuario sin permiso rote el PIN.
+- `clientes`: permitir `update` de `ubicacion`, `plata`, `env10/15/45`, `flotante10/15/45`, `ultimaActualizacionMs` y `ultimoMovimientoTipo` desde la transacción de venta (`FORMULARIO`).
+- `historial_flotantes`: `create` desde la venta y lectura para `FORMULARIO`/`FINANZAS`/`CONFINANZAS`.
 - Evitar reglas `allow read, write: if true`.
 
 ## Pendiente técnico recomendado
 
 1. Centralizar `firebaseConfig` en un solo archivo (`firebase-config.js`) para no repetirlo en cada HTML.
-2. Mover la validación de permisos (`FINANZAS`, `CONFINANZAS`) al servidor o a reglas, no solo a la UI.
+2. Mover la validación de permisos (`FINANZAS`, `CONFINANZAS`, `TABLERO`) al servidor o a reglas, no solo a la UI.
 3. Terminar la migración de `alarmas.html` y del audio de `app.js` (todavía usan Apps Script).
-4. Revisar el tope de lectura de `controlfinanzas` (hoy lee toda la colección `confinanzas`); si crece, paginar o consultar por rango de fechas con un campo índice.
+4. Revisar el tope de lectura de `controlfinanzas` y `tablero` (hoy leen toda la colección `confinanzas`); si crece, paginar o consultar por rango de fechas con un campo índice.
+5. Implementar la revisión diaria de vencimientos (`FIN_CALENDARIO` → `alarmas`) con una tarea programada (cron/Cloud Function) que corra al menos una vez por día.
+6. `flota.html`, `index_recepcion.html` y el audio quedan fuera de alcance por ahora; `flota` y recepción de flotantes se retoman después.
 
 ## Alcance v1: transferencias y compras (actualizado 2026-11-09)
 
@@ -585,7 +649,8 @@ ni rentabilidad diaria; quedan para una etapa posterior.
 - `controlfinanzas` muestra un badge `COMPRA` y bloquea edición/borrado de los
   asientos con `origen: "COMPRA"`. La rectificación se hace solo desde
   `controlremitos`.
-- No se construye todavía el tablero de rentabilidad diaria.
+- El tablero de comando ya está migrado. La rentabilidad diaria por costo
+  (`CU10/15/45`) sigue pendiente porque la venta nueva no guarda el costo unitario.
 
 ### Arqueo
 
@@ -612,11 +677,12 @@ ni rentabilidad diaria; quedan para una etapa posterior.
 - `controlcomisiones.html`: `FINANZAS` o `CONFINANZAS`.
 - `controlremitos.html` y `controltransferencias.html`: `FINANZAS` o `CONFINANZAS`.
 - `parametroscomisiones.html`: permiso `PRECIOS`; se abre desde `precios.html`.
+- `tablero.html`: permiso `TABLERO`; el tile de `inicio.html` también depende de ese permiso.
 - `micaja.html`: solo token válido; cada chofer ve únicamente sus movimientos.
 - `administrativo.html` valida `tokens/{k}` y luego `usuarios/{usuario}`; muestra
   Arqueo solo con `FINANZAS` y Comisiones/Remitos/Transferencias con cualquiera de los
   dos.
-- `inicio.html` muestra el tile Administrativo con `FINANZAS` o `CONFINANZAS`, y el
-  tile Mi Caja con `FORMULARIO`.
-- Los tiles de `tablero.html` e `index_recepcion.html` siguen fuera de `inicio.html`
-  porque esas páginas todavía no existen en VMGAS2.
+- `inicio.html` muestra el tile Administrativo con `FINANZAS` o `CONFINANZAS`, el
+  tile Mi Caja con `FORMULARIO` y el tile Tablero con `TABLERO`.
+- El tile de `index_recepcion.html` sigue fuera de `inicio.html` porque esa página
+  todavía no existe en VMGAS2.

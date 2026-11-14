@@ -1,0 +1,1749 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <title>Tablero de Comando</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script src="vm-core.js?v=20261113"></script>
+
+    <style>
+        :root {
+            --bg-dark: #050510;
+            --bg-card: #12121a;
+            --accent: #FFD700;
+            --accent-glow: rgba(255, 215, 0, 0.3);
+            --compra: #a855f7;
+            --text-main: #ffffff;
+            --text-sec: #a0a0b0;
+            --success: #2dd4bf;
+            --danger: #ff4757;
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --card-blue: #3b82f6;
+        }
+
+        * {
+            box-sizing: border-box;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-main);
+            background-color: var(--bg-dark);
+            background-image:
+                radial-gradient(circle at 0% 0%, rgba(76, 29, 149, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 100% 100%, rgba(255, 215, 0, 0.05) 0%, transparent 40%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            font-size: 13px;
+            padding-bottom: 50px;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+        }
+
+        /* --- LOADING NEÓN --- */
+        .neon-loader {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            border: 3px solid transparent;
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite, neon-glow 1.5s ease-in-out infinite alternate;
+            z-index: 9999;
+            display: none;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
+
+        @keyframes neon-glow {
+            from {
+                box-shadow: 0 0 10px var(--accent), inset 0 0 10px var(--accent);
+            }
+
+            to {
+                box-shadow: 0 0 25px var(--accent), inset 0 0 20px var(--accent);
+            }
+        }
+
+        /* --- HEADER --- */
+        .fixed-header {
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            background: rgba(5, 5, 16, 0.95);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 12px 15px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .page-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin: 0;
+            background: linear-gradient(to right, #fff, var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn-action {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: var(--text-sec);
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-action:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        /* --- CONTROLES DE FECHA --- */
+        .controls-wrapper {
+            max-width: 1200px;
+            margin: 15px auto;
+            padding: 0 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .pills-group {
+            display: flex;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .btn-pill {
+            background: transparent;
+            border: none;
+            color: var(--text-sec);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-pill.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .date-filters {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            background: var(--bg-card);
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .date-group {
+            position: relative;
+            flex: 1;
+        }
+
+        .date-group input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 6px 6px 6px 24px;
+            font-family: inherit;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .date-icon {
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--accent);
+            font-size: 12px;
+        }
+
+        /* --- GRILLA Y CARDS --- */
+        .view-section {
+            padding: 0 15px;
+            max-width: 1200px;
+            margin: 0 auto 30px auto;
+            opacity: 1;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .section-header {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-bottom: 15px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 8px;
+        }
+
+        .grid-kpi {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .grid-charts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+        }
+
+        .card-title {
+            font-size: 10px;
+            color: var(--text-sec);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .kpi-value {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #fff;
+            font-family: monospace;
+        }
+
+        .kpi-sub {
+            font-size: 11px;
+            margin-top: 2px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .chart-container-sm {
+            position: relative;
+            height: 180px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        .scrollable-list {
+            max-height: 160px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .scrollable-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .scrollable-list::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .scrollable-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        /* LIST ROW ESTÁNDAR Y CON BORDES DE COLOR */
+        .list-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            font-size: 11px;
+        }
+
+        .list-row:last-child {
+            border-bottom: none;
+        }
+
+        .list-row.b-accent {
+            border-left: 2px solid var(--accent);
+            padding-left: 8px;
+            margin-bottom: 2px;
+        }
+
+        .list-row.b-compra {
+            border-left: 2px solid var(--compra);
+            padding-left: 8px;
+            margin-bottom: 2px;
+        }
+
+        .list-row.b-blue {
+            border-left: 2px solid var(--card-blue);
+            padding-left: 8px;
+            margin-bottom: 2px;
+        }
+
+        .badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .text-pos {
+            color: var(--success);
+        }
+
+        .text-neg {
+            color: var(--danger);
+        }
+
+        .text-accent {
+            color: var(--accent);
+        }
+
+        .text-compra {
+            color: var(--compra);
+        }
+
+        .mixed-card {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: stretch;
+        }
+
+        .mixed-left {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .mixed-right {
+            flex: 1;
+            min-width: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .block-calle {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .block-calle-title {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .block-calle-data {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-sec);
+        }
+
+        .block-calle-data b {
+            color: #fff;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .grid-3col {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            text-align: center;
+        }
+
+        .stat-box {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .stat-lbl {
+            font-size: 10px;
+            color: var(--text-sec);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .stat-val {
+            font-size: 16px;
+            font-family: monospace;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .hidden-row {
+            display: none !important;
+        }
+
+        .btn-toggle-list {
+            width: 100%;
+            margin-top: 10px;
+            padding: 8px;
+            text-align: center;
+        }
+
+        /* Mapa: OpenStreetMap oscurecido sin API key */
+        .leaflet-container { background: #0b1120 !important; }
+        .leaflet-tile {
+            filter: brightness(0.62) invert(1) contrast(3) hue-rotate(200deg) saturate(0.35) brightness(0.65);
+        }
+        .leaflet-control-attribution {
+            background: rgba(5,5,16,.75) !important;
+            color: #a0a0b0 !important;
+            font-size: 9px !important;
+        }
+        .leaflet-control-attribution a { color: #FFD700 !important; }
+        #mapa-calor-empty { font-family: 'Outfit', sans-serif; }
+    </style>
+</head>
+
+<body>
+
+    <div id="loader" class="neon-loader"></div>
+
+    <div class="fixed-header">
+        <div class="header-top">
+            <button class="btn-action" id="btnVolver">❮ Volver</button>
+            <h2 class="page-title">Tablero de Comando</h2>
+            <button class="btn-action" id="btnFlota" style="display:none;">🚚 KM FLOTA</button>
+        </div>
+    </div>
+
+    <div class="controls-wrapper">
+        <div class="pills-group">
+            <button class="btn-pill" onclick="setQuickDate('hoy', this)">Hoy</button>
+            <button class="btn-pill" onclick="setQuickDate('7d', this)">7D</button>
+            <button class="btn-pill active" onclick="setQuickDate('mes', this)">Este Mes</button>
+        </div>
+
+        <div class="date-filters">
+            <div class="date-group"><span class="date-icon">📅</span><input type="text" id="dash-start"
+                    onchange="invalidateCacheAndReload()"></div>
+            <div style="color:var(--text-sec); font-size:10px; font-weight:bold;">➜</div>
+            <div class="date-group"><span class="date-icon">📅</span><input type="text" id="dash-end"
+                    onchange="invalidateCacheAndReload()"></div>
+        </div>
+    </div>
+
+    <div id="view-riesgo" class="view-section">
+        <div class="section-header">⚠️ Riesgo & Stock</div>
+
+        <div class="card" style="margin-bottom: 15px; border-top: 2px solid var(--accent);">
+            <div class="card-title">Stock Total Empresa (Planta + Calle) <span id="ind-stock"
+                    style="font-size:14px">⚫</span></div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:space-between; margin-top:5px;">
+                <div class="stat-box" style="flex:1; min-width:160px; text-align:center;">
+                    <div class="stat-lbl" style="color:#2dd4bf; font-size:12px;">GARRAFA 10KG</div>
+                    <div
+                        style="font-size:13px; margin-top:8px; display:flex; justify-content:space-around; align-items:center;">
+                        <span class="text-pos">🟢 Llenos: <b id="t-stock-l10" style="font-size:15px;">...</b></span>
+                        <span class="text-neg">🔴 Vacíos: <b id="t-stock-v10" style="font-size:15px;">...</b></span>
+                    </div>
+                </div>
+                <div class="stat-box" style="flex:1; min-width:160px; text-align:center;">
+                    <div class="stat-lbl" style="color:#3b82f6; font-size:12px;">GARRAFA 15KG</div>
+                    <div
+                        style="font-size:13px; margin-top:8px; display:flex; justify-content:space-around; align-items:center;">
+                        <span class="text-pos">🟢 Llenos: <b id="t-stock-l15" style="font-size:15px;">...</b></span>
+                        <span class="text-neg">🔴 Vacíos: <b id="t-stock-v15" style="font-size:15px;">...</b></span>
+                    </div>
+                </div>
+                <div class="stat-box" style="flex:1; min-width:160px; text-align:center;">
+                    <div class="stat-lbl" style="color:#FFD700; font-size:12px;">CILINDRO 45KG</div>
+                    <div
+                        style="font-size:13px; margin-top:8px; display:flex; justify-content:space-around; align-items:center;">
+                        <span class="text-pos">🟢 Llenos: <b id="t-stock-l45" style="font-size:15px;">...</b></span>
+                        <span class="text-neg">🔴 Vacíos: <b id="t-stock-v45" style="font-size:15px;">...</b></span>
+                    </div>
+                </div>
+            </div>
+            <div
+                style="margin-top:15px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:10px;">
+                <span style="font-size:11px; color:var(--text-sec);">Proyección de Quiebre (Al ritmo actual):</span>
+                <span class="kpi-value text-neg" id="kpi-quiebre" style="font-size:1.2rem;">...</span>
+            </div>
+        </div>
+
+        <div class="card"
+            style="margin-bottom: 15px; border-top: 2px solid var(--success); background: rgba(0,0,0,0.2);">
+            <div class="card-title">Stock Físico en Plataforma (Base) <span id="estado-turno" class="badge"
+                    style="background:rgba(255,255,255,0.1)">...</span></div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:space-between; margin-top:5px;">
+                <div class="stat-box" style="flex:1; min-width:150px; text-align:center;">
+                    <div class="stat-lbl" style="color:#2dd4bf; font-size:12px;">GARRAFAS 10KG</div>
+                    <div style="font-size:12px; margin-top:5px; display:flex; justify-content:space-around;">
+                        <span class="text-pos">Llenos: <b id="p-stock-l10" style="font-size:14px;">...</b></span>
+                        <span class="text-neg">Vacíos: <b id="p-stock-v10" style="font-size:14px;">...</b></span>
+                    </div>
+                </div>
+                <div class="stat-box" style="flex:1; min-width:150px; text-align:center;">
+                    <div class="stat-lbl" style="color:#3b82f6; font-size:12px;">GARRAFAS 15KG</div>
+                    <div style="font-size:12px; margin-top:5px; display:flex; justify-content:space-around;">
+                        <span class="text-pos">Llenos: <b id="p-stock-l15" style="font-size:14px;">...</b></span>
+                        <span class="text-neg">Vacíos: <b id="p-stock-v15" style="font-size:14px;">...</b></span>
+                    </div>
+                </div>
+                <div class="stat-box" style="flex:1; min-width:150px; text-align:center;">
+                    <div class="stat-lbl" style="color:#FFD700; font-size:12px;">GARRAFAS 45KG</div>
+                    <div style="font-size:12px; margin-top:5px; display:flex; justify-content:space-around;">
+                        <span class="text-pos">Llenos: <b id="p-stock-l45" style="font-size:14px;">...</b></span>
+                        <span class="text-neg">Vacíos: <b id="p-stock-v45" style="font-size:14px;">...</b></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 15px; border-top: 2px solid #3b82f6;">
+            <div class="card-title">Unidades en Tránsito (Flota en la calle)</div>
+            <div id="lista-flota" style="display: flex; flex-direction: column; gap: 8px; margin-top: 5px;"></div>
+        </div>
+
+        <div class="grid-charts">
+
+            <div class="card" style="border-top: 2px solid var(--accent)">
+                <div class="card-title">Cuenta Corriente (Clientes)</div>
+                <div id="container-ctacte">
+                </div>
+            </div>
+
+            <div class="card" style="border-top: 2px solid var(--card-blue)">
+                <div class="card-title">Cauciones (Garantías)</div>
+                <div id="container-cauciones">
+                </div>
+            </div>
+
+            <div class="card" style="border-top: 2px solid var(--danger)">
+                <div class="card-title">🚨 Envases Secuestrados (> 45 días)</div>
+                <div class="scrollable-list" id="list-secuestrados"></div>
+            </div>
+
+            <div class="card" style="border-top: 2px solid var(--danger)">
+                <div class="card-title">Transferencias Adeudadas <span class="badge"
+                        style="background: rgba(255,71,87,0.2); color: var(--danger)">CRÍTICO</span></div>
+                <div class="scrollable-list" id="list-adeudados"></div>
+            </div>
+
+            <div class="card" style="border-top: 2px solid var(--accent)">
+                <div class="card-title">Arqueos Pendientes (Caja)</div>
+                <div class="scrollable-list" id="list-arqueos-pendientes"></div>
+            </div>
+            <div class="card">
+                <div class="card-title">Remitos de Planta SIN Conciliar</div>
+                <div class="scrollable-list" id="list-remitos"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="container-btn-mas" style="text-align: center; padding: 20px 15px; max-width: 1200px; margin: 0 auto;">
+        <button id="btnCargarMas" class="btn-action"
+            style="padding: 12px 24px; font-size: 13px; border-color: var(--accent); color: var(--accent); width: 100%; max-width: 400px; font-weight: bold;">
+            ⬇️ Cargar Operativa y Finanzas ⬇️
+        </button>
+    </div>
+
+    <div id="view-operativa" class="view-section" style="display: none; opacity: 0;">
+        <div class="section-header">🚚 Logística & Operativa</div>
+        <div class="grid-kpi">
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-title">Panel de Volumen (Kilos Netos)</div>
+                <div class="mixed-card">
+                    <div class="mixed-left">
+                        <div class="kpi-value" id="kpi-kilos" style="font-size: 2rem;">...</div>
+                        <div class="kpi-sub text-pos" id="kpi-kilos-plata" style="font-weight:700; margin-bottom:10px;">
+                            ...</div>
+                        <div style="display:flex; flex-direction:column; gap:4px; font-size:11px;">
+                            <div
+                                style="display:flex; justify-content:space-between; border-bottom:1px solid var(--glass-border); padding-bottom:2px;">
+                                <span style="color:#2dd4bf">● Garrafas 10kg</span><span id="unid-10"
+                                    style="color:#fff; font-weight:700;">...</span>
+                            </div>
+                            <div
+                                style="display:flex; justify-content:space-between; border-bottom:1px solid var(--glass-border); padding-bottom:2px;">
+                                <span style="color:#3b82f6">● Garrafas 15kg</span><span id="unid-15"
+                                    style="color:#fff; font-weight:700;">...</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; padding-bottom:2px;">
+                                <span style="color:#FFD700">● Cilindros 45kg</span><span id="unid-45"
+                                    style="color:#fff; font-weight:700;">...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mixed-right" style="flex-direction: row; gap: 10px;">
+                        <div style="flex:1; display:flex; flex-direction:column; align-items:center;">
+                            <div style="font-size:10px; color:var(--text-sec); margin-bottom:5px;">MIX PRODUCTO</div>
+                            <div class="chart-container-sm" style="height:120px;"><canvas id="chart-mix"></canvas></div>
+                        </div>
+                        <div style="flex:1; display:flex; flex-direction:column; align-items:center;">
+                            <div style="font-size:10px; color:var(--text-sec); margin-bottom:5px;">BUTANO / PROPANO
+                            </div>
+                            <div class="chart-container-sm" style="height:120px;"><canvas id="chart-gases"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="grid-column: 1 / -1; border-top: 2px solid var(--accent)">
+                <div class="card-title">Promedios de Venta Históricos</div>
+                <div style="margin-bottom: 15px;">
+                    <div style="color: var(--text-sec); font-size: 11px; margin-bottom: 5px; font-weight: bold;">📊
+                        PROMEDIO SEMANAL (Últ. 5 semanas)</div>
+                    <div class="grid-3col">
+                        <div class="stat-box">
+                            <div class="stat-lbl">BUTANO (Kg)</div>
+                            <div class="stat-val text-accent" id="prom-sem-bk">...</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl">PROPANO (Kg)</div>
+                            <div class="stat-val text-accent" id="prom-sem-pk">...</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl">Unidades</div>
+                            <div style="font-size:10px; color:#fff; font-family:monospace; margin-top:2px;"
+                                id="prom-sem-u">...</div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div style="color: var(--text-sec); font-size: 11px; margin-bottom: 5px; font-weight: bold;">📊
+                        PROMEDIO MENSUAL (Últ. 6 meses)</div>
+                    <div class="grid-3col">
+                        <div class="stat-box">
+                            <div class="stat-lbl">BUTANO (Kg)</div>
+                            <div class="stat-val text-pos" id="prom-men-bk">...</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl">PROPANO (Kg)</div>
+                            <div class="stat-val text-pos" id="prom-men-pk">...</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-lbl">Unidades</div>
+                            <div style="font-size:10px; color:#fff; font-family:monospace; margin-top:2px;"
+                                id="prom-men-u">...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-title">Total Viajes Logísticos</div>
+                <div style="display:flex; justify-content:space-between; align-items:end;">
+                    <div class="kpi-value text-accent" id="kpi-viajes">...</div>
+                    <div class="kpi-sub text-pos" id="kpi-viajes-plata"
+                        style="font-weight:700; font-family:monospace; font-size:14px;">...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-charts">
+            <div class="card" style="grid-column: 1 / -1; padding: 10px;">
+                <div class="card-title" style="padding: 0 5px;">Mapa de Calor (Ventas GPS)</div>
+                <div id="mapa-calor" style="height: 480px; width: 100%; border-radius: 8px; z-index: 1; position: relative;">
+                    <div id="mapa-calor-empty" style="position:absolute; inset:0; z-index:500; display:flex; align-items:center; justify-content:center; text-align:center; padding:20px; background:rgba(5,5,16,.55); color:#a0a0b0; font-size:13px; font-weight:700; pointer-events:none;">
+                        Sin datos GPS para el rango seleccionado.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="grid-column: 1 / -1; border-top: 2px solid #3b82f6;">
+                <div class="card-title">Efectividad Logística (Llevados vs Vendidos)</div>
+                <div class="chart-container"><canvas id="chart-efectividad"></canvas></div>
+            </div>
+
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-title">Ventas por Chofer / Vendedor</div>
+                <div class="chart-container"><canvas id="chart-choferes"></canvas></div>
+            </div>
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-title">Rendimiento por Zona</div>
+                <div class="chart-container"><canvas id="chart-zonas"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-finanzas" class="view-section" style="display: none; opacity: 0;">
+        <div class="section-header">💰 Finanzas & Resultados</div>
+        <div class="grid-kpi">
+            <div class="card">
+                <div class="card-title">Ingresos Totales</div>
+                <div class="kpi-value text-pos" id="kpi-ingresos">...</div>
+                <div class="kpi-sub text-sec">Ventas y Arqueos</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Egresos Totales</div>
+                <div class="kpi-value text-neg" id="kpi-egresos">...</div>
+                <div class="kpi-sub text-sec">Gastos y Compras</div>
+            </div>
+            <div class="card" style="border-top: 2px solid var(--accent)">
+                <div class="card-title">Renta Neta</div>
+                <div class="kpi-value" id="kpi-renta">...</div>
+                <div class="kpi-sub text-sec" id="kpi-renta-sub">Margen operativo</div>
+            </div>
+        </div>
+
+        <div class="grid-charts">
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-title">Evolución de Caja Diaria</div>
+                <div class="chart-container"><canvas id="chart-evolucion"></canvas></div>
+            </div>
+
+            <div class="card" style="grid-column: 1 / -1;">
+                <div class="card-title">Distribución y Detalle de Gastos</div>
+                <div class="mixed-card">
+                    <div class="mixed-left chart-container-sm"><canvas id="chart-gastos"></canvas></div>
+                    <div class="mixed-right">
+                        <div class="scrollable-list" id="list-gastos-detalle"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
+            authDomain: "vmgaslr.firebaseapp.com",
+            projectId: "vmgaslr",
+            storageBucket: "vmgaslr.firebasestorage.app",
+            messagingSenderId: "75859850089",
+            appId: "1:75859850089:web:fc551c770bbf4ae25803f8",
+            measurementId: "G-RJCWWBMBFF"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        if (window.ChartDataLabels) Chart.register(window.ChartDataLabels);
+
+        const $ = (id) => document.getElementById(id);
+        const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+        const pad = (n) => String(n).padStart(2, '0');
+        const norm = (v) => String(v ?? '').toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]/g, '');
+        const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        const k = VM.tokenActual();
+        if (!k) VM.expulsar();
+        VM.limpiarUrl();
+
+        const state = {
+            start: null, end: null, startMs: 0, endMs: 0,
+            movs: [], conf: [], cargas: [], clientes: [], usuarios: [], turnos: [],
+            patrimonio: {}, userMap: {}, clienteById: {}, lastMovByClient: {},
+            fpStart: null, fpEnd: null
+        };
+
+        let chartInst = { evolucion: null, gastos: null, choferes: null, zonas: null, mix: null, gases: null, efectividad: null };
+        let heatMapObj = null;
+        let heatLayer = null;
+        let seccionesExtraVisibles = false;
+
+        // ---------------- FECHAS ----------------
+        function parseDateAny(v) {
+            if (!v) return null;
+            if (v instanceof Date) return new Date(v.getFullYear(), v.getMonth(), v.getDate());
+            if (typeof v.toDate === 'function') {
+                const d = v.toDate();
+                return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            }
+            if (typeof v === 'number') {
+                let d;
+                if (v > 20000 && v < 80000) {
+                    // Fecha serial de Excel/Sheets exportada como número.
+                    d = new Date(1899, 11, 30);
+                    d.setDate(d.getDate() + v);
+                } else {
+                    d = new Date(v);
+                }
+                return isNaN(d.getTime()) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            }
+            const s = String(v).trim();
+            if (!s) return null;
+            if (/^\d{5}(?:\.\d+)?$/.test(s)) return parseDateAny(Number(s));
+            if (s.includes('T')) {
+                const d = new Date(s);
+                return isNaN(d.getTime()) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            }
+            if (s.includes('-')) {
+                const p = s.split('-');
+                if (p.length === 3) {
+                    if (p[0].length === 4) return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+                    return new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0]));
+                }
+            }
+            if (s.includes('/')) {
+                const p = s.split('/');
+                if (p.length === 3) return new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0]));
+            }
+            const d = new Date(s);
+            return isNaN(d.getTime()) ? null : new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        }
+
+        function fechaKey(d) { return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`; }
+        function isoKey(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+
+        function parseFH(f, h) {
+            const d = parseDateAny(f);
+            if (!d) return 0;
+            let hh = 0, mm = 0, ss = 0;
+            const hs = String(h ?? '').trim();
+            if (hs) {
+                if (!hs.includes(':') && /^\d*\.?\d+$/.test(hs)) {
+                    const frac = Number(hs);
+                    if (frac >= 0 && frac < 1) {
+                        const total = Math.round(frac * 86400);
+                        hh = Math.floor(total / 3600);
+                        mm = Math.floor((total % 3600) / 60);
+                        ss = total % 60;
+                    } else {
+                        hh = Math.floor(frac);
+                    }
+                } else {
+                    const p = hs.split(':').map(Number);
+                    hh = p[0] || 0; mm = p[1] || 0; ss = p[2] || 0;
+                }
+            }
+            d.setHours(hh, mm, ss, 0);
+            return d.getTime();
+        }
+
+        function rangoDias(desde, hasta) {
+            const out = [];
+            const d = new Date(desde.getFullYear(), desde.getMonth(), desde.getDate());
+            const fin = new Date(hasta.getFullYear(), hasta.getMonth(), hasta.getDate());
+            let guard = 0;
+            while (d <= fin && guard < 400) {
+                out.push(new Date(d));
+                d.setDate(d.getDate() + 1);
+                guard++;
+            }
+            return out;
+        }
+
+        function fechaEnRango(m) {
+            const t = getMovTs(m);
+            return t >= state.startMs && t <= state.endMs;
+        }
+
+        // ---------------- CARGA DE DATOS ----------------
+        async function fetchMovimientos(desde, hasta) {
+            const dias = rangoDias(desde, hasta).map(fechaKey);
+            const chunks = [];
+            for (let i = 0; i < dias.length; i += 30) chunks.push(dias.slice(i, i + 30));
+            const salida = [];
+            const vistos = new Set();
+            for (const chunk of chunks) {
+                const snap = await getDocs(query(collection(db, 'movimientos'), where('FECHA', 'in', chunk)));
+                snap.forEach(d => {
+                    if (vistos.has(d.id)) return;
+                    vistos.add(d.id);
+                    salida.push({ id: d.id, ...d.data() });
+                });
+            }
+            return salida;
+        }
+
+        async function cargarDatos() {
+            const desdeBase = new Date(state.start.getFullYear(), state.start.getMonth(), state.start.getDate());
+            desdeBase.setMonth(desdeBase.getMonth() - 6);
+
+            const [movs, confSnap, cargaSnap, cliSnap, usrSnap, turnoSnap, patSnap] = await Promise.all([
+                fetchMovimientos(desdeBase, state.end),
+                getDocs(collection(db, 'confinanzas')),
+                getDocs(collection(db, 'ccarga')),
+                getDocs(collection(db, 'clientes')),
+                getDocs(collection(db, 'usuarios')),
+                getDocs(collection(db, 'turnos')),
+                getDoc(doc(db, 'patrimonio', 'totales'))
+            ]);
+
+            state.movs = movs;
+            state.conf = confSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            state.cargas = cargaSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            state.clientes = cliSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            state.usuarios = usrSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            state.turnos = turnoSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            state.patrimonio = patSnap.exists() ? patSnap.data() : {};
+
+            state.userMap = {};
+            state.usuarios.forEach(u => {
+                [u.id, u.nombre_mostrar, u.nombre_completo, u.usuario].forEach(x => {
+                    if (x) state.userMap[norm(x)] = norm(u.id);
+                });
+            });
+
+            state.clienteById = {};
+            state.clientes.forEach(c => {
+                state.clienteById[c.id] = c;
+                if (c.id_cliente) state.clienteById[c.id_cliente] = c;
+            });
+
+            state.lastMovByClient = {};
+            state.movs.forEach(m => {
+                const id = String(m.ID_CLIENTE || '').trim();
+                if (!id) return;
+                const t = getMovTs(m);
+                if (t > (state.lastMovByClient[id] || 0)) state.lastMovByClient[id] = t;
+            });
+        }
+
+        // ---------------- HELPERS DE MOVIMIENTOS / CARGAS ----------------
+        function getMovTs(m) {
+            const ms = num(m.TIMESTAMP_MS);
+            if (ms > 0) return ms;
+            return parseFH(m.FECHA, m.HORA);
+        }
+
+        function getCargaTs(c) {
+            const ms = num(c.timestampMs);
+            if (ms > 0) return ms;
+            return parseFH(c.fechaSalida ?? c.FECHA_SAL, c.horaSalida ?? c.HORA_SAL);
+        }
+
+        function getCargaLlegadaTs(c) {
+            const ms = num(c.timestampLlegadaMs);
+            if (ms > 0) return ms;
+            const t = parseFH(c.fechaLlegada ?? c.FECHA_LLEG ?? c.FECHA_SAL, c.horaLlegada ?? c.HORA_LLEG ?? c.HORA_SAL);
+            return t || Infinity;
+        }
+
+        function getVentaTotal(m) {
+            const campos = ['VS10$', 'VS15$', 'VS45$', 'VC10$', 'VC15$', 'VC45$', 'VRP10$', 'VRP15$', 'VRP45$', 'VU10$', 'VU15$', 'VU45$', 'CE10$', 'CE15$', 'CE45$'];
+            let total = 0;
+            campos.forEach(k => { total += num(m[k]); });
+            if (!total) total = num(m.TOTAL);
+            return total;
+        }
+
+        function getUnidades(m) {
+            return num(m.ALL10) + num(m.ALL15) + num(m.ALL45);
+        }
+
+        function getKilos(m) {
+            return num(m.ALL10) * 10 + num(m.ALL15) * 15 + num(m.ALL45) * 45;
+        }
+
+        function esVentaMov(m) {
+            const tipo = String(m.TIPO || '').toUpperCase();
+            if (tipo.includes('GASTO') || tipo.includes('EGRESO') || tipo.includes('RECUPERO')) return false;
+            if (tipo === 'CAUCION') return false;
+            return getVentaTotal(m) > 0 || getUnidades(m) > 0;
+        }
+
+        function parseCoords(valor) {
+            let s = String(valor || '').trim();
+            if (!s) return null;
+            if (s.includes('?q=')) s = s.split('?q=')[1];
+            const m = s.match(/(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)/);
+            if (!m) return null;
+            const lat = Number(m[1]);
+            const lon = Number(m[2]);
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+            if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+            return { lat, lon };
+        }
+
+        function clienteDe(m) {
+            return state.clienteById[m.ID_CLIENTE] || null;
+        }
+
+        // ---------------- STOCK ----------------
+        function normalizarStock(x) {
+            const o = x || {};
+            return {
+                l10: num(o.l10 ?? o.L10), v10: num(o.v10 ?? o.V10),
+                l15: num(o.l15 ?? o.L15), v15: num(o.v15 ?? o.V15),
+                l45: num(o.l45 ?? o.L45), v45: num(o.v45 ?? o.V45)
+            };
+        }
+
+        function calcularEsperado(base, desdeMs) {
+            const acc = { ...base };
+            const cargas = state.cargas.map(c => ({
+                ...c,
+                _id: String(c.idViaje || c.id || '').trim(),
+                _sal: getCargaTs(c),
+                _lleg: getCargaLlegadaTs(c),
+                _chofer: norm(c.chofer)
+            }));
+
+            cargas.forEach(c => {
+                if (c._sal >= desdeMs) {
+                    acc.l10 += num(c.lL10) - num(c.sL10);
+                    acc.v10 += num(c.lV10) - num(c.sV10);
+                    acc.l15 += num(c.lL15) - num(c.sL15);
+                    acc.v15 += num(c.lV15) - num(c.sV15);
+                    acc.l45 += num(c.lL45) - num(c.sL45);
+                    acc.v45 += num(c.lV45) - num(c.sV45);
+                }
+            });
+
+            state.movs.forEach(m => {
+                const t = getMovTs(m);
+                if (!t || t < desdeMs) return;
+                const quien = state.userMap[norm(m.USUARIO)] || norm(m.USUARIO);
+                const idViajeMov = String(m.ID_VIAJE || m.idViaje || '').trim();
+                const enViaje = idViajeMov
+                    ? cargas.some(c => c._id === idViajeMov)
+                    : cargas.some(c => c._chofer === quien && t >= c._sal - 60000 && t <= c._lleg + 60000);
+                if (enViaje) return;
+                acc.l10 -= num(m.ALL10); acc.v10 += num(m.AV10) + (m.esPagoDeuda ? num(m.dev10) : 0);
+                acc.l15 -= num(m.ALL15); acc.v15 += num(m.AV15) + (m.esPagoDeuda ? num(m.dev15) : 0);
+                acc.l45 -= num(m.ALL45); acc.v45 += num(m.AV45) + (m.esPagoDeuda ? num(m.dev45) : 0);
+            });
+
+            return acc;
+        }
+
+        function calcularMovimientosViaje(c) {
+            const salida = getCargaTs(c);
+            const choferN = norm(c.chofer);
+            let b10 = 0, s10 = 0, b15 = 0, s15 = 0, b45 = 0, s45 = 0;
+            if (String(c.tipoViaje || '').toUpperCase() !== 'COMPRA') {
+                state.movs.forEach(m => {
+                    const t = getMovTs(m);
+                    if (t < salida - 60000) return;
+                    const idViajeMov = String(m.ID_VIAJE || m.idViaje || '').trim();
+                    const delViaje = idViajeMov
+                        ? idViajeMov === String(c.idViaje || c.id)
+                        : (state.userMap[norm(m.USUARIO)] || norm(m.USUARIO)) === choferN;
+                    if (!delViaje) return;
+                    b10 += num(m.ALL10); s10 += num(m.AV10) + (m.esPagoDeuda ? num(m.dev10) : 0);
+                    b15 += num(m.ALL15); s15 += num(m.AV15) + (m.esPagoDeuda ? num(m.dev15) : 0);
+                    b45 += num(m.ALL45); s45 += num(m.AV45) + (m.esPagoDeuda ? num(m.dev45) : 0);
+                });
+            }
+            return { b10, s10, b15, s15, b45, s45 };
+        }
+
+        function calcularFlotaNeta() {
+            const total = { l10: 0, v10: 0, l15: 0, v15: 0, l45: 0, v45: 0 };
+            state.cargas.forEach(c => {
+                const estado = String(c.estado || '').toUpperCase();
+                if (estado !== 'EN_RUTA' && estado !== 'COMPRA_EN_RUTA') return;
+                if (String(c.tipoViaje || '').toUpperCase() === 'COMPRA') return;
+                const mov = calcularMovimientosViaje(c);
+                total.l10 += Math.max(0, num(c.sL10) - mov.b10);
+                total.v10 += num(c.sV10) + mov.s10;
+                total.l15 += Math.max(0, num(c.sL15) - mov.b15);
+                total.v15 += num(c.sV15) + mov.s15;
+                total.l45 += Math.max(0, num(c.sL45) - mov.b45);
+                total.v45 += num(c.sV45) + mov.s45;
+            });
+            return total;
+        }
+
+        function calcularStock() {
+            const turnos = [...state.turnos].sort((a, b) => num(b.timestampAperturaMs) - num(a.timestampAperturaMs));
+            const ultimo = turnos[0] || null;
+            const estadoTurno = ultimo ? String(ultimo.estado || 'CERRADO').toUpperCase() : 'S/D';
+
+            let planta = null;
+            if (ultimo && estadoTurno === 'ABIERTO') {
+                planta = calcularEsperado(normalizarStock(ultimo.ini), num(ultimo.timestampAperturaMs));
+            } else if (ultimo && ultimo.fin && num(ultimo.timestampCierreMs)) {
+                planta = calcularEsperado(normalizarStock(ultimo.fin), num(ultimo.timestampCierreMs));
+            }
+
+            const calle = calcularFlotaNeta();
+
+            const total = planta ? {
+                l10: planta.l10 + calle.l10, v10: planta.v10 + calle.v10,
+                l15: planta.l15 + calle.l15, v15: planta.v15 + calle.v15,
+                l45: planta.l45 + calle.l45, v45: planta.v45 + calle.v45
+            } : null;
+
+            return { estadoTurno, planta, calle, total };
+        }
+
+        // ---------------- RENDER: RIESGO / STOCK ----------------
+        function renderRiesgo() {
+            const stock = calcularStock();
+            const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+
+            if (stock.total) {
+                set('t-stock-l10', stock.total.l10); set('t-stock-v10', stock.total.v10);
+                set('t-stock-l15', stock.total.l15); set('t-stock-v15', stock.total.v15);
+                set('t-stock-l45', stock.total.l45); set('t-stock-v45', stock.total.v45);
+            } else {
+                ['t-stock-l10', 't-stock-v10', 't-stock-l15', 't-stock-v15', 't-stock-l45', 't-stock-v45'].forEach(id => set(id, 'S/D'));
+            }
+
+            if (stock.planta) {
+                set('p-stock-l10', stock.planta.l10); set('p-stock-v10', stock.planta.v10);
+                set('p-stock-l15', stock.planta.l15); set('p-stock-v15', stock.planta.v15);
+                set('p-stock-l45', stock.planta.l45); set('p-stock-v45', stock.planta.v45);
+            } else {
+                ['p-stock-l10', 'p-stock-v10', 'p-stock-l15', 'p-stock-v15', 'p-stock-l45', 'p-stock-v45'].forEach(id => set(id, 'S/D'));
+            }
+
+            const btnEstado = $('estado-turno');
+            if (btnEstado) {
+                btnEstado.innerText = 'Turno: ' + stock.estadoTurno;
+                btnEstado.style.background = stock.estadoTurno === 'ABIERTO' ? 'rgba(45,212,191,0.2)' : 'rgba(255,71,87,0.2)';
+                btnEstado.style.color = stock.estadoTurno === 'ABIERTO' ? 'var(--success)' : 'var(--danger)';
+            }
+
+            const llenos = stock.total ? stock.total.l10 + stock.total.l15 + stock.total.l45 : 0;
+            const dias = stock.total ? (llenos > 0 ? 3 : 0) : 'S/D';
+            set('kpi-quiebre', dias === 'S/D' ? 'S/D' : dias + ' Días');
+            set('ind-stock', dias === 'S/D' ? '⚫' : (dias < 2 ? '🔴' : (dias < 5 ? '🟡' : '🟢')));
+
+            renderFlotaActiva();
+            renderCuentaCorriente();
+            renderCauciones();
+            renderSecuestrados();
+            renderAdeudados();
+            renderArqueosPendientes();
+            renderRemitosPendientes();
+        }
+
+        function renderFlotaActiva() {
+            const cont = $('lista-flota');
+            if (!cont) return;
+            const activas = state.cargas.filter(c => ['EN_RUTA', 'COMPRA_EN_RUTA'].includes(String(c.estado || '').toUpperCase()));
+            if (!activas.length) {
+                cont.innerHTML = `<div style="text-align:center; color:var(--text-sec); padding:10px; font-size:11px; background:rgba(0,0,0,0.2); border-radius:8px;">Flota en base. Sin unidades en tránsito.</div>`;
+                return;
+            }
+
+            cont.innerHTML = activas.map(c => {
+                const isCompra = String(c.tipoViaje || '').toUpperCase() === 'COMPRA';
+                const salida = getCargaTs(c);
+                const choferN = norm(c.chofer);
+                let b10 = 0, s10 = 0, b15 = 0, s15 = 0, b45 = 0, s45 = 0;
+
+                if (!isCompra) {
+                    state.movs.forEach(m => {
+                        const t = getMovTs(m);
+                        if (t < salida - 60000) return;
+                        const idViajeMov = String(m.ID_VIAJE || m.idViaje || '').trim();
+                        const delViaje = idViajeMov
+                            ? idViajeMov === String(c.idViaje || c.id)
+                            : (state.userMap[norm(m.USUARIO)] || norm(m.USUARIO)) === choferN;
+                        if (!delViaje) return;
+                        b10 += num(m.ALL10); s10 += num(m.AV10) + (m.esPagoDeuda ? num(m.dev10) : 0);
+                        b15 += num(m.ALL15); s15 += num(m.AV15) + (m.esPagoDeuda ? num(m.dev15) : 0);
+                        b45 += num(m.ALL45); s45 += num(m.AV45) + (m.esPagoDeuda ? num(m.dev45) : 0);
+                    });
+                }
+
+                const llenos = isCompra
+                    ? { 10: 0, 15: 0, 45: 0 }
+                    : { 10: Math.max(0, num(c.sL10) - b10), 15: Math.max(0, num(c.sL15) - b15), 45: Math.max(0, num(c.sL45) - b45) };
+                const vacios = isCompra
+                    ? { 10: num(c.sV10), 15: num(c.sV15), 45: num(c.sV45) }
+                    : { 10: num(c.sV10) + s10, 15: num(c.sV15) + s15, 45: num(c.sV45) + s45 };
+                const color = isCompra ? 'var(--compra)' : 'var(--success)';
+
+                return `<div class="block-calle" style="border-left: 3px solid ${color}; margin-bottom:6px; padding: 8px 10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+                        <span style="font-size: 11px; font-weight: 800;">🚚 ${esc(c.chofer || 'S/D')} <span style="font-weight:normal; color:var(--text-sec); font-size:9px;">(${esc(c.tipoViaje || 'REPARTO')})</span></span>
+                        <span style="font-size: 9px; color: var(--text-sec);">${esc(c.horaSalida || '')}</span>
+                    </div>
+                    <div style="font-size: 11px; display:flex; justify-content:space-between; gap:5px; flex-wrap:nowrap;">
+                        <span><b style="color:#2dd4bf;">10k:</b> L:${llenos[10]} V:${vacios[10]}</span>
+                        <span><b style="color:#3b82f6;">15k:</b> L:${llenos[15]} V:${vacios[15]}</span>
+                        <span><b style="color:#FFD700;">45k:</b> L:${llenos[45]} V:${vacios[45]}</span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderCuentaCorriente() {
+            const cont = $('container-ctacte');
+            if (!cont) return;
+            const items = state.clientes
+                .filter(c => num(c.env10) + num(c.env15) + num(c.env45) > 0 || Math.abs(num(c.plata)) > 0)
+                .map(c => ({
+                    cliente: c.nombre || c.id_cliente || c.id,
+                    c10: num(c.env10), c15: num(c.env15), c45: num(c.env45),
+                    monto: num(c.plata),
+                    estado: String(c.ultimoMovimientoTipo || 'CUENTA CORRIENTE').toUpperCase()
+                }))
+                .sort((a, b) => a.cliente.localeCompare(b.cliente, 'es'));
+
+            if (!items.length) {
+                cont.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-sec);">No hay registros.</div>`;
+                return;
+            }
+
+            let html = items.map((item, index) => {
+                const hide = index >= 3 ? 'hidden-row' : '';
+                const esComodato = item.estado.includes('COMODATO');
+                const clase = esComodato ? 'b-accent' : 'b-compra';
+                const etiqueta = esComodato ? 'Comodato / Envases' : 'Cuenta corriente';
+                const monto = item.monto > 0 ? `Debe $${formatM(item.monto)}`
+                    : (item.monto < 0 ? `A favor $${formatM(Math.abs(item.monto))}` : '—');
+                return `<div class="list-row row-cta ${clase} ${hide}">
+                    <div><b style="color:#fff" title="${esc(item.cliente)}">${esc(item.cliente)}</b><br><span style="color:var(--text-sec); font-size:9px;">${etiqueta}</span></div>
+                    <div style="text-align:right; font-family:monospace; font-size:10px;">
+                        10k:<b style="color:#fff">${item.c10}</b> | 15k:<b style="color:#fff">${item.c15}</b> | 45k:<b style="color:#fff">${item.c45}</b>
+                        <div style="color:var(--danger); font-size:11px; margin-top:2px;">${monto}</div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            if (items.length > 3) {
+                html += `<button class="btn-action btn-toggle-list" data-expanded="false" onclick="toggleRows(this, 'container-ctacte', 'row-cta')">Ver más ⬇️</button>`;
+            }
+            cont.innerHTML = html;
+        }
+
+        function renderCauciones() {
+            const cont = $('container-cauciones');
+            if (!cont) return;
+            cont.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-sec);">Sin datos de cauciones en el modelo nuevo.</div>`;
+        }
+
+        function renderSecuestrados() {
+            const cont = $('list-secuestrados');
+            if (!cont) return;
+            const ahora = Date.now();
+            const items = state.clientes.map(c => {
+                const env = num(c.env10) + num(c.env15) + num(c.env45);
+                if (env <= 0) return null;
+                let ultimo = num(c.ultimaActualizacionMs);
+                if (!ultimo) {
+                    const d = parseDateAny(c.ultimaActualizacion);
+                    ultimo = d ? d.getTime() : 0;
+                }
+                if (!ultimo) ultimo = state.lastMovByClient[c.id] || state.lastMovByClient[c.id_cliente] || 0;
+                if (!ultimo) return null;
+                const dias = Math.floor((ahora - ultimo) / 86400000);
+                if (dias <= 45) return null;
+                return {
+                    cliente: c.nombre || c.id_cliente || c.id,
+                    dias,
+                    envases: env,
+                    detalle: `${num(c.env10)}x10, ${num(c.env15)}x15, ${num(c.env45)}x45`
+                };
+            }).filter(Boolean).sort((a, b) => b.dias - a.dias);
+
+            cont.innerHTML = items.length ? items.map(s => `
+                <div class="list-row">
+                    <div><b style="color:#fff">${esc(s.cliente)}</b><br><span style="color:var(--text-sec); font-size:9px;">Retiene: ${esc(s.detalle)} (Hace ${s.dias} días)</span></div>
+                    <div style="text-align:right; color:var(--danger); font-family:monospace; font-weight:700;">${s.envases} unid.</div>
+                </div>`).join('') : `<div style="text-align:center; color:var(--success); padding:20px 0;">No hay envases estancados (S/D) ✔️</div>`;
+        }
+
+        function renderAdeudados() {
+            const cont = $('list-adeudados');
+            if (!cont) return;
+            const items = state.movs
+                .filter(m => num(m['T$']) > 0 && !String(m.VERIFICADO_BANCO || '').trim())
+                .map(m => ({ cliente: m.C || 'S/N', fecha: m.FECHA || '', monto: num(m['T$']) }))
+                .sort((a, b) => (parseFH(b.fecha) || 0) - (parseFH(a.fecha) || 0))
+                .slice(0, 30);
+
+            cont.innerHTML = items.length ? items.map(d => `
+                <div class="list-row"><div><b style="color:#fff">${esc(d.cliente)}</b><br><span style="color:var(--text-sec); font-size:9px;">${esc(d.fecha)}</span></div><div style="text-align:right; color:var(--danger); font-family:monospace; font-weight:700;">-$${formatM(d.monto)}</div></div>`).join('')
+                : `<div style="text-align:center; color:var(--success); padding:20px 0;">Deudas en 0 o S/D ✔️</div>`;
+        }
+
+        function renderArqueosPendientes() {
+            const cont = $('list-arqueos-pendientes');
+            if (!cont) return;
+            const items = state.cargas
+                .filter(c => ['EN_RUTA', 'COMPRA_EN_RUTA'].includes(String(c.estado || '').toUpperCase()))
+                .map(c => ({ chofer: c.chofer || 'S/D', viaje: c.idViaje || c.id, hora: c.horaSalida || 'S/D' }));
+
+            cont.innerHTML = items.length ? items.map(a => `
+                <div class="list-row"><div><b style="color:#fff">Chofer: ${esc(a.chofer)}</b> <span class="badge" style="background:rgba(255,215,0,0.2); color:var(--accent)">EN RUTA</span><br><span style="color:var(--text-sec); font-size:9px;">Salida: ${esc(a.hora)} | ID: ${esc(a.viaje)}</span></div><div style="text-align:right; color:var(--text-main); font-family:monospace; font-weight:700;">--</div></div>`).join('')
+                : `<div style="text-align:center; color:var(--success); padding:20px 0;">Todo cerrado o S/D ✔️</div>`;
+        }
+
+        function esConciliada(c) {
+            const raw = c.conciliado ?? c.CONCILIADO;
+            if (raw === true || String(raw).toUpperCase() === 'SI') return true;
+            return !!String(c.factura ?? c.FACTURA ?? '').trim();
+        }
+
+        function renderRemitosPendientes() {
+            const cont = $('list-remitos');
+            if (!cont) return;
+            const items = state.cargas
+                .filter(c => String(c.tipoViaje || '').toUpperCase() === 'COMPRA' && !esConciliada(c))
+                .map(c => ({
+                    remito: c.remito || c.REMITO || 'SIN REMITO',
+                    fecha: c.fechaSalida || c.FECHA_SAL || '',
+                    chofer: c.chofer || 'S/D',
+                    monto: 0
+                }));
+
+            cont.innerHTML = items.length ? items.map(r => `
+                <div class="list-row"><div><b style="color:#fff">${esc(r.remito)}</b> <span class="badge" style="background:rgba(255,215,0,0.2); color:var(--accent)">PAGO PENDIENTE</span><br><span style="color:var(--text-sec); font-size:9px;">${esc(r.fecha)} | Chofer: ${esc(r.chofer)}</span></div><div style="text-align:right; font-family:monospace; font-weight:700; color:var(--compra)">$${formatM(r.monto)}</div></div>`).join('')
+                : `<div style="text-align:center; color:var(--success); padding:20px 0;">Planta conciliada o S/D ✔️</div>`;
+        }
+
+        // ---------------- RENDER: OPERATIVA + MAPA ----------------
+        function renderOperativa() {
+            const movs = state.movs.filter(m => fechaEnRango(m) && esVentaMov(m));
+
+            let kilos = 0, dinero = 0, u10 = 0, u15 = 0, u45 = 0;
+            const choferMap = {};
+            const zonaMap = {};
+            const mapaCalor = [];
+
+            movs.forEach(m => {
+                const k = getKilos(m);
+                const venta = getVentaTotal(m);
+                const c10 = num(m.ALL10), c15 = num(m.ALL15), c45 = num(m.ALL45);
+                kilos += k; dinero += venta;
+                u10 += c10; u15 += c15; u45 += c45;
+
+                const chofer = m.USUARIO || 'S/D';
+                choferMap[chofer] = (choferMap[chofer] || 0) + venta;
+
+                const cli = clienteDe(m);
+                const zona = cli ? (cli.zona || 'S/D') : 'S/D';
+                if (!zonaMap[zona]) zonaMap[zona] = { plata: 0, unid: 0 };
+                zonaMap[zona].plata += venta;
+                zonaMap[zona].unid += c10 + c15 + c45;
+
+                let coords = cli ? parseCoords(cli.ubicacion || cli.coordenadas) : null;
+                if (!coords) coords = parseCoords(m.UBICACION);
+                if (coords) mapaCalor.push([coords.lat, coords.lon, Math.max(1, k)]);
+            });
+
+            $('kpi-kilos').innerText = formatM(kilos) + ' Kg';
+            $('kpi-kilos-plata').innerText = 'Facturado: $' + formatM(dinero);
+            $('unid-10').innerText = u10 + ' unid.';
+            $('unid-15').innerText = u15 + ' unid.';
+            $('unid-45').innerText = u45 + ' unid.';
+
+            const cargasRango = state.cargas.filter(c => {
+                const t = getCargaTs(c);
+                return t >= state.startMs && t <= state.endMs;
+            });
+            const repartos = cargasRango.filter(c => String(c.tipoViaje || '').toUpperCase() !== 'COMPRA');
+            const llevados = repartos.reduce((a, c) => a + num(c.sL10) + num(c.sL15) + num(c.sL45), 0);
+            $('kpi-viajes').innerText = repartos.length || '0';
+            $('kpi-viajes-plata').innerText = '$' + formatM(dinero);
+
+            const seisMeses = new Date(state.end.getFullYear(), state.end.getMonth(), state.end.getDate());
+            seisMeses.setMonth(seisMeses.getMonth() - 6);
+            const desdeMs = seisMeses.getTime();
+            let pBk = 0, pPk = 0, pU10 = 0, pU15 = 0, pU45 = 0;
+            state.movs.forEach(m => {
+                if (!esVentaMov(m) || getMovTs(m) < desdeMs) return;
+                pU10 += num(m.ALL10); pU15 += num(m.ALL15); pU45 += num(m.ALL45);
+                pBk += num(m.ALL10) * 10 + num(m.ALL15) * 15;
+                pPk += num(m.ALL45) * 45;
+            });
+            $('prom-sem-bk').innerText = formatM(Math.round(pBk / 24));
+            $('prom-sem-pk').innerText = formatM(Math.round(pPk / 24));
+            $('prom-sem-u').innerHTML = `10k: ${Math.round(pU10 / 24)} | 15k: ${Math.round(pU15 / 24)} | 45k: <span style="color:var(--accent)">${Math.round(pU45 / 24)}</span>`;
+            $('prom-men-bk').innerText = formatM(Math.round(pBk / 6));
+            $('prom-men-pk').innerText = formatM(Math.round(pPk / 6));
+            $('prom-men-u').innerHTML = `10k: ${Math.round(pU10 / 6)} | 15k: ${Math.round(pU15 / 6)} | 45k: <span style="color:var(--accent)">${Math.round(pU45 / 6)}</span>`;
+
+            renderChart('mix', 'doughnut', {
+                labels: ['10kg', '15kg', '45kg'],
+                datasets: [{ data: [u10, u15, u45], backgroundColor: ['#2dd4bf', '#3b82f6', '#FFD700'], borderWidth: 0 }]
+            }, { plugins: { legend: { display: false }, datalabels: { color: '#000', font: { weight: 'bold', size: 10 }, formatter: (v) => v + ' u.' } } });
+
+            renderChart('gases', 'pie', {
+                labels: ['Butano', 'Propano'],
+                datasets: [{ data: [u10 * 10 + u15 * 15, u45 * 45], backgroundColor: ['#a855f7', '#ff9100'], borderWidth: 0 }]
+            }, { plugins: { legend: { display: false }, datalabels: { color: '#fff', font: { weight: 'bold', size: 10 }, formatter: (v) => formatMCompact(v) + ' kg' } } });
+
+            renderChart('efectividad', 'bar', {
+                labels: ['Volumen General'],
+                datasets: [
+                    { label: 'Cargados en Planta', data: [llevados], backgroundColor: 'rgba(59, 130, 246, 0.3)', borderRadius: 4 },
+                    { label: 'Bajados en Calle', data: [u10 + u15 + u45], backgroundColor: '#3b82f6', borderRadius: 4 }
+                ]
+            }, { indexAxis: 'y', plugins: { legend: { display: true, labels: { color: '#a0a0b0' } }, datalabels: { color: '#fff', font: { weight: 'bold', size: 10 }, formatter: (v) => v + ' u.' } } });
+
+            renderChart('choferes', 'bar', {
+                labels: Object.keys(choferMap),
+                datasets: [{ label: 'Ventas ($)', data: Object.values(choferMap), backgroundColor: '#FFD700', borderRadius: 4 }]
+            }, { indexAxis: 'y', plugins: { legend: { display: false }, datalabels: { color: '#000', anchor: 'end', align: 'left', formatter: (v) => '$' + formatM(v), font: { weight: 'bold', size: 11 } } } });
+
+            renderChart('zonas', 'bar', {
+                labels: Object.keys(zonaMap),
+                datasets: [{
+                    label: 'Facturado ($)',
+                    data: Object.values(zonaMap).map(z => z.plata),
+                    unidades: Object.values(zonaMap).map(z => z.unid),
+                    backgroundColor: '#a855f7', borderRadius: 4
+                }]
+            }, { indexAxis: 'y', plugins: { legend: { display: false }, datalabels: { color: '#fff', anchor: 'end', align: 'end', formatter: (v, ctx) => `[${ctx.dataset.unidades ? ctx.dataset.unidades[ctx.dataIndex] : 0} unid]  $${formatM(v)}`, font: { size: 10 } } }, layout: { padding: { right: 100 } } });
+
+            if (heatMapObj) {
+                if (heatLayer) heatMapObj.removeLayer(heatLayer);
+                if (mapaCalor.length) {
+                    heatLayer = L.heatLayer(mapaCalor, {
+                        radius: 20, blur: 15, maxZoom: 14,
+                        gradient: { 0.2: '#3b82f6', 0.5: '#2dd4bf', 0.8: '#FFD700', 1.0: '#ff4757' }
+                    }).addTo(heatMapObj);
+                }
+                const vacio = $('mapa-calor-empty');
+                if (vacio) vacio.style.display = mapaCalor.length ? 'none' : 'flex';
+                setTimeout(() => heatMapObj.invalidateSize(), 100);
+            }
+        }
+
+        // ---------------- RENDER: FINANZAS ----------------
+        function normalizarConf(d) {
+            const fecha = parseDateAny(d.fecha ?? d.FECHA);
+            const montoRaw = num(d.monto ?? d.MONTO);
+            let tipo = String(d.tipo ?? d.TIPO ?? '').toUpperCase();
+            if (tipo !== 'INGRESO' && tipo !== 'EGRESO') tipo = montoRaw < 0 ? 'EGRESO' : 'INGRESO';
+            return {
+                fecha,
+                tipo,
+                monto: Math.abs(montoRaw),
+                rubro: d.rubro ?? d.RUBRO ?? 'Varios',
+                subrubro: d.subrubro ?? d.SUBRUBRO ?? ''
+            };
+        }
+
+        function renderFinanzas() {
+            const movs = state.movs.filter(m => fechaEnRango(m) && esVentaMov(m));
+            const conf = state.conf.map(normalizarConf).filter(c => c.fecha && c.fecha.getTime() >= state.startMs && c.fecha.getTime() <= state.endMs);
+
+            let ventas = 0;
+            const dias = {};
+            movs.forEach(m => {
+                const venta = getVentaTotal(m);
+                ventas += venta;
+                const d = parseDateAny(m.FECHA);
+                if (!d) return;
+                const key = fechaKey(d);
+                if (!dias[key]) dias[key] = { in: 0, out: 0, orden: d.getTime() };
+                dias[key].in += venta;
+            });
+
+            let egresos = 0;
+            const gastosMap = {};
+            conf.forEach(c => {
+                const key = fechaKey(c.fecha);
+                if (!dias[key]) dias[key] = { in: 0, out: 0, orden: c.fecha.getTime() };
+                if (c.tipo === 'EGRESO') {
+                    egresos += c.monto;
+                    dias[key].out += c.monto;
+                    gastosMap[c.rubro] = (gastosMap[c.rubro] || 0) + c.monto;
+                } else {
+                    dias[key].in += c.monto;
+                }
+            });
+
+            const ingresos = ventas + conf.filter(c => c.tipo === 'INGRESO').reduce((a, c) => a + c.monto, 0);
+            const renta = ingresos - egresos;
+
+            $('kpi-ingresos').innerText = '$' + formatM(ingresos);
+            $('kpi-egresos').innerText = '$' + formatM(egresos);
+            const elRenta = $('kpi-renta');
+            elRenta.innerText = '$' + formatM(renta);
+            elRenta.className = 'kpi-value ' + (renta >= 0 ? 'text-pos' : 'text-neg');
+
+            const labels = Object.keys(dias).sort((a, b) => dias[a].orden - dias[b].orden);
+            renderChart('evolucion', 'line', {
+                labels,
+                datasets: [
+                    { label: 'Ingresos', data: labels.map(k => dias[k].in), borderColor: '#2dd4bf', backgroundColor: 'rgba(45, 212, 191, 0.1)', fill: true, tension: 0.3 },
+                    { label: 'Egresos', data: labels.map(k => dias[k].out), borderColor: '#ff4757', backgroundColor: 'transparent', tension: 0.3 }
+                ]
+            }, { plugins: { datalabels: { color: (c) => c.dataset.borderColor, align: 'top', font: { size: 9, weight: 'bold' }, formatter: (v) => formatMCompact(v) } } });
+
+            const gastosLabels = Object.keys(gastosMap);
+            const colores = ['#FFD700', '#ff9100', '#ff4757', '#a855f7', '#3b82f6', '#2dd4bf'];
+            renderChart('gastos', 'doughnut', {
+                labels: gastosLabels,
+                datasets: [{ data: gastosLabels.map(l => gastosMap[l]), backgroundColor: gastosLabels.map((_, i) => colores[i % colores.length]), borderWidth: 0 }]
+            }, { plugins: { legend: { display: false }, datalabels: { display: false } } });
+
+            const detalle = $('list-gastos-detalle');
+            detalle.innerHTML = gastosLabels.length ? gastosLabels.map((lbl, i) => `
+                <div class="list-row"><div style="display:flex; align-items:center; gap:5px;"><span style="color:${colores[i % colores.length]}; font-size:14px;">●</span> ${esc(lbl)}</div><div style="font-family:monospace; font-weight:700;">$${formatM(gastosMap[lbl])}</div></div>`).join('')
+                : `<div style="text-align:center; padding:20px; color:var(--text-sec);">S/D</div>`;
+        }
+
+        // ---------------- GRÁFICOS ----------------
+        function formatM(n) { return parseFloat(n || 0).toLocaleString('es-AR'); }
+        function formatMCompact(n) {
+            n = parseFloat(n || 0);
+            if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+            if (n >= 1000) return (n / 1000).toFixed(0) + 'k';
+            return n;
+        }
+
+        function renderChart(canvasId, tipo, dataObj, extraOptions = {}) {
+            const el = $('chart-' + canvasId);
+            if (!el) return;
+            if (chartInst[canvasId]) chartInst[canvasId].destroy();
+            let baseOptions = { responsive: true, maintainAspectRatio: false };
+            if (tipo === 'bar' || tipo === 'line') {
+                baseOptions.scales = {
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { font: { size: 10 } }, beginAtZero: true },
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                };
+            }
+            chartInst[canvasId] = new Chart(el.getContext('2d'), { type: tipo, data: dataObj, options: { ...baseOptions, ...extraOptions } });
+        }
+
+        // ---------------- MAPA ----------------
+        function initMap() {
+            const cont = $('mapa-calor');
+            if (!cont || heatMapObj) return;
+            heatMapObj = L.map('mapa-calor', { zoomControl: true }).setView([-29.413, -66.850], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(heatMapObj);
+        }
+
+        // ---------------- CONTROLES ----------------
+        function invalidateCacheAndReload() {
+            if (!state.fpStart || !state.fpEnd) return;
+            const a = state.fpStart.selectedDates[0] || parseDateAny($('dash-start').value);
+            const b = state.fpEnd.selectedDates[0] || parseDateAny($('dash-end').value);
+            if (!a || !b) return;
+            state.start = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+            state.end = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+            if (state.start > state.end) {
+                const t = state.start; state.start = state.end; state.end = t;
+            }
+            state.startMs = state.start.getTime();
+            state.endMs = state.end.getTime() + 86399999;
+            cargarYRenderizar();
+        }
+
+        function setQuickDate(modo, btnElement) {
+            document.querySelectorAll('.btn-pill').forEach(b => b.classList.remove('active'));
+            if (btnElement) btnElement.classList.add('active');
+            if (!state.fpStart || !state.fpEnd) return;
+            const hoy = new Date();
+            if (modo === 'hoy') {
+                state.fpStart.setDate(hoy); state.fpEnd.setDate(hoy);
+            } else if (modo === '7d') {
+                const pasado = new Date(); pasado.setDate(hoy.getDate() - 6);
+                state.fpStart.setDate(pasado); state.fpEnd.setDate(hoy);
+            } else {
+                const primero = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+                state.fpStart.setDate(primero); state.fpEnd.setDate(hoy);
+            }
+            invalidateCacheAndReload();
+        }
+
+        function toggleRows(btn, containerId, rowClass) {
+            const rows = document.querySelectorAll(`#${containerId} .${rowClass}`);
+            const expandido = btn.getAttribute('data-expanded') === 'true';
+            rows.forEach(r => r.classList.toggle('hidden-row', expandido));
+            btn.innerText = expandido ? 'Ver más ⬇️' : 'Ver menos ⬆️';
+            btn.setAttribute('data-expanded', expandido ? 'false' : 'true');
+        }
+
+        window.setQuickDate = setQuickDate;
+        window.toggleRows = toggleRows;
+        window.invalidateCacheAndReload = invalidateCacheAndReload;
+
+        function mostrarError(msg) {
+            let el = $('tablero-error');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'tablero-error';
+                el.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:99999;background:#7f1d1d;color:#fff;padding:10px 16px;border-radius:10px;font-size:12px;max-width:90%;box-shadow:0 10px 30px rgba(0,0,0,.4)';
+                document.body.appendChild(el);
+            }
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 8000);
+        }
+
+        async function cargarYRenderizar() {
+            const loader = $('loader');
+            if (loader) loader.style.display = 'block';
+            try {
+                await cargarDatos();
+                renderRiesgo();
+                if (seccionesExtraVisibles) {
+                    renderOperativa();
+                    renderFinanzas();
+                }
+            } catch (e) {
+                console.error(e);
+                mostrarError('Error leyendo Firestore: ' + (e.code || e.message || 'conexión'));
+            } finally {
+                if (loader) loader.style.display = 'none';
+                document.body.style.opacity = 1;
+            }
+        }
+
+        function setupEntorno() {
+            // Tablero oscuro: no mezclamos el tema claro del resto de las pantallas.
+            document.body.classList.remove('light-mode', 'tema-claro');
+            document.body.classList.add('dark');
+            document.body.style.opacity = 1;
+            // vm-core aplica el tema guardado en DOMContentLoaded; el tablero
+            // mantiene su diseño oscuro para que el mapa y los gráficos se lean.
+            setTimeout(() => {
+                document.body.classList.remove('light-mode', 'tema-claro');
+                document.body.classList.add('dark');
+            }, 0);
+            initMap();
+
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            ['dash-start', 'dash-end'].forEach(id => { const el = $(id); if (el) el.removeAttribute('onchange'); });
+
+            state.fpStart = flatpickr('#dash-start', {
+                defaultDate: firstDay, dateFormat: 'Y-m-d', locale: 'es', theme: 'dark',
+                onChange: () => { if (state.fpEnd) invalidateCacheAndReload(); }
+            });
+            state.fpEnd = flatpickr('#dash-end', {
+                defaultDate: today, dateFormat: 'Y-m-d', locale: 'es', theme: 'dark',
+                onChange: () => { if (state.fpStart) invalidateCacheAndReload(); }
+            });
+
+            Chart.defaults.color = '#a0a0b0';
+            Chart.defaults.font.family = "'Outfit', sans-serif";
+            Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(0,0,0,0.8)';
+            Chart.defaults.plugins.tooltip.titleColor = '#FFD700';
+
+            const btnVolver = $('btnVolver');
+            if (btnVolver) btnVolver.onclick = () => { window.location.href = 'inicio.html?k=' + encodeURIComponent(k); };
+            const btnFlota = $('btnFlota');
+            if (btnFlota) btnFlota.style.display = 'none';
+
+            const btnMas = $('btnCargarMas');
+            if (btnMas) {
+                btnMas.onclick = function () {
+                    this.parentElement.style.display = 'none';
+                    const viewOp = $('view-operativa');
+                    const viewFin = $('view-finanzas');
+                    viewOp.style.display = 'block';
+                    viewFin.style.display = 'block';
+                    seccionesExtraVisibles = true;
+                    if (heatMapObj) heatMapObj.invalidateSize();
+                    Object.values(chartInst).forEach(c => { if (c) c.resize(); });
+                    setTimeout(() => { viewOp.style.opacity = 1; viewFin.style.opacity = 1; }, 50);
+                    renderOperativa();
+                    renderFinanzas();
+                };
+            }
+
+            window.addEventListener('resize', () => {
+                if (heatMapObj) heatMapObj.invalidateSize();
+                Object.values(chartInst).forEach(c => { if (c) c.resize(); });
+            });
+
+            invalidateCacheAndReload();
+        }
+
+        (async function init() {
+            try {
+                const tokenData = await VM.validarToken(k);
+                if (!tokenData) return VM.expulsar();
+                const userData = await VM.usuario(tokenData.usuario);
+                const valorTablero = userData && userData.TABLERO;
+                const tieneTablero = valorTablero === true || String(valorTablero).toLowerCase() === 'true' || String(valorTablero) === '1';
+                if (!tieneTablero) return VM.expulsar();
+                VM.iniciarSesion(k);
+                sessionStorage.setItem('usuarioActivo', tokenData.usuario || 'SISTEMA');
+                setupEntorno();
+            } catch (e) {
+                console.error(e);
+                VM.expulsar();
+            }
+        })();
+</script>
+</body>
+
+</html>

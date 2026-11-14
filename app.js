@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getFirestore, doc, getDoc, collection, getDocs, writeBatch, increment, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, getDocs, query, where, writeBatch, increment, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCesmFFsn7LvgmcFMWFfi6F5_Zvco79ucM",
@@ -693,10 +693,10 @@ async function sugerirClientesCercanos() {
     const [latAct, lonAct] = ubiActual.split(',').map(Number);
 
     let clientesConDistancia = clientesData.filter(c => {
-        let ubi = c.ubicacion || c.UBICACION;
+        let ubi = c.ubicacion || c.coordenadas || c.UBICACION;
         return ubi && ubi.includes(',');
     }).map(c => {
-        let ubi = c.ubicacion || c.UBICACION;
+        let ubi = c.ubicacion || c.coordenadas || c.UBICACION;
         const [lat, lon] = ubi.split(',').map(Number);
         const dist = calcularDistancia(latAct, lonAct, lat, lon);
         return { ...c, distancia: dist };
@@ -1269,16 +1269,187 @@ function leerCola() {
 }
 function escribirCola(c) { localStorage.setItem('cola_ventas', JSON.stringify(c)); }
 
+function numeroSeguro(valor) {
+    const n = Number(valor);
+    return Number.isFinite(n) ? n : 0;
+}
+
+function normalizarClaveUsuario(valor) {
+    return String(valor || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function esUbicacionValida(valor) {
+    const s = String(valor || '').trim();
+    return /^-?\d{1,3}(?:\.\d+)?\s*,\s*-?\d{1,3}(?:\.\d+)?$/.test(s);
+}
+
+function ubicacionUtil(valor) {
+    const s = String(valor || '').trim();
+    if (!s || /^SIN_GPS/i.test(s)) return '';
+    return s;
+}
+
+function tipoMovimientoFlotante(data) {
+    if (data.esPagoDeuda) return 'PAGO_DEUDA';
+    if (String(data.esFlotante).toLowerCase() === 'true') return 'FLOTANTE';
+    if (data.operacionEnvase === 'comodato') return 'COMODATO';
+    if (data.operacionEnvase === 'consignacion') return 'CONSIGNACION';
+    if (data.operacionEnvase === 'venta') return 'VENTA_ENVASE';
+    if (String(data.TIPO || '').toUpperCase().includes('GASTO')) return 'GASTO';
+    return 'VENTA';
+}
+
+function calcularDeltasCliente(data) {
+    return {
+        d10: numeroSeguro(data.MOV_NETO_10),
+        d15: numeroSeguro(data.MOV_NETO_15),
+        d45: numeroSeguro(data.MOV_NETO_45),
+        dinero: numeroSeguro(data.MOV_NETO_DINERO)
+    };
+}
+
+// El saldo se maneja como un único número con signo:
+// positivo = el cliente debe; negativo = el cliente tiene a favor.
+// En el documento se guarda separado en env* (deuda) y flotante* (a favor).
+function calcularSaldosCliente(base, deltas) {
+    const b = base || {};
+    const saldo10 = numeroSeguro(b.env10) - numeroSeguro(b.flotante10) + numeroSeguro(deltas.d10);
+    const saldo15 = numeroSeguro(b.env15) - numeroSeguro(b.flotante15) + numeroSeguro(deltas.d15);
+    const saldo45 = numeroSeguro(b.env45) - numeroSeguro(b.flotante45) + numeroSeguro(deltas.d45);
+    const saldoDinero = numeroSeguro(b.plata) + numeroSeguro(deltas.dinero);
+
+    return {
+        saldo10, saldo15, saldo45, saldoDinero,
+        env10: Math.max(0, saldo10),
+        env15: Math.max(0, saldo15),
+        env45: Math.max(0, saldo45),
+        flotante10: Math.max(0, -saldo10),
+        flotante15: Math.max(0, -saldo15),
+        flotante45: Math.max(0, -saldo45),
+        plata: saldoDinero
+    };
+}
+
+function crearHistorialFlotante(data, deltas, saldos) {
+    return {
+        idTransaccion: data.N,
+        movimientoId: data.N,
+        fecha: data.FECHA || '',
+        hora: data.HORA || '',
+        usuario: data.USUARIO || '',
+        usuarioId: data.USUARIO_ID || '',
+        idCliente: data.ID_CLIENTE || '',
+        clienteNombre: data.C || data.clienteNombre || '',
+        tipoMov: tipoMovimientoFlotante(data),
+        operacionEnvase: data.operacionEnvase || '',
+        movEnv10: deltas.d10,
+        movEnv15: deltas.d15,
+        movEnv45: deltas.d45,
+        movDinero: deltas.dinero,
+        saldo10: saldos.saldo10,
+        saldo15: saldos.saldo15,
+        saldo45: saldos.saldo45,
+        saldoDinero: saldos.saldoDinero,
+        notas: data.G || '',
+        idViaje: data.ID_VIAJE || data.idViaje || '',
+        idTurno: data.ID_TURNO || data.idTurno || '',
+        timestampMs: data.TIMESTAMP_MS || Date.now(),
+        creado: serverTimestamp()
+    };
+}
+
+// Devuelve la ubicación existente del cliente o, si no tiene, la nueva GPS.
+function resolverUbicacionCliente(data, cliData) {
+    const existente = ubicacionUtil(cliData && (cliData.ubicacion || cliData.coordenadas));
+    if (existente) return existente;
+    const nueva = String((data && data.clienteUbicacion) || '').trim();
+    if (esUbicacionValida(nueva)) return nueva;
+    const movimiento = String((data && data.UBICACION) || '').trim();
+    return esUbicacionValida(movimiento) ? movimiento : '';
+}
+
+// Viaje activo del chofer y turno abierto. Si no hay, quedan los valores
+// pedidos: ID_VIAJE = "Sin_Camion" e ID_TURNO = "SIN_TURNO".
+async function obtenerContextoOperacion() {
+    const CACHE_KEY = 'vm_contexto_operacion';
+    const fallback = { idViaje: 'Sin_Camion', idTurno: 'SIN_TURNO' };
+    let cache = null;
+    try { cache = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch (e) { cache = null; }
+
+    const usuarioCache = String(window.idUsuarioFirebase || '').trim();
+    if (!navigator.onLine) {
+        if (cache && cache.usuario === usuarioCache && cache.idTurno &&
+            (Date.now() - Number(cache.ts || 0)) < 12 * 60 * 60 * 1000) return cache;
+        return fallback;
+    }
+
+    const ctx = { ...fallback };
+
+    try {
+        const snapTurnos = await getDocs(query(collection(db, 'turnos'), where('estado', '==', 'ABIERTO')));
+        let mejor = null;
+        snapTurnos.forEach(d => {
+            const t = d.data();
+            const ms = Number(t.timestampAperturaMs) || 0;
+            if (!mejor || ms > mejor.ms) mejor = { ms, id: String(t.idTurno || d.id).trim() };
+        });
+        if (mejor && mejor.id) ctx.idTurno = mejor.id;
+    } catch (e) {
+        console.warn('No se pudo leer el turno abierto:', e);
+    }
+
+    const userId = String(window.idUsuarioFirebase || '').trim();
+    const userNombre = String(window.nombreUsuarioMostrar || '').trim();
+    if (userId || userNombre) {
+        try {
+            const snapViajes = await getDocs(query(collection(db, 'ccarga'), where('estado', 'in', ['EN_RUTA', 'COMPRA_EN_RUTA'])));
+            let mejor = null;
+            snapViajes.forEach(d => {
+                const v = d.data();
+                const chofer = String(v.chofer || '').trim();
+                const coincide = normalizarClaveUsuario(chofer) === normalizarClaveUsuario(userId) ||
+                    normalizarClaveUsuario(chofer) === normalizarClaveUsuario(userNombre);
+                if (!coincide) return;
+                const ms = Number(v.timestampMs) || 0;
+                if (!mejor || ms > mejor.ms) mejor = { ms, id: String(v.idViaje || d.id).trim() };
+            });
+            if (mejor && mejor.id) ctx.idViaje = mejor.id;
+        } catch (e) {
+            console.warn('No se pudo leer el viaje activo:', e);
+        }
+    }
+
+    const out = { ...ctx, usuario: usuarioCache, ts: Date.now() };
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(out)); } catch (e) {}
+    return out;
+}
+
 // Escribe la venta y sus efectos sobre el cliente UNA sola vez (si ya existe, no hace nada).
 async function enviarVentaFirestore(payload) {
     const data = { ...payload };
     delete data._offline_ts;
+
+    const ubicacionCliente = String(data.clienteUbicacion || '').trim();
+    delete data.clienteUbicacion;
+
     if (data.esClienteNuevo && !data.ID_CLIENTE) data.ID_CLIENTE = doc(collection(db, "clientes")).id;
     const movRef = doc(db, "movimientos", data.N);
+    const deltas = calcularDeltasCliente(data);
+    const huboMovimientoSaldos = !!(deltas.d10 || deltas.d15 || deltas.d45 || deltas.dinero);
 
     return runTransaction(db, async (tx) => {
         const ya = await tx.get(movRef);
         if (ya.exists()) return 'DUPLICADA';
+
+        // Todas las lecturas van antes de la primera escritura (regla de transacciones).
+        let cliRef = null;
+        let cliSnap = null;
+        if (!data.esClienteNuevo && data.ID_CLIENTE) {
+            cliRef = doc(db, "clientes", data.ID_CLIENTE);
+            cliSnap = await tx.get(cliRef);
+        }
 
         tx.set(movRef, data);
 
@@ -1308,31 +1479,75 @@ async function enviarVentaFirestore(payload) {
         }
 
         if (data.esClienteNuevo) {
+            const saldos = calcularSaldosCliente({}, deltas);
+            const coords = esUbicacionValida(ubicacionCliente) ? ubicacionCliente
+                : (esUbicacionValida(data.UBICACION) ? String(data.UBICACION).trim() : '');
+
             tx.set(doc(db, "clientes", data.ID_CLIENTE), {
-                nombre: data.clienteNombre, zona: data.clienteZona, categoria: data.clienteCategoria,
-                direccion: data.clienteDireccion, telefono: data.clienteTelefono, cuit_dni: data.cuit_dni,
-                plata: 0, env10: 0, env15: 0, env45: 0
+                id_cliente: data.ID_CLIENTE,
+                nombre: data.clienteNombre,
+                zona: data.clienteZona,
+                categoria: data.clienteCategoria,
+                direccion: data.clienteDireccion,
+                telefono: data.clienteTelefono,
+                mail: data.clienteMail || '',
+                cuit_dni: data.cuit_dni,
+                ubicacion: coords,
+                plata: saldos.plata,
+                env10: saldos.env10, env15: saldos.env15, env45: saldos.env45,
+                flotante10: saldos.flotante10, flotante15: saldos.flotante15, flotante45: saldos.flotante45,
+                ultimaActualizacion: data.FECHA || '',
+                ultimaActualizacionMs: data.TIMESTAMP_MS || Date.now(),
+                ultimoMovimientoTipo: tipoMovimientoFlotante(data),
+                ultimoMovimientoId: data.N
             });
+
+            if (huboMovimientoSaldos) {
+                tx.set(doc(collection(db, "historial_flotantes")), crearHistorialFlotante(data, deltas, saldos));
+            }
             tx.update(doc(db, "seguridad", "pin"), { version_datos: increment(1) });
         } else if (data.ID_CLIENTE) {
-            const cliRef = doc(db, "clientes", data.ID_CLIENTE);
+            const cliData = cliSnap && cliSnap.exists() ? cliSnap.data() : null;
             const updates = {};
-            if (data.esPagoDeuda) {
-                if (data.pagoDeudaDinero) updates.plata = increment(-data.pagoDeudaDinero);
-                if (data.dev10) updates.env10 = increment(-data.dev10);
-                if (data.dev15) updates.env15 = increment(-data.dev15);
-                if (data.dev45) updates.env45 = increment(-data.dev45);
+
+            let saldos = null;
+            if (huboMovimientoSaldos) {
+                saldos = calcularSaldosCliente(cliData || {}, deltas);
+                Object.assign(updates, {
+                    plata: saldos.plata,
+                    env10: saldos.env10, env15: saldos.env15, env45: saldos.env45,
+                    flotante10: saldos.flotante10, flotante15: saldos.flotante15, flotante45: saldos.flotante45,
+                    ultimaActualizacion: data.FECHA || '',
+                    ultimaActualizacionMs: data.TIMESTAMP_MS || Date.now(),
+                    ultimoMovimientoTipo: tipoMovimientoFlotante(data),
+                    ultimoMovimientoId: data.N
+                });
+                tx.set(doc(collection(db, "historial_flotantes")), crearHistorialFlotante(data, deltas, saldos));
             }
-            if (data.operacionEnvase === 'consignacion') {
-                const deudEnv = (data.CE10$ || 0) + (data.CE15$ || 0) + (data.CE45$ || 0);
-                if (deudEnv > 0) updates.plata = increment(deudEnv);
+
+            const coords = resolverUbicacionCliente({ clienteUbicacion: ubicacionCliente, UBICACION: data.UBICACION }, cliData);
+            if (coords && !ubicacionUtil(cliData && cliData.ubicacion)) {
+                updates.ubicacion = coords;
             }
-            if (data.operacionEnvase === 'comodato') {
-                if (data.CE10) updates.env10 = increment(data.CE10);
-                if (data.CE15) updates.env15 = increment(data.CE15);
-                if (data.CE45) updates.env45 = increment(data.CE45);
+
+            if (!cliData) {
+                // Venta a un ID de cliente que ya no existe: recreamos la ficha mínima.
+                tx.set(doc(db, "clientes", data.ID_CLIENTE), {
+                    id_cliente: data.ID_CLIENTE,
+                    nombre: data.C || data.clienteNombre || '',
+                    zona: data.clienteZona || '',
+                    categoria: data.clienteCategoria || '',
+                    direccion: data.clienteDireccion || '',
+                    telefono: data.clienteTelefono || '',
+                    cuit_dni: data.cuit_dni || '',
+                    ubicacion: updates.ubicacion || '',
+                    plata: updates.plata || 0,
+                    env10: updates.env10 || 0, env15: updates.env15 || 0, env45: updates.env45 || 0,
+                    flotante10: updates.flotante10 || 0, flotante15: updates.flotante15 || 0, flotante45: updates.flotante45 || 0
+                });
+            } else if (Object.keys(updates).length > 0) {
+                tx.update(cliRef, updates);
             }
-            if (Object.keys(updates).length > 0) tx.update(cliRef, updates);
         }
         return 'OK';
     });
@@ -1439,8 +1654,8 @@ async function guardar() {
     }
 
     let validacionGPS = "SIN_DATOS";
-    if (!ubicacionActual.includes("SIN_GPS") && clienteSeleccionado && (clienteSeleccionado.ubicacion || clienteSeleccionado.UBICACION)) {
-        let ubiCli = clienteSeleccionado.ubicacion || clienteSeleccionado.UBICACION;
+    if (!ubicacionActual.includes("SIN_GPS") && clienteSeleccionado && (clienteSeleccionado.ubicacion || clienteSeleccionado.coordenadas || clienteSeleccionado.UBICACION)) {
+        let ubiCli = clienteSeleccionado.ubicacion || clienteSeleccionado.coordenadas || clienteSeleccionado.UBICACION;
 
         if (ubiCli.includes("?q=")) {
             ubiCli = ubiCli.split("?q=")[1];
@@ -1458,6 +1673,12 @@ async function guardar() {
     }
 
     updateLoader("PROCESANDO OPERACIÓN...", "Armando paquete de datos");
+
+    // Viaje activo del chofer y turno abierto. Si no hay, se guardan
+    // "Sin_Camion" y "SIN_TURNO" para que el movimiento quede trazable.
+    const contextoOperacion = await obtenerContextoOperacion();
+    const ubicacionCliente = (!ubicacionActual.includes('SIN_GPS') && esUbicacionValida(ubicacionActual))
+        ? ubicacionActual.trim() : '';
 
     const cat = obtenerCat();
     const esNuevo = document.getElementById('nuevoCliente').checked;
@@ -1594,8 +1815,13 @@ async function guardar() {
         precioEnvaseAutorizado: document.getElementById('precioAutorizadoCheck') ? document.getElementById('precioAutorizadoCheck').checked : false,
         ID_CLIENTE: idClienteSeleccionado,
         cuit_dni: esNuevo ? document.getElementById('nuevoCuit').value : '',
+        clienteUbicacion: ubicacionCliente,
         UBICACION: ubicacionActual,
         PUNTO_GPS: validacionGPS,
+        ID_VIAJE: contextoOperacion.idViaje,
+        idViaje: contextoOperacion.idViaje,
+        ID_TURNO: contextoOperacion.idTurno,
+        idTurno: contextoOperacion.idTurno,
         COMISION_TOTAL: comisionTotal,
         COMISION_DETALLE: comisionDetalle,
         COMISION_PAGADA: false,

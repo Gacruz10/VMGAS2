@@ -476,8 +476,9 @@ function buildUI() {
 }
 
 function renderFila(r) {
-    const mapClass = r.coordenadas ? 'active' : 'inactive';
-    const mapLink = r.coordenadas ? `href="https://maps.google.com/?q=${esc(r.coordenadas)}" target="_blank"` : `href="javascript:void(0)"`;
+    const ubicacionCliente = r.ubicacion || r.coordenadas || '';
+    const mapClass = ubicacionCliente ? 'active' : 'inactive';
+    const mapLink = ubicacionCliente ? `href="https://maps.google.com/?q=${esc(ubicacionCliente)}" target="_blank"` : `href="javascript:void(0)"`;
 
     return `
     <div class="cli-item" data-id="${esc(r.id)}">
@@ -503,7 +504,7 @@ function renderDetalle(r) {
             <div class="input-group"><label>CUIT/DNI</label><input type="text" value="${esc(r.cuit_dni || '')}" oninput="window.syncData('${r.id}', this, 'cuit_dni')"></div>
             <div class="input-group"><label>CUIL</label><input type="text" value="${esc(r.cuil || '')}" placeholder="20-29418675-6" oninput="window.syncData('${r.id}', this, 'cuil')"></div>
             <div class="input-group"><label>CUIL PAGO</label><input type="text" value="${esc(r.cuil_pago || '')}" placeholder="CUIL de quien paga" oninput="window.syncData('${r.id}', this, 'cuil_pago')"></div>
-            <div class="input-group"><label>Coordenadas</label><input type="text" value="${esc(r.coordenadas || '')}" placeholder="-29.418, -66.875" oninput="window.syncData('${r.id}', this, 'coordenadas')"></div>
+            <div class="input-group"><label>Coordenadas</label><input type="text" value="${esc(r.ubicacion || r.coordenadas || '')}" placeholder="-29.418, -66.875" oninput="window.syncData('${r.id}', this, 'ubicacion')"></div>
         </div>
         
         <div class="prices-box">
@@ -549,7 +550,7 @@ window.syncData = function(id, input, field) {
     r[field] = val;
     r._search = armarBusqueda(r);
 
-    if (field === 'coordenadas') {
+    if (field === 'ubicacion' || field === 'coordenadas') {
         const mapIcon = input.closest('.cli-item').querySelector('.cli-map');
         if (val) {
             mapIcon.classList.remove('inactive'); mapIcon.classList.add('active');
@@ -621,7 +622,7 @@ window.agregarCliente = function() {
         p_esp_env_15: document.getElementById('new_e15').value,
         p_esp_env_45: document.getElementById('new_e45').value,
         vencimiento: venc,
-        coordenadas: document.getElementById('newCoordenadas').value.trim(),
+        ubicacion: document.getElementById('newCoordenadas').value.trim(),
         _isNew: true // Marcador para saber que nunca se guardó en Firebase
     };
     

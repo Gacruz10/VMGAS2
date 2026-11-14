@@ -354,6 +354,10 @@
           <span class="material-symbols-rounded tile-icon">account_tree</span>
           <span class="title">Control<br>Movimientos</span>
       </a>
+      <a class="tile audit" id="tileTablero" onclick="window.navegar('tablero.html')" style="display:none">
+          <span class="material-symbols-rounded tile-icon">insights</span>
+          <span class="title">Tablero<br>de Comando</span>
+      </a>
       <a class="tile logout" onclick="window.logout()" style="border-color: rgba(255,55,95,0.3);">
           <span class="material-symbols-rounded tile-icon">logout</span>
           <span class="title" style="color:#ff375f">Cerrar Sesión</span>
@@ -574,6 +578,7 @@ function renderizarInterfaz(nombre, p) {
     show('tileFinanzas',    p.finanzas || p.confinanzas);
     show('tileConFinanzas', p.confinanzas);
     show('tileTreeView',    p.gastos); 
+    show('tileTablero',     p.tablero);
     
     initHoverEffects();
     
