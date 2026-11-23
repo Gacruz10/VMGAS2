@@ -72,6 +72,11 @@ details[open]>summary::before{transform:rotate(90deg)}
 .sale .cli{font-weight:600;overflow:hidden;text-overflow:ellipsis}
 .sale .det{grid-column:2/-1;display:flex;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--dim);align-items:center}
 .sale .tot{font-weight:800;text-align:right}
+.sale.con-gasto{background:rgba(229,72,77,.045);box-shadow:inset 3px 0 0 var(--red)}
+.sale.con-gasto:hover{background:rgba(229,72,77,.09)}
+.sale .tot.gasto{color:var(--red);font-weight:900}
+.gasto-tag{font-size:11px;font-weight:900;color:var(--red);background:rgba(229,72,77,.12);border:1px solid var(--red);border-radius:999px;padding:1px 7px;letter-spacing:.3px;white-space:nowrap}
+.money.gasto{color:var(--red)}
 .tbl-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--card);-webkit-overflow-scrolling:touch;max-height:72vh}
 table{border-collapse:separate;border-spacing:0;width:100%;min-width:max-content}
 th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
@@ -82,6 +87,9 @@ th.sticky{z-index:3;background:var(--head)}
 tbody tr{cursor:pointer}
 tbody tr:hover td{background:var(--bg)}
 tbody tr.sel td{background:rgba(30,111,217,.14)}
+tbody tr.fila-gasto:not(.sel) td{background:rgba(229,72,77,.055)}
+tbody tr.fila-gasto:hover:not(.sel) td{background:rgba(229,72,77,.11)}
+td.celda-gasto{color:var(--red)!important;font-weight:900}
 tfoot td{font-weight:800;background:var(--head);position:sticky;bottom:0}
 .modal{position:fixed;inset:0;background:rgba(10,15,30,.55);display:none;align-items:flex-end;justify-content:center;z-index:50}
 .modal.show{display:flex}
@@ -314,9 +322,10 @@ const COLS = [
   { k: 'L10', l: 'LLENOS 10', t: 'n', def: 1, v: m => m.L[10] },
   { k: 'L15', l: 'LLENOS 15', t: 'n', def: 1, v: m => m.L[15] },
   { k: 'L45', l: 'LLENOS 45', t: 'n', def: 1, v: m => m.L[45] },
-  { k: 'total', l: 'TOTAL', t: 'm', def: 1, v: m => m.total },
-  { k: 'efe', l: 'EFECTIVO', t: 'm', def: 1, v: m => m.efe },
+  { k: 'total', l: 'TOTAL', t: 'm', def: 1, v: m => m.totalNeto },
+  { k: 'efe', l: 'EFECTIVO', t: 'm', def: 1, v: m => m.efeNeto },
   { k: 'tra', l: 'TRANSF.', t: 'm', def: 1, v: m => m.tra },
+  { k: 'GASTO_TOTAL', l: 'GASTO', t: 'm', def: 1, v: m => m.gasto },
   { k: 'V10', l: 'VACÍOS 10', t: 'n', v: m => m.V[10] },
   { k: 'V15', l: 'VACÍOS 15', t: 'n', v: m => m.V[15] },
   { k: 'V45', l: 'VACÍOS 45', t: 'n', v: m => m.V[45] },
@@ -324,7 +333,6 @@ const COLS = [
   { k: 'ID_CLIENTE', l: 'ID cliente', t: 'txt', v: m => m.raw.ID_CLIENTE || '' },
   { k: 'idTurno', l: 'ID turno', t: 'txt', v: m => m.turnoId || '' },
   { k: 'idViaje', l: 'ID viaje', t: 'txt', v: m => m.viajeId || '' },
-  { k: 'GASTO_TOTAL', l: 'Gasto', t: 'm', v: m => num(m.raw.GASTO_TOTAL) },
   { k: 'COMISION_TOTAL', l: 'Comisión', t: 'm', v: m => num(m.raw.COMISION_TOTAL) },
   { k: 'clienteZona', l: 'Zona', t: 'txt', v: m => m.raw.clienteZona || '' },
   { k: 'clienteCategoria', l: 'Categoría', t: 'txt', v: m => m.raw.clienteCategoria || '' },
@@ -419,11 +427,11 @@ function diasStrings(d1, fin) {
   return out;
 }
 
-const emptyT = () => ({ n: 0, tot: 0, efe: 0, tra: 0, L: { 10: 0, 15: 0, 45: 0 }, V: { 10: 0, 15: 0, 45: 0 } });
+const emptyT = () => ({ n: 0, tot: 0, efe: 0, tra: 0, gastos: 0, L: { 10: 0, 15: 0, 45: 0 }, V: { 10: 0, 15: 0, 45: 0 } });
 function sumar(list) {
   const t = emptyT();
   list.forEach(v => {
-    t.n++; t.tot += v.total; t.efe += v.efe; t.tra += v.tra;
+    t.n++; t.tot += v.totalNeto; t.efe += v.efeNeto; t.tra += v.tra; t.gastos += (v.gasto || 0);
     SIZES.forEach(k => { t.L[k] += v.L[k]; t.V[k] += v.V[k]; });
   });
   return t;
@@ -513,6 +521,30 @@ async function cargar() {
         L[k] = num(r[`ALL${k}`]);
         V[k] = num(r[`AV${k}`]) + (r.esPagoDeuda ? num(r[`dev${k}`]) : 0);
       });
+
+      const tipoNorm = String(r.TIPO || '').toUpperCase();
+      const esGastoDoc = tipoNorm.includes('GAST') || tipoNorm.includes('EGRESO');
+      const gastoDeclarado = Math.abs(num(r.GASTO_TOTAL));
+      const totalBruto = num(r.TOTAL);
+      const efeBruto = num(r['E$']);
+      const traBruto = num(r['T$']);
+
+      // En VMGAS2 el monto del gasto vive en GASTO_TOTAL. Los registros viejos
+      // pueden traerlo en TOTAL (en negativo), por eso no se resta dos veces.
+      const gasto = esGastoDoc
+        ? (gastoDeclarado > 0 ? gastoDeclarado : Math.abs(totalBruto))
+        : gastoDeclarado;
+
+      // El gasto se descuenta del efectivo y del total neto de la operación.
+      // Si el registro viejo ya trae un negativo en TOTAL/E$ y además tiene
+      // GASTO_TOTAL explícito, se prioriza el monto declarado para no duplicar.
+      const totalNeto = gasto > 0
+        ? (totalBruto < 0 ? (gastoDeclarado > 0 ? -gasto : totalBruto) : totalBruto - gasto)
+        : totalBruto;
+      const efeNeto = gasto > 0
+        ? (efeBruto < 0 ? (gastoDeclarado > 0 ? -gasto : efeBruto) : efeBruto - gasto)
+        : efeBruto;
+
       return {
         id, raw: r,
         ms: parseFH(r.FECHA, r.HORA),
@@ -522,9 +554,14 @@ async function cargar() {
         chofer: mapU[normU(r.USUARIO)] || normU(r.USUARIO),
         tipo: r.TIPO || '',
         cliente: r.C || r.clienteNombre || '',
-        total: num(r.TOTAL),
-        efe: num(r['E$']),
-        tra: num(r['T$']),
+        total: totalBruto,
+        totalNeto,
+        efe: efeBruto,
+        efeNeto,
+        tra: traBruto,
+        gasto,
+        esGasto: esGastoDoc,
+        tieneGasto: gasto > 0,
         L, V,
         idViaje: r.idViaje || r.ID_VIAJE || null,
         idTurno: r.idTurno || r.ID_TURNO || null,
@@ -683,18 +720,23 @@ function stripLV(titulo, cls, o) {
 function ventaHtml(v) {
   const llenos = SIZES.filter(k => v.L[k] || v.V[k]).map(k => `<span class="pill p-tag">${k}kg ${fq(v.L[k])}L/${fq(v.V[k])}V</span>`).join('');
   const pagos = [v.efe ? `Efe <b>${fm(v.efe)}</b>` : '', v.tra ? `Transf <b>${fm(v.tra)}</b>` : ''].filter(Boolean).join(' · ');
-  return `<div class="sale" data-venta="${esc(v.id)}">
+  const gastoTag = v.tieneGasto ? `<span class="gasto-tag">GASTO ${fm(-v.gasto)}</span>` : '';
+  return `<div class="sale ${v.tieneGasto ? 'con-gasto' : ''}" data-venta="${esc(v.id)}">
     <span class="hora">${esc(v.hora.slice(0, 5))}</span>
     <span class="cli">${esc(v.cliente || '—')} <span class="muted">· ${esc(v.usuario)}</span></span>
-    <span class="tot num">${fm(v.total)}</span>
-    <div class="det">${llenos}${pagos ? `<span>${pagos}</span>` : ''}</div>
+    <span class="tot num ${v.tieneGasto ? 'gasto' : ''}">${fm(v.totalNeto)}</span>
+    <div class="det">${llenos}${gastoTag}${pagos ? `<span>${pagos}</span>` : ''}</div>
   </div>`;
 }
 
 function totalesHtml(t) {
-  return `<span class="stat"><span class="k">Ventas</span><b>${t.n}</b></span>
-    <span class="stat"><span class="k">Efectivo</span><b class="money">${fm(t.efe)}</b></span>
+  const gastoStat = t.gastos > 0
+    ? `<span class="stat" title="Descontado del efectivo"><span class="k">Gastos</span><b class="money gasto">${fm(-t.gastos)}</b></span>`
+    : '';
+  return `<span class="stat"><span class="k">Ops</span><b>${t.n}</b></span>
+    <span class="stat"><span class="k">${t.gastos > 0 ? 'Efectivo neto' : 'Efectivo'}</span><b class="money">${fm(t.efe)}</b></span>
     <span class="stat"><span class="k">Transf.</span><b class="money blue">${fm(t.tra)}</b></span>
+    ${gastoStat}
     <span class="stat"><span class="k">Total</span><b class="money">${fm(t.tot)}</b></span>`;
 }
 
@@ -750,16 +792,18 @@ function sinCamionHtml(sueltas) {
   const t = sumar(sueltas);
   const bloques = [...porUsr].map(([usr, vs]) => {
     const tu = sumar(vs);
+    const gastoUsr = tu.gastos > 0 ? `<span class="money gasto num">Gasto ${fm(-tu.gastos)}</span>` : '';
     return `<details class="trip" open>
       <summary>🏪 <b>${esc(usr)}</b> <span class="grow"></span> <span class="muted">${tu.n} ops</span>
-        <span class="money num">Efe ${fm(tu.efe)}</span><span class="money blue num">Transf ${fm(tu.tra)}</span><span class="money num">TOT ${fm(tu.tot)}</span>
+        <span class="money num">Efe ${fm(tu.efe)}</span><span class="money blue num">Transf ${fm(tu.tra)}</span>${gastoUsr}<span class="money num">TOT ${fm(tu.tot)}</span>
       </summary>
       <div class="body">${vs.map(ventaHtml).join('')}</div>
     </details>`;
   }).join('');
+  const gastoTotal = t.gastos > 0 ? `<span class="money gasto num">Gastos ${fm(-t.gastos)}</span>` : '';
   return `<details class="purple" style="border-color:var(--blue);background:transparent" open>
     <summary style="color:var(--blue)">🏪 SIN CAMIÓN <span class="grow"></span>
-      <span class="muted">Ops: ${t.n}</span><span class="money num">TOT: ${fm(t.tot)}</span></summary>
+      <span class="muted">Ops: ${t.n}</span>${gastoTotal}<span class="money num">TOT: ${fm(t.tot)}</span></summary>
     <div style="padding:4px 0 8px">${bloques}</div>
   </details>`;
 }
@@ -799,10 +843,14 @@ function turnoHtml(g, viajes, sueltas) {
     </div>`;
   }
 
+  const gastoCaja = tt.gastos > 0
+    ? `<span class="stat" title="Descontado del efectivo"><span class="k">Gastos</span><b class="money gasto">${fm(-tt.gastos)}</b></span>`
+    : '';
   const caja = `<div class="strip" style="background:var(--bg)">
       <span class="lbl" style="color:var(--dim)">CAJA TURNO</span>
-      <span class="stat"><span class="k">Efectivo</span><b class="money">${fm(tt.efe)}</b></span>
+      <span class="stat"><span class="k">${tt.gastos > 0 ? 'Efectivo neto' : 'Efectivo'}</span><b class="money">${fm(tt.efe)}</b></span>
       <span class="stat"><span class="k">Transf.</span><b class="money blue">${fm(tt.tra)}</b></span>
+      ${gastoCaja}
       <span class="stat"><span class="k">Recaudación</span><b class="money">${fm(tt.tot)}</b></span>
       <span class="stat"><span class="k">Ops</span><b>${tt.n}</b></span>
     </div>`;
@@ -854,8 +902,10 @@ function celdaHtml(c, v, i) {
   const pendiente = !!(p && c.k in p);
   const val = valorCelda(c, v);
   const txt = c.t === 'm' ? fm(val) : c.t === 'n' ? fq(val) : esc(val);
-  const editable = !!EDIT_MAP[c.k];
-  const cls = [c.t !== 'txt' ? 'r num' : '', i === 0 ? 'sticky' : '', pendiente ? 'pend' : '', editable && S.editMode ? 'editable' : ''].join(' ');
+  const esGasto = v.gasto > 0;
+  const editable = !!EDIT_MAP[c.k] && !(esGasto && (c.k === 'total' || c.k === 'efe'));
+  const redGasto = esGasto && (c.k === 'total' || c.k === 'efe' || c.k === 'GASTO_TOTAL' || (c.k === 'tipo' && v.esGasto));
+  const cls = [c.t !== 'txt' ? 'r num' : '', i === 0 ? 'sticky' : '', pendiente ? 'pend' : '', editable && S.editMode ? 'editable' : '', redGasto ? 'celda-gasto' : ''].join(' ');
   const data = editable ? ` data-edit="${c.k}" data-id="${esc(v.id)}"` : '';
   return `<td class="${cls}"${data}>${txt}</td>`;
 }
@@ -879,7 +929,7 @@ function renderPla() {
     return `<th data-sort="${c.k}" class="${c.t !== 'txt' ? 'r' : ''} ${i === 0 ? 'sticky' : ''}">${c.l}${flecha}</th>`;
   }).join('');
 
-  const body = rows.map(v => `<tr data-venta="${esc(v.id)}" class="${S.sel.has(v.id) ? 'sel' : ''}">
+  const body = rows.map(v => `<tr data-venta="${esc(v.id)}" class="${S.sel.has(v.id) ? 'sel' : ''} ${v.gasto > 0 ? 'fila-gasto' : ''}">
     ${cols.map((c, i) => celdaHtml(c, v, i)).join('')}
     <td><button class="ghost" data-ficha="${esc(v.id)}" title="Ver / editar">⋯</button></td>
   </tr>`).join('');
@@ -887,7 +937,8 @@ function renderPla() {
   const pie = cols.map((c, i) => {
     if (i === 0) return `<td class="sticky">TOTAL (${rows.length})</td>`;
     if (c.t === 'txt') return '<td></td>';
-    return `<td class="r num">${c.t === 'm' ? fm(sumas[c.k]) : fq(sumas[c.k])}</td>`;
+    const extra = [sumas[c.k] < 0 ? 'neg' : '', c.k === 'GASTO_TOTAL' && sumas[c.k] > 0 ? 'celda-gasto' : ''].join(' ');
+    return `<td class="r num ${extra}">${c.t === 'm' ? fm(sumas[c.k]) : fq(sumas[c.k])}</td>`;
   }).join('');
 
   $('vistaPla').innerHTML = `<div class="tbl-wrap"><table>
@@ -952,6 +1003,10 @@ function abrirEdicionCelda(td) {
   const v = S.byId.get(id);
   if (!v) return;
   const meta = EDIT_MAP[k];
+  if (v.gasto > 0 && (k === 'total' || k === 'efe')) {
+    toast('Edite el monto del gasto en la columna GASTO o en la ficha (⋯).');
+    return;
+  }
   const val = valorCelda(colByKey(k), v);
   const inpVal = meta.t === 'bool' ? (String(val).trim().toUpperCase().startsWith('S') ? 'S' : 'N') : val;
   const attrs = meta.t === 'int' ? 'inputmode="numeric" pattern="-?[0-9]*"'
@@ -1035,10 +1090,14 @@ function renderResumen() {
   const t = sumar(S.ventas.filter(fOk));
   const viajes = S.dias.flatMap(d => d.grupos.flatMap(g => g.viajes))
     .filter(x => !filtrosActivos() || x.ventas.some(fOk)).length;
+  const gastoCard = t.gastos > 0
+    ? `<div class="card"><div class="muted">Gastos</div><div class="money gasto" style="font-size:18px">${fm(-t.gastos)}</div></div>`
+    : '';
   $('resumenRango').innerHTML = `
     <div class="card"><div class="muted">Total del rango</div><div class="money" style="font-size:18px">${fm(t.tot)}</div></div>
-    <div class="card"><div class="muted">Efectivo</div><div class="money" style="font-size:18px">${fm(t.efe)}</div></div>
+    <div class="card"><div class="muted">${t.gastos > 0 ? 'Efectivo neto' : 'Efectivo'}</div><div class="money" style="font-size:18px">${fm(t.efe)}</div></div>
     <div class="card"><div class="muted">Transferencia</div><div class="money blue" style="font-size:18px">${fm(t.tra)}</div></div>
+    ${gastoCard}
     <div class="card"><div class="muted">Operaciones</div><div style="font-size:18px;font-weight:800">${t.n}</div></div>
     <div class="card"><div class="muted">Viajes</div><div style="font-size:18px;font-weight:800">${viajes}</div></div>`;
 }
@@ -1066,7 +1125,8 @@ function renderSel() {
   $('selbar').classList.toggle('show', vs.length > 0);
   if (!vs.length) return;
   const t = sumar(vs);
-  $('selTxt').innerHTML = `<b>${t.n}</b> seleccionadas · Total <b>${fm(t.tot)}</b> · Efe ${fm(t.efe)} · Transf ${fm(t.tra)}<br>
+  const gastoSel = t.gastos > 0 ? ` · Gastos <b class="money gasto">${fm(-t.gastos)}</b>` : '';
+  $('selTxt').innerHTML = `<b>${t.n}</b> seleccionadas · Total <b>${fm(t.tot)}</b> · Efe ${fm(t.efe)} · Transf ${fm(t.tra)}${gastoSel}<br>
     Llenos: ${SIZES.map(k => `${k}kg ${fq(t.L[k])}`).join(' · ')}`;
 }
 
@@ -1108,12 +1168,16 @@ function abrirFicha(id) {
   const sistema = Object.entries(v.raw)
     .filter(([k]) => !EDITABLE.some(c => c.k === k) && k !== 'pin')
     .map(([k, val]) => `<dt>${esc(k)}</dt><dd>${esc(val !== null && typeof val === 'object' ? JSON.stringify(val) : val)}</dd>`).join('');
+  const avisoGasto = v.gasto > 0
+    ? `<div class="warnbox" style="margin:0 0 10px">Este movimiento descuenta <b>${fm(v.gasto)}</b> de la caja. Para modificarlo, edite el campo <b>Gasto $</b>. En la planilla, el total y el efectivo se muestran netos.</div>`
+    : '';
   $('fichaBody').innerHTML = `
     <div class="row" style="margin-bottom:8px">
       <span class="pill p-tag">${esc(v.tipo)}</span>
       <span class="muted">N° ${esc(v.id)}</span>
       <span class="muted">Viaje: ${esc(v.viajeId || v.idViaje || 'sin camión')} · Turno: ${esc(v.turnoId || v.idTurno || 'sin turno')}</span>
     </div>
+    ${avisoGasto}
     <div class="fgrid">${campos}</div>
     <div class="warnbox" id="avisoCambios" style="display:none">Cambios sin guardar. Al guardar se pide PIN y motivo. El saldo de clientes no se recalcula.</div>
     <div class="row" style="margin-top:12px;justify-content:space-between">
@@ -1189,7 +1253,7 @@ function eliminarOperacion() {
   const movId = v.id, raw = v.raw;
   pedirConfirmacion({
     titulo: 'Eliminar operación',
-    cuerpo: `<b>${esc(v.cliente || 'Sin cliente')}</b> · ${fm(v.total)} · ${esc(v.fecha)} ${esc(v.hora)}<br>
+    cuerpo: `<b>${esc(v.cliente || 'Sin cliente')}</b> · ${fm(v.totalNeto)} · ${esc(v.fecha)} ${esc(v.hora)}<br>
       La operación pasa a la papelera y sale de los totales.`,
     onOk: async (motivo, pinTipo) => {
       const batch = writeBatch(db);
@@ -1339,6 +1403,16 @@ document.addEventListener('click', e => {
   S.cols = Array.isArray(guardadas) && guardadas.length
     ? guardadas.filter(k => COL_KEYS.includes(k))
     : COLS.filter(c => c.def).map(c => c.k);
+  // Migración: incorporar la columna GASTO una sola vez en sesiones con columnas guardadas.
+  if (!localStorage.getItem('vm_cols_gasto_v1')) {
+    if (!S.cols.includes('GASTO_TOTAL')) {
+      const idx = S.cols.indexOf('tra');
+      if (idx >= 0) S.cols.splice(idx + 1, 0, 'GASTO_TOTAL');
+      else S.cols.push('GASTO_TOTAL');
+    }
+    localStorage.setItem('vm_cols_mov', JSON.stringify(S.cols));
+    localStorage.setItem('vm_cols_gasto_v1', '1');
+  }
   if (await validarSesion()) await cargar();
 })();
 </script>
