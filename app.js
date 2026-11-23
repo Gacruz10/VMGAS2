@@ -44,6 +44,10 @@ let isSyncing = false;
 // Nota de voz desactivada por ahora. Para restaurarla: cambiar a true.
 const AUDIO_HABILITADO = false;
 
+// Autorización por PIN para gastos desactivada por ahora.
+// El circuito del PIN se conserva; para volver a pedirlo, cambiar a true.
+const PIN_GASTOS_HABILITADO = false;
+
 // Evita que un pago supere lo que falta cobrar (venta normal / consignación)
 function limitarPagoAlTotal(inputId) {
     if (document.getElementById('pagoDeuda').checked) return;
@@ -403,6 +407,7 @@ async function init() {
         if (AUDIO_HABILITADO) iniciarManejadorAudio();
         else { const bx = document.querySelector('.audio-recorder-box'); if (bx) bx.style.display = 'none'; }
         aplicarAutoFoco();
+        actualizarDisponibilidadGastos();
 
         sugerirClientesCercanos();
 
@@ -611,6 +616,60 @@ function checkVisibilidadCascada() {
     document.getElementById('seccionesOperativas').style.display = (hasClient || isNew || isGasto) ? 'block' : 'none';
 }
 
+function gastosBloqueadoPorCliente() {
+    return document.getElementById('cliente').value !== "" || document.getElementById('nuevoCliente').checked;
+}
+
+function actualizarDisponibilidadGastos() {
+    const chk = document.getElementById('declaracionGastos');
+    if (!chk) return;
+
+    const contenedor = document.getElementById('chkGastos');
+    const seccion = document.getElementById('sectionGastos');
+    const bloqueado = gastosBloqueadoPorCliente();
+
+    chk.disabled = bloqueado;
+    if (contenedor) {
+        contenedor.style.opacity = bloqueado ? '0.45' : '';
+        contenedor.style.cursor = bloqueado ? 'not-allowed' : '';
+        contenedor.title = bloqueado ? 'No disponible: ya hay un cliente seleccionado' : '';
+    }
+
+    if (bloqueado && chk.checked) {
+        chk.checked = false;
+        if (seccion) seccion.style.display = 'none';
+        document.getElementById('montoGastos').value = '';
+        document.getElementById('descripcionGastos').value = '';
+        document.getElementById('descripcionGastos').classList.remove('input-error');
+        toggleMutuallyExclusive('declaracionGastos');
+        verificarSiNecesitaPin();
+    }
+
+    checkVisibilidadCascada();
+}
+
+// Al elegir un cliente se descarta cualquier alta de cliente que haya quedado a medio cargar.
+function limpiarNuevoCliente() {
+    const chk = document.getElementById('nuevoCliente');
+    if (chk) chk.checked = false;
+
+    const seccion = document.getElementById('nuevoClienteSection');
+    if (seccion) seccion.style.display = 'none';
+
+    const selectores = document.getElementById('selectoresPrincipales');
+    if (selectores) selectores.style.display = 'flex';
+
+    ['nombreCliente', 'nuevoCuit', 'nuevaZona', 'categoria', 'nuevaDireccion', 'nuevoTelefono', 'nuevoMail'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+
+    ['nombreCliente', 'nuevaDireccion', 'nuevoTelefono', 'nuevaZona', 'categoria'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('input-error');
+    });
+}
+
 document.getElementById('nombreCliente').addEventListener('blur', function () {
     const val = this.value.trim().toLowerCase(); if (!val) return;
     if (clientesData.some(c => c.nombre.toLowerCase() === val)) showToast('⚠️ ATENCIÓN: Ya existe un cliente con este nombre en la base.', 'warning');
@@ -648,7 +707,7 @@ function togglePreciosEnvasesManuales(checkbox) {
 }
 
 function verificarSiNecesitaPin() {
-    const necesita = document.getElementById('manualPriceCheck1').checked || document.getElementById('manualPriceCheck2').checked || document.getElementById('manualPriceCheck3').checked || document.getElementById('precioAutorizadoCheck').checked || document.getElementById('ventaEnvases').checked || document.getElementById('declaracionGastos').checked;
+    const necesita = document.getElementById('manualPriceCheck1').checked || document.getElementById('manualPriceCheck2').checked || document.getElementById('manualPriceCheck3').checked || document.getElementById('precioAutorizadoCheck').checked || document.getElementById('ventaEnvases').checked || (PIN_GASTOS_HABILITADO && document.getElementById('declaracionGastos').checked);
     const container = document.getElementById('globalPinContainer'); const pinInput = document.getElementById('globalPinInput');
     if (necesita) { container.style.display = 'block'; pinInput.setAttribute('required', 'true'); }
     else { container.style.display = 'none'; pinInput.value = ''; pinInput.removeAttribute('required'); }
@@ -1053,23 +1112,31 @@ document.getElementById('zona').onchange = function () {
     clientesData.filter(c => c.zona === z).forEach(c => { const opt = document.createElement('option'); opt.value = JSON.stringify(c); opt.textContent = c.nombre; sel.appendChild(opt); });
 
     document.getElementById('clientInfoBox').style.display = 'none';
+    document.getElementById('tipoClienteDisplay').style.display = 'none';
     document.getElementById('acuerdoDisplay').style.display = 'none';
     document.getElementById('pagoDeudaContainer').style.display = 'none';
     document.getElementById('pagoDeuda').checked = false;
     document.getElementById('sectionPagoDeuda').style.display = 'none';
     idClienteSeleccionado = '';
-    checkVisibilidadCascada(); actualizarTotales();
+    clienteSeleccionado = null;
+    actualizarDisponibilidadGastos(); actualizarTotales();
 };
 
 document.getElementById('cliente').onchange = function () {
     if (!this.value) {
         document.getElementById('clientInfoBox').style.display = 'none';
+        document.getElementById('tipoClienteDisplay').style.display = 'none';
         document.getElementById('acuerdoDisplay').style.display = 'none';
         document.getElementById('pagoDeudaContainer').style.display = 'none';
         document.getElementById('pagoDeuda').checked = false;
         document.getElementById('sectionPagoDeuda').style.display = 'none';
-        checkVisibilidadCascada(); actualizarTotales(); idClienteSeleccionado = ''; return;
+        idClienteSeleccionado = '';
+        clienteSeleccionado = null;
+        actualizarDisponibilidadGastos(); actualizarTotales(); return;
     }
+
+    // Si había un alta de cliente a medio cargar, se descarta al elegir un cliente existente.
+    limpiarNuevoCliente();
 
     clienteSeleccionado = JSON.parse(this.value);
     idClienteSeleccionado = clienteSeleccionado.id_cliente || '';
@@ -1161,7 +1228,7 @@ document.getElementById('cliente').onchange = function () {
         containerPago.style.display = 'none';
     }
 
-    checkVisibilidadCascada(); actualizarPreciosAutomaticos();
+    actualizarDisponibilidadGastos(); actualizarPreciosAutomaticos();
 };
 
 document.getElementById('nuevoCliente').onchange = function () {
@@ -1178,6 +1245,7 @@ document.getElementById('nuevoCliente').onchange = function () {
         document.getElementById('pagoDeuda').checked = false;
         document.getElementById('sectionPagoDeuda').style.display = 'none';
         idClienteSeleccionado = '';
+        clienteSeleccionado = null;
 
         document.getElementById('nombreCliente').classList.remove('input-error');
         document.getElementById('nuevaDireccion').classList.remove('input-error');
@@ -1191,7 +1259,7 @@ document.getElementById('nuevoCliente').onchange = function () {
         document.getElementById('nuevaZona').classList.remove('input-error');
         document.getElementById('categoria').classList.remove('input-error');
     }
-    checkVisibilidadCascada(); actualizarPreciosAutomaticos();
+    actualizarDisponibilidadGastos(); actualizarPreciosAutomaticos();
 };
 
 document.getElementById('categoria').onchange = () => actualizarPreciosAutomaticos();
@@ -1505,7 +1573,7 @@ async function enviarVentaFirestore(payload) {
             if (huboMovimientoSaldos) {
                 tx.set(doc(collection(db, "historial_flotantes")), crearHistorialFlotante(data, deltas, saldos));
             }
-            tx.update(doc(db, "seguridad", "pin"), { version_datos: increment(1) });
+            tx.set(doc(db, "seguridad", "pin"), { version_datos: increment(1) }, { merge: true });
         } else if (data.ID_CLIENTE) {
             const cliData = cliSnap && cliSnap.exists() ? cliSnap.data() : null;
             const updates = {};
@@ -1559,7 +1627,7 @@ function guardarEnCola(payload) {
     cola.push(payload);
     escribirCola(cola);
     mostrarExito("Se enviará sola apenas haya conexión.", "GUARDADO EN EL TELÉFONO");
-    setTimeout(() => window.location.reload(), 1800);
+    setTimeout(() => VM.irInicio(k), 1800);
 }
 
 // Sin botón: la cola se envía sola. Se mantiene la función por compatibilidad.
@@ -1873,7 +1941,7 @@ async function guardar() {
     try {
         await conTimeout(enviarVentaFirestore(payload), 20000);
         mostrarExito("La operación se registró correctamente.");
-        setTimeout(() => window.location.reload(), 1200);
+        setTimeout(() => VM.irInicio(k), 1200);
     } catch (e) {
         console.warn("Fallo al guardar:", e);
         if (esErrorDeRed(e)) {

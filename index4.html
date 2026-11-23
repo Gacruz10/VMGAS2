@@ -108,6 +108,12 @@
             <input type="email" id="nuevoMail" placeholder="Email (Opcional)">
         </div>
 
+        <div class="checkbox-item" id="chkGastos"><input type="checkbox" id="declaracionGastos"><label for="declaracionGastos" class="red-label">DECLARAR GASTO</label></div>
+        <div id="sectionGastos" class="hidden-section">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" id="montoGastos" placeholder="Monto $" class="money-input">
+            <input type="text" id="descripcionGastos" placeholder="Motivo del gasto (OBLIGATORIO)..." style="margin-top:10px">
+        </div>
+
         <div id="seccionesOperativas" style="display:none;">
 
             <div class="checkbox-item" id="chkRetiraPlanta" style="background: rgba(76, 175, 80, 0.15); padding: 12px; border-radius: 10px; border: 2px solid var(--success); margin-bottom: 20px;">
@@ -146,12 +152,6 @@
                 </div>
             </div>
             
-            <div class="checkbox-item" id="chkGastos"><input type="checkbox" id="declaracionGastos"><label for="declaracionGastos" class="red-label">DECLARAR GASTO</label></div>
-            <div id="sectionGastos" class="hidden-section">
-                <input type="text" inputmode="numeric" pattern="[0-9]*" id="montoGastos" placeholder="Monto $" class="money-input">
-                <input type="text" id="descripcionGastos" placeholder="Motivo del gasto (OBLIGATORIO)..." style="margin-top:10px">
-            </div>
-
             <div class="checkbox-item" id="chkEntregaGas"><input type="checkbox" id="entregaGas"><label for="entregaGas" class="yellow-label">GAS LLENO</label></div>
             <div id="sectionGas" class="hidden-section">
                 <div class="garrafa-row">
@@ -252,6 +252,6 @@
         </div>
     </div>
 
-    <script type="module" src="app.js"></script>
+    <script type="module" src="app.js?v=20261122"></script>
 </body>
 </html>
