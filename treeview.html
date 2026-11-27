@@ -287,6 +287,13 @@ const pad2 = n => String(n).padStart(2, '0');
 const normU = v => String(v ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const ymd = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 const parseDay = s => { if (!s) return null; const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const fechaParaInput = s => {
+  if (!s) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const p = String(s).split('/');
+  if (p.length === 3 && p[0] && p[1] && p[2]) return `${p[2]}-${pad2(p[1])}-${pad2(p[0])}`;
+  return '';
+};
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const nf = new Intl.NumberFormat('es-AR');
 const fm = n => { n = Math.round(num(n)); return (n < 0 ? '-' : '') + '$' + nf.format(Math.abs(n)); };
@@ -394,6 +401,7 @@ const S = {
 };
 
 // ---------- Sesión ----------
+const entrada = new URLSearchParams(window.location.search);
 let TOKEN = VM.tokenActual();
 if (!TOKEN) { location.replace('inicio.html'); throw new Error('Sin sesión'); }
 sessionStorage.setItem('k', TOKEN);
@@ -1398,6 +1406,11 @@ document.addEventListener('click', e => {
   const hoy = new Date();
   $('fDesde').value = ymd(hoy);
   $('fHasta').value = ymd(hoy);
+  const fechaEntrada = fechaParaInput(entrada.get('fecha'));
+  if (fechaEntrada) {
+    $('fDesde').value = fechaEntrada;
+    $('fHasta').value = fechaEntrada;
+  }
   VM.aplicarTema();
   const guardadas = JSON.parse(localStorage.getItem('vm_cols_mov') || 'null');
   S.cols = Array.isArray(guardadas) && guardadas.length
@@ -1413,7 +1426,15 @@ document.addEventListener('click', e => {
     localStorage.setItem('vm_cols_mov', JSON.stringify(S.cols));
     localStorage.setItem('vm_cols_gasto_v1', '1');
   }
-  if (await validarSesion()) await cargar();
+  if (await validarSesion()) {
+    await cargar();
+    const movEntrada = String(entrada.get('mov') || '').trim();
+    if (movEntrada) {
+      S.f.q = movEntrada;
+      $('fQ').value = movEntrada;
+      renderAll();
+    }
+  }
 })();
 </script>
 </body>

@@ -33,7 +33,7 @@
       background: radial-gradient(at 0% 0%, #0f172a 0%, transparent 50%),
                   radial-gradient(at 100% 100%, #1e1b4b 0%, transparent 50%), var(--bg-color);
       background-attachment: fixed; min-height: 100vh; padding: 10px;
-      transition: color 0.3s ease, background 0.3s ease;
+      transition: color 0.3s ease, background 0.3s ease; overflow-x: hidden;
     }
 
     .theme-toggle {
@@ -53,6 +53,7 @@
     .btn-volver:hover { background: rgba(128,128,128,0.2); }
 
     .container { max-width: 900px; margin: 0 auto; display: grid; gap: 10px; grid-template-columns: 1fr; margin-top: 25px; }
+    .container > * { min-width: 0; }
     @media (min-width: 768px) { .container { grid-template-columns: 1fr 1fr; } .full-width { grid-column: 1 / -1; } }
 
     .led-alert {
@@ -63,7 +64,7 @@
     @keyframes flashLed { 0%, 100% { box-shadow: 0 0 5px rgba(255,68,68,0.1); } 50% { box-shadow: 0 0 15px rgba(255,68,68,0.3); } }
     .led-alert.active { display: block; }
 
-    .card { background: var(--glass); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); border-radius: 10px; padding: 12px; }
+    .card { background: var(--glass); backdrop-filter: blur(10px); border: 1px solid var(--glass-border); border-radius: 10px; padding: 12px; min-width: 0; }
     .card-title { font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; display: flex; justify-content: space-between; border-bottom: 1px solid rgba(128,128,128,0.2); padding-bottom: 4px; gap: 8px; }
 
     .period-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
@@ -81,7 +82,7 @@
 
     .empty-state { text-align: center; padding: 16px 8px; color: var(--ok); font-weight: 700; font-size: 0.8rem; }
 
-    .data-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed rgba(128,128,128,0.2); }
+    .data-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed rgba(128,128,128,0.2); flex-wrap: wrap; gap: 6px; }
     .data-label { color: var(--text-muted); font-size: 0.75rem; }
     .data-value { font-weight: 700; font-size: 0.85rem; }
     .data-total { font-size: 1rem; color: var(--accent); margin-top: 4px; border: none; }
@@ -132,23 +133,55 @@
     .loading-text { color: var(--accent); font-size: 0.8rem; font-weight: 800; letter-spacing: 1px; }
     .loading-text.success-mode { color: var(--ok); }
 
-    /* HISTORIAL DE CIERRES */
-    .history-table-wrap { overflow-x: auto; margin-top: 4px; }
-    .history-table { width: 100%; border-collapse: collapse; font-size: 0.66rem; min-width: 650px; }
-    .history-table thead th { color: var(--text-muted); font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.04em; text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--glass-border); white-space: nowrap; }
-    .history-table tbody td { padding: 6px; border-bottom: 1px solid rgba(128,128,128,0.16); vertical-align: middle; }
-    .history-table tbody tr:hover { background: rgba(128,128,128,0.12); }
-    .history-table .num { text-align: right; white-space: nowrap; font-family: monospace; }
-    .history-id { font-family: monospace; font-size: 0.6rem; color: var(--text-muted); }
-    .history-meta { font-size: 0.58rem; color: var(--text-muted); margin-top: 2px; }
-    .history-empty { text-align: center; padding: 18px 8px; color: var(--text-muted); font-size: 0.75rem; font-weight: 600; }
-    .history-warning { padding: 8px; border: 1px solid var(--error); border-radius: 6px; color: var(--error); font-size: 0.7rem; font-weight: 700; }
-    .hist-pill { display: inline-block; font-size: 0.55rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; border-radius: 999px; padding: 2px 6px; border: 1px solid transparent; white-space: nowrap; }
-    .hist-ok { color: var(--ok); background: rgba(45,212,191,0.1); border-color: rgba(45,212,191,0.4); }
-    .hist-dif { color: var(--accent); background: rgba(255,215,0,0.08); border-color: rgba(255,215,0,0.4); }
-    .btn-fin { display: inline-block; padding: 4px 8px; border-radius: 5px; background: var(--accent); color: #000; font-size: 0.6rem; font-weight: 800; text-decoration: none; white-space: nowrap; }
-    body.light-mode .btn-fin { color: #fff; background: #b45309; }
-    .btn-fin:hover { filter: brightness(1.08); }
+    /* VENTAS DEL ARQUEO */
+    .ventas-resumen { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .ventas-list { display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-right: 2px; }
+    .venta-item { border: 1px solid var(--glass-border); border-radius: 8px; padding: 8px 10px; background: rgba(128,128,128,0.06); min-width: 0; }
+    .venta-item.gasto { border-color: var(--error); background: rgba(255,68,68,0.06); }
+    .venta-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .venta-cliente { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
+    .venta-cliente b { overflow-wrap: anywhere; }
+    .venta-fecha { font-size: 0.62rem; color: var(--text-muted); }
+    .venta-total { font-weight: 800; white-space: nowrap; }
+    .venta-total.neg { color: var(--error); }
+    .venta-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+    .qty-chip, .money-chip {
+      display: inline-flex; align-items: baseline; gap: 4px; font-size: 0.65rem; color: var(--text-muted);
+      background: rgba(128,128,128,0.12); border: 1px solid var(--glass-border); border-radius: 999px; padding: 2px 8px; white-space: nowrap;
+    }
+    .qty-chip b, .money-chip b { color: var(--text-primary); }
+    .money-chip.total b { color: var(--accent); }
+    .gasto-chip { font-size: 0.58rem; font-weight: 800; color: var(--error); border: 1px solid var(--error); background: rgba(255,68,68,0.1); border-radius: 999px; padding: 1px 6px; }
+    .btn-modificar { margin-left: auto; font-size: 0.65rem; font-weight: 800; text-decoration: none; color: #000; background: var(--accent); border-radius: 5px; padding: 3px 8px; white-space: nowrap; }
+    body.light-mode .btn-modificar { color: #fff; background: #b45309; }
+    .btn-modificar:hover { filter: brightness(1.08); }
+    .ventas-empty { text-align: center; padding: 14px 8px; color: var(--text-muted); font-size: 0.75rem; font-weight: 600; }
+    .hint-box { font-size: 0.65rem; color: var(--text-muted); line-height: 1.4; margin-top: 6px; }
+    .garrafas-values { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+    .dia-garrafas { font-size: 0.62rem; color: var(--text-muted); margin-top: 2px; }
+    .data-row.garrafas-row { align-items: flex-start; }
+
+    @media (max-width: 640px) {
+      body { padding: 7px; }
+      .header { justify-content: space-between; padding-left: 46px; margin-top: 0; }
+      .header h1 { position: static; left: auto; top: auto; font-size: 1rem; }
+      .header-buttons { flex: 0 0 auto; margin-top: 0; }
+      .theme-toggle { width: 36px; height: 36px; font-size: 17px; top: 7px; left: 7px; }
+      .container { margin-top: 12px; gap: 8px; }
+      .card { padding: 10px; border-radius: 8px; }
+      .card-title { flex-wrap: wrap; }
+      .period-row { flex-wrap: wrap; }
+      .period-row select { max-width: 100%; flex: 1; }
+      .data-row { gap: 6px; }
+      .data-value { text-align: right; }
+      .garrafas-values { justify-content: flex-start; }
+      .dia-item { flex-wrap: wrap; gap: 8px; }
+      .dia-info { flex: 1; min-width: 0; }
+      .success-grid { grid-template-columns: 1fr; }
+      .venta-top { flex-wrap: wrap; }
+      .venta-total { width: 100%; text-align: right; }
+      .btn-modificar { margin-left: 0; }
+    }
 
     /* MODAL DE ÉXITO */
     .modal-overlay { position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; padding: 16px; background: rgba(2,6,23,0.88); backdrop-filter: blur(8px); }
@@ -225,7 +258,7 @@
     </div>
 
     <div class="led-alert full-width" id="alertTransf">
-      ⚠️ ATENCIÓN: Consultar TRANSFERENCIAS pagadas en efectivo.
+      ⚠️ TRANSFERENCIAS: se toman del sistema y se revisan manualmente una por una.
     </div>
 
     <div class="card" id="cardSistema">
@@ -252,6 +285,15 @@
           </div>
         </div>
 
+        <div class="data-row garrafas-row">
+          <span class="data-label">Garrafas vendidas</span>
+          <span class="data-value garrafas-values">
+            <span class="qty-chip">10 kg <b id="sisG10">0</b></span>
+            <span class="qty-chip">15 kg <b id="sisG15">0</b></span>
+            <span class="qty-chip">45 kg <b id="sisG45">0</b></span>
+          </span>
+        </div>
+
         <div style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed rgba(128,128,128,0.2);">
           <div class="data-row">
             <span class="data-label">Suma Transferencias (Banco)</span>
@@ -269,11 +311,7 @@
         <input type="number" id="realEfectivo" placeholder="0.00" step="0.01" min="0" style="font-size: 1.3rem; text-align: center; color: var(--accent);">
       </div>
 
-      <div class="input-group">
-        <label>Transferencias Reales (Verificadas manualmente)</label>
-        <input type="number" id="realTransf" placeholder="0.00" step="0.01" min="0" style="font-size: 1.3rem; text-align: center; color: var(--ok);">
-        <div id="transfInfo" style="font-size:0.62rem; color:var(--text-muted); text-align:center; margin-top:4px;">Sistema: $ 0 · Diferencia: $ 0</div>
-      </div>
+      <div class="hint-box">Las transferencias se toman automáticamente del sistema y se revisan manualmente. Para el arqueo solo se carga el efectivo.</div>
 
       <div id="resultBox" class="result-box status-neutral">
         <span id="resultMsg" style="font-size: 0.75rem;">Ingrese efectivo para comparar</span>
@@ -286,13 +324,16 @@
       </div>
     </div>
 
-    <div class="full-width">
-      <button class="btn-confirm" id="btnCerrarCaja" disabled>REGISTRAR CIERRE Y GUARDAR</button>
+    <div class="card full-width" id="ventasCard">
+      <div class="card-title">Ventas del Arqueo <span id="ventasInfo">0 movimientos</span></div>
+      <div id="ventasResumen" class="ventas-resumen"></div>
+      <div id="ventasBody" class="ventas-list">
+        <div class="ventas-empty">Seleccione un chofer y al menos un día.</div>
+      </div>
     </div>
 
-    <div class="card full-width" id="historialCard">
-      <div class="card-title">Historial de Cierres <span id="historialInfo">ÚLTIMOS 25</span></div>
-      <div id="historialBody" class="history-empty">Cargando cierres...</div>
+    <div class="full-width">
+      <button class="btn-confirm" id="btnCerrarCaja" disabled>REGISTRAR CIERRE Y GUARDAR</button>
     </div>
 
   </div>
@@ -305,12 +346,11 @@
     <div class="success-grid">
       <div><span>Chofer</span><strong id="successChofer">—</strong></div>
       <div><span>Efectivo real</span><strong id="successReal">—</strong></div>
-      <div><span>Transferencias reales</span><strong id="successRealTransf">—</strong></div>
+      <div><span>Transferencias (sistema)</span><strong id="successRealTransf">—</strong></div>
       <div><span>Diferencia efectivo</span><strong id="successDif">—</strong></div>
-      <div><span>Diferencia transferencias</span><strong id="successDifTransf">—</strong></div>
       <div><span>Días / movimientos</span><strong id="successDias">—</strong></div>
     </div>
-    <p class="success-note">El cierre ya impactó en <b>confinanzas</b> como ingreso. Podés conciliarlo desde Control de Finanzas o volver a consultarlo en el historial.</p>
+    <p class="success-note">El cierre ya impactó en <b>confinanzas</b> como ingreso. Las transferencias quedan registradas según el sistema para revisión manual.</p>
     <div class="success-actions">
       <a id="successFinLink" class="btn-confirm" style="text-decoration:none; display:block; text-align:center;" href="#" target="_blank" rel="noopener">VER EN FINANZAS</a>
       <button type="button" class="btn-action" id="successClose">CERRAR Y SEGUIR</button>
@@ -375,6 +415,8 @@ function money(n, dec = 0) {
         minimumFractionDigits: dec, maximumFractionDigits: dec
     });
 }
+
+const fq = (n) => Math.round(num(n)).toLocaleString('es-AR');
 
 function round2(n) { return Math.round(num(n) * 100) / 100; }
 
@@ -509,23 +551,17 @@ let grupos = [];
 let gruposPorChofer = new Map();
 let choferActual = '';
 let seleccionados = new Set();
-let sisData = { efectivo: 0, transf: 0, gastos: 0, total: 0, listaGastos: [], enRuta: false, dias: 0 };
+let sisData = { efectivo: 0, transf: 0, gastos: 0, total: 0, listaGastos: [], enRuta: false, dias: 0, ventas: [], g10: 0, g15: 0, g45: 0 };
 let hayDiferencia = false;
-let hayDiferenciaTransf = false;
 let activeDrivers = new Set();
-let historialCierres = [];
-let historialError = null;
 
 function resetUI() {
     grupos = [];
     gruposPorChofer = new Map();
     choferActual = '';
     seleccionados.clear();
-    sisData = { efectivo: 0, transf: 0, gastos: 0, total: 0, listaGastos: [], enRuta: false, dias: 0 };
+    sisData = { efectivo: 0, transf: 0, gastos: 0, total: 0, listaGastos: [], enRuta: false, dias: 0, ventas: [], g10: 0, g15: 0, g45: 0 };
     hayDiferencia = false;
-    hayDiferenciaTransf = false;
-    historialCierres = [];
-    historialError = null;
 
     $('diasContainer').innerHTML = '';
     $('diasContainer').classList.add('hidden');
@@ -534,10 +570,13 @@ function resetUI() {
     $('selChofer').innerHTML = '<option value="">Cargando movimientos pendientes...</option>';
     $('selChofer').disabled = true;
     $('realEfectivo').value = '';
-    $('realTransf').value = '';
     $('obsArqueo').value = '';
-    $('transfInfo').textContent = 'Sistema: $ 0 · Diferencia: $ 0';
-    $('transfInfo').style.color = 'var(--text-muted)';
+    $('sisG10').textContent = '0';
+    $('sisG15').textContent = '0';
+    $('sisG45').textContent = '0';
+    $('ventasInfo').textContent = '0 movimientos';
+    $('ventasResumen').innerHTML = '';
+    $('ventasBody').innerHTML = '<div class="ventas-empty">Seleccione un chofer y al menos un día.</div>';
     $('divDetalleGastos').style.display = 'none';
     $('divDetalleGastos').innerHTML = '';
     $('alertTransf').classList.remove('active');
@@ -555,10 +594,6 @@ function resetUI() {
     $('btnCerrarCaja').disabled = true;
     $('btnCerrarCaja').textContent = 'REGISTRAR CIERRE Y GUARDAR';
     $('periodoInfo').textContent = '';
-    if ($('historialBody')) {
-        $('historialBody').className = 'history-empty';
-        $('historialBody').textContent = 'Cargando cierres...';
-    }
 }
 
 // ---------------- Carga de datos ----------------
@@ -576,14 +611,9 @@ async function cargarDatos() {
         const chunks = [];
         for (let i = 0; i < fechas.length; i += 30) chunks.push(fechas.slice(i, i + 30));
 
-        const [snapUsers, snapViajes, snapArqueos, ...snapsMov] = await Promise.all([
+        const [snapUsers, snapViajes, ...snapsMov] = await Promise.all([
             getDocs(collection(db, 'usuarios')),
             getDocs(query(collection(db, 'ccarga'), where('estado', 'in', ['EN_RUTA', 'COMPRA_EN_RUTA']))),
-            getDocs(collection(db, 'arqueos')).catch(e => {
-                console.warn('No se pudo leer el historial de arqueos:', e);
-                historialError = e;
-                return null;
-            }),
             ...chunks.map(ch => getDocs(query(collection(db, 'movimientos'), where('FECHA', 'in', ch))))
         ]);
 
@@ -638,6 +668,10 @@ async function cargarDatos() {
                         efectivo: 0,
                         transf: 0,
                         gastos: 0,
+                        g10: 0,
+                        g15: 0,
+                        g45: 0,
+                        detalle: [],
                         listaGastos: []
                     };
                     map.set(key, g);
@@ -648,6 +682,11 @@ async function cargarDatos() {
                 g.transf += calc.transf;
                 g.gastos += calc.gastos;
                 if (calc.gastos > 0) g.listaGastos.push(calc.gastoDetalle);
+                const cant = cantidadesGarrafas(m);
+                g.g10 += cant.c10;
+                g.g15 += cant.c15;
+                g.g45 += cant.c45;
+                g.detalle.push(normalizarVentaArqueo(m, d.id, fecha, cant));
                 g.movs.push(d.id);
             });
         });
@@ -675,13 +714,6 @@ async function cargarDatos() {
             c.gastos += g.gastos;
         });
 
-        if (snapArqueos) {
-            historialCierres = agruparHistorial(snapArqueos);
-            historialError = null;
-        } else {
-            historialCierres = [];
-        }
-        renderHistorial();
         renderChoferes();
         $('mainUI').classList.remove('hidden');
         toggleLoader(false);
@@ -690,130 +722,8 @@ async function cargarDatos() {
         toggleLoader(false);
         showToast('Error cargando datos: ' + (e.message || 'conexión'), 'error');
         $('selChofer').innerHTML = '<option value="">Error de conexión</option>';
-        historialCierres = [];
-        renderHistorial();
         $('mainUI').classList.remove('hidden');
     }
-}
-
-function agruparHistorial(snap) {
-    const mapa = new Map();
-
-    snap.forEach(d => {
-        const x = d.data();
-        const idCierre = String(x.idCierre ?? x.ID_CIERRE ?? x.IDCIERRE ?? d.id).trim() || d.id;
-        const fecha = String(x.fecha ?? x.FECHA ?? '').trim();
-        const real = round2(num(x.realEfectivo ?? x.REAL_EFECTIVO ?? x.real_efectivo ?? 0));
-        const sisTotalRaw = x.sisTotal ?? x.SIS_TOTAL ?? x.sis_total;
-        const sisTotal = round2(sisTotalRaw != null ? num(sisTotalRaw) : 0);
-        const difRaw = x.diferencia ?? x.DIFERENCIA;
-        const diferencia = round2(difRaw != null ? num(difRaw) : (real - sisTotal));
-        const realTransf = round2(num(x.realTransf ?? x.REAL_TRANSF ?? x.real_transf ?? 0));
-        const sisTransf = round2(num(x.sisTransf ?? x.SIS_TRANSF ?? x.sis_transf ?? 0));
-        const difTransfRaw = x.diferenciaTransf ?? x.DIFERENCIA_TRANSF;
-        const diferenciaTransf = round2(difTransfRaw != null ? num(difTransfRaw) : (realTransf - sisTransf));
-        const movs = Array.isArray(x.movimientos) ? x.movimientos.length
-            : Math.max(0, Number(x.cantidadMovimientos ?? x.CANTIDAD_MOVIMIENTOS ?? 0) || 0);
-
-        let g = mapa.get(idCierre);
-        if (!g) {
-            g = {
-                idCierre,
-                fechas: new Set(),
-                chofer: '',
-                auditor: '',
-                hora: '',
-                observaciones: '',
-                realTotal: 0,
-                realTransfTotal: 0,
-                difTotal: 0,
-                difTransfTotal: 0,
-                dias: 0,
-                movsCount: 0,
-                orden: 0
-            };
-            mapa.set(idCierre, g);
-        }
-
-        if (fecha) g.fechas.add(fecha);
-        g.chofer = g.chofer || String(x.chofer ?? x.CHOFER ?? '').trim();
-        g.auditor = g.auditor || String(x.auditor ?? x.AUDITOR ?? '').trim();
-        g.hora = g.hora || String(x.hora ?? x.HORA ?? '').trim();
-        g.observaciones = g.observaciones || String(x.observaciones ?? x.OBSERVACIONES ?? '').trim();
-        g.realTotal += real;
-        g.realTransfTotal += realTransf;
-        g.difTotal += diferencia;
-        g.difTransfTotal += diferenciaTransf;
-        g.dias += 1;
-        g.movsCount += movs;
-        g.orden = Math.max(g.orden, toMs(x.creado ?? x.CREADO) || toMs(x.timestampMs ?? x.TIMESTAMPMS) || parseFecha(fecha));
-    });
-
-    return [...mapa.values()].map(g => {
-        g.fechas = [...g.fechas].sort((a, b) => parseFecha(a) - parseFecha(b));
-        g.fechaMin = g.fechas[0] || '';
-        g.fechaMax = g.fechas[g.fechas.length - 1] || '';
-        g.realTotal = round2(g.realTotal);
-        g.realTransfTotal = round2(g.realTransfTotal);
-        g.difTotal = round2(g.difTotal);
-        g.difTransfTotal = round2(g.difTransfTotal);
-        g.estado = (Math.abs(g.difTotal) > 0.01 || Math.abs(g.difTransfTotal) > 0.01) ? 'DIF' : 'OK';
-        return g;
-    }).sort((a, b) => (b.orden || 0) - (a.orden || 0)).slice(0, 25);
-}
-
-function renderHistorial() {
-    const cont = $('historialBody');
-    if (!cont) return;
-
-    const info = $('historialInfo');
-
-    if (historialError) {
-        if (info) info.textContent = 'ERROR';
-        cont.className = '';
-        cont.innerHTML = `<div class="history-warning">No se pudo leer la colección <b>arqueos</b>: ${esc(historialError.code || historialError.message || 'error de conexión')}. Revisá las reglas de Firestore.</div>`;
-        return;
-    }
-
-    if (!historialCierres.length) {
-        if (info) info.textContent = 'SIN CIERRES';
-        cont.className = 'history-empty';
-        cont.textContent = 'Todavía no hay cierres registrados en el período.';
-        return;
-    }
-
-    if (info) info.textContent = `ÚLTIMOS ${historialCierres.length}`;
-
-    const enlaceBase = `controlfinanzas.html?k=${encodeURIComponent(k || '')}&arqueo=`;
-
-    const filas = historialCierres.map(g => {
-        const rango = (g.fechaMin && g.fechaMax && g.fechaMin !== g.fechaMax)
-            ? `${g.fechaMin} – ${g.fechaMax}`
-            : (g.fechaMin || '—');
-        const estado = g.estado === 'OK'
-            ? '<span class="hist-pill hist-ok">OK</span>'
-            : `<span class="hist-pill hist-dif" title="Efectivo: ${money(g.difTotal, 2)} · Transferencias: ${money(g.difTransfTotal, 2)}">DIF</span>`;
-        const enlace = `${enlaceBase}${encodeURIComponent(g.idCierre)}`;
-
-        return `<tr>
-            <td><div class="history-id">${esc(g.idCierre)}</div><div class="history-meta">${esc(g.auditor || '—')}${g.hora ? ` · ${esc(g.hora)}` : ''}</div></td>
-            <td>${esc(rango)}</td>
-            <td>${esc(g.chofer || '—')}</td>
-            <td class="num">${money(g.realTotal, 2)}</td>
-            <td class="num">${money(g.realTransfTotal, 2)}</td>
-            <td class="num">${estado}</td>
-            <td class="num">${g.dias} / ${g.movsCount}</td>
-            <td><a class="btn-fin" href="${enlace}" target="_blank" rel="noopener" title="Abrir conciliación en Control de Finanzas">Ver en Finanzas</a></td>
-        </tr>`;
-    }).join('');
-
-    cont.className = '';
-    cont.innerHTML = `<div class="history-table-wrap"><table class="history-table">
-        <thead><tr>
-            <th>Cierre</th><th>Fecha</th><th>Chofer</th><th class="num">Real efe.</th><th class="num">Real transf.</th><th class="num">Estado</th><th class="num">Días / mov.</th><th></th>
-        </tr></thead>
-        <tbody>${filas}</tbody>
-    </table></div>`;
 }
 
 function calcularMovimiento(m) {
@@ -856,6 +766,67 @@ function calcularMovimiento(m) {
     return { efectivo, transf, gastos, gastoDetalle };
 }
 
+function cantidadesGarrafas(m) {
+    let c10 = num(m.ALL10), c15 = num(m.ALL15), c45 = num(m.ALL45);
+    if (!c10 && !c15 && !c45) {
+        let arr = [];
+        try { arr = Array.isArray(m.garrafas) ? m.garrafas : JSON.parse(m.garrafas || '[]'); } catch (e) { arr = []; }
+        if (Array.isArray(arr)) {
+            arr.forEach(g => {
+                const tipo = String(g?.tipo ?? g?.TIPO ?? '').replace(/\D/g, '');
+                const cantidad = num(g?.cantidad ?? g?.CANTIDAD);
+                if (tipo === '10') c10 += cantidad;
+                else if (tipo === '15') c15 += cantidad;
+                else if (tipo === '45') c45 += cantidad;
+            });
+        }
+    }
+    return { c10, c15, c45 };
+}
+
+function normalizarVentaArqueo(m, id, fecha, cant) {
+    const tipoNorm = String(m.TIPO || '').toUpperCase();
+    const esGastoDoc = tipoNorm.includes('GAST') || tipoNorm.includes('EGRESO');
+    const gastoDeclarado = Math.abs(num(m.GASTO_TOTAL));
+    const totalBruto = num(m.TOTAL);
+    const efeBruto = num(m['E$']);
+    const tra = num(m['T$']);
+
+    const gasto = esGastoDoc
+        ? (gastoDeclarado > 0 ? gastoDeclarado : Math.abs(totalBruto))
+        : gastoDeclarado;
+
+    const totalNeto = gasto > 0
+        ? (totalBruto < 0 ? (gastoDeclarado > 0 ? -gasto : totalBruto) : totalBruto - gasto)
+        : totalBruto;
+    const efeNeto = gasto > 0
+        ? (efeBruto < 0 ? (gastoDeclarado > 0 ? -gasto : efeBruto) : efeBruto - gasto)
+        : efeBruto;
+
+    const hora = String(m.HORA || '');
+    const hp = hora.split(':').map(Number);
+    const ms = parseFecha(fecha) + ((hp[0] || 0) * 3600 + (hp[1] || 0) * 60 + (hp[2] || 0)) * 1000;
+
+    return {
+        id,
+        fecha,
+        hora,
+        ms,
+        cliente: esGastoDoc
+            ? (String(m.G || m.C || 'GASTO').trim() || 'GASTO')
+            : (String(m.C || m.clienteNombre || '—').trim() || '—'),
+        tipo: m.TIPO || '',
+        esGasto: esGastoDoc,
+        gasto,
+        c10: cant.c10,
+        c15: cant.c15,
+        c45: cant.c45,
+        total: totalNeto,
+        efe: efeNeto,
+        tra
+    };
+}
+
 function renderChoferes() {
     const sel = $('selChofer');
 
@@ -888,7 +859,6 @@ function seleccionarChofer(key) {
     choferActual = key;
     seleccionados.clear();
     $('realEfectivo').value = '';
-    $('realTransf').value = '';
     $('obsArqueo').value = '';
 
     const cont = $('diasContainer');
@@ -919,6 +889,7 @@ function seleccionarChofer(key) {
             <div>
                 <div class="dia-fecha">${esc(g.fecha)}</div>
                 <div class="dia-meta">${g.movs.length} movimiento(s) | ${money(g.efectivo - g.gastos)}</div>
+                <div class="dia-garrafas">10: ${fq(g.g10)} · 15: ${fq(g.g15)} · 45: ${fq(g.g45)}</div>
             </div>`;
 
         const chk = document.createElement('input');
@@ -944,7 +915,7 @@ function seleccionarChofer(key) {
 
 // ---------------- Cálculos ----------------
 function recalcular() {
-    sisData = { efectivo: 0, transf: 0, gastos: 0, total: 0, listaGastos: [], enRuta: false, dias: 0 };
+    sisData = { efectivo: 0, transf: 0, gastos: 0, total: 0, listaGastos: [], enRuta: false, dias: 0, ventas: [], g10: 0, g15: 0, g45: 0 };
 
     const c = gruposPorChofer.get(choferActual);
     if (c) {
@@ -953,18 +924,26 @@ function recalcular() {
             sisData.efectivo += g.efectivo;
             sisData.transf += g.transf;
             sisData.gastos += g.gastos;
+            sisData.g10 += g.g10 || 0;
+            sisData.g15 += g.g15 || 0;
+            sisData.g45 += g.g45 || 0;
             sisData.dias++;
             if (g.listaGastos.length) sisData.listaGastos.push(...g.listaGastos);
+            if (g.detalle && g.detalle.length) sisData.ventas.push(...g.detalle);
         });
         sisData.enRuta = activeDrivers.has(c.usuarioKey);
     }
 
+    sisData.ventas.sort((a, b) => (a.ms || 0) - (b.ms || 0));
     sisData.total = sisData.efectivo - sisData.gastos;
 
     $('sisEfectivo').textContent = money(sisData.efectivo);
     $('sisTransf').textContent = money(sisData.transf);
     $('sisGastos').textContent = `- ${money(sisData.gastos)}`;
     $('sisTotal').textContent = money(sisData.total);
+    $('sisG10').textContent = fq(sisData.g10);
+    $('sisG15').textContent = fq(sisData.g15);
+    $('sisG45').textContent = fq(sisData.g45);
 
     const cardSis = $('cardSistema');
     const alertTag = $('alertRuta');
@@ -990,23 +969,70 @@ function recalcular() {
         divGastos.innerHTML = '';
     }
 
+    renderVentas();
     actualizarDiferencia();
+}
+
+function renderVentas() {
+    const cont = $('ventasBody');
+    const info = $('ventasInfo');
+    const resumen = $('ventasResumen');
+    if (!cont) return;
+
+    const ventas = sisData.ventas || [];
+    if (!ventas.length) {
+        if (info) info.textContent = '0 movimientos';
+        if (resumen) resumen.innerHTML = '';
+        cont.innerHTML = '<div class="ventas-empty">Seleccione un chofer y al menos un día.</div>';
+        return;
+    }
+
+    const total = ventas.reduce((a, v) => a + v.total, 0);
+    const totalEfe = ventas.reduce((a, v) => a + v.efe, 0);
+    const totalTra = ventas.reduce((a, v) => a + v.tra, 0);
+
+    if (info) info.textContent = `${ventas.length} movimiento(s)`;
+    if (resumen) {
+        resumen.innerHTML = `
+            <span class="qty-chip">10 kg <b>${fq(sisData.g10)}</b></span>
+            <span class="qty-chip">15 kg <b>${fq(sisData.g15)}</b></span>
+            <span class="qty-chip">45 kg <b>${fq(sisData.g45)}</b></span>
+            <span class="money-chip total">Total <b>${money(total)}</b></span>
+            <span class="money-chip">Efe <b>${money(totalEfe)}</b></span>
+            <span class="money-chip">Transf <b>${money(totalTra)}</b></span>`;
+    }
+
+    cont.innerHTML = ventas.map(v => {
+        const url = `treeview.html?k=${encodeURIComponent(k || '')}&fecha=${encodeURIComponent(v.fecha)}&mov=${encodeURIComponent(v.id)}`;
+        const fechaHora = [v.fecha, v.hora ? v.hora.slice(0, 5) : ''].filter(Boolean).join(' ');
+        const clienteTxt = v.esGasto && String(v.cliente).toUpperCase() === 'GASTO'
+            ? ''
+            : `<b>${esc(v.cliente)}</b>`;
+        return `<div class="venta-item ${v.esGasto ? 'gasto' : ''}">
+            <div class="venta-top">
+                <div class="venta-cliente">
+                    ${clienteTxt}
+                    ${v.esGasto ? '<span class="gasto-chip">GASTO</span>' : ''}
+                    <span class="venta-fecha">${esc(fechaHora)}</span>
+                </div>
+                <div class="venta-total ${v.total < 0 ? 'neg' : ''}">${money(v.total)}</div>
+            </div>
+            <div class="venta-meta">
+                <span class="qty-chip">10 kg <b>${fq(v.c10)}</b></span>
+                <span class="qty-chip">15 kg <b>${fq(v.c15)}</b></span>
+                <span class="qty-chip">45 kg <b>${fq(v.c45)}</b></span>
+                <span class="money-chip">Efe <b>${money(v.efe)}</b></span>
+                <span class="money-chip">Transf <b>${money(v.tra)}</b></span>
+                <a class="btn-modificar" href="${url}" target="_blank" rel="noopener">✏️ Modificar</a>
+            </div>
+        </div>`;
+    }).join('');
 }
 
 function actualizarDiferencia() {
     const realRaw = $('realEfectivo').value;
     const real = realRaw === '' ? 0 : num(realRaw);
     const diff = round2(real - sisData.total);
-
-    const transfRaw = $('realTransf').value;
-    const realTransf = transfRaw === '' ? 0 : num(transfRaw);
-    const diffTransf = round2(realTransf - sisData.transf);
-    const info = $('transfInfo');
-    info.textContent = `Sistema: ${money(sisData.transf)} · Diferencia: ${money(diffTransf)}`;
-    info.style.color = (transfRaw === '' || Math.abs(diffTransf) <= 0.01)
-        ? 'var(--text-muted)'
-        : 'var(--error)';
-    hayDiferenciaTransf = transfRaw !== '' && Math.abs(diffTransf) > 0.01;
 
     const box = $('resultBox');
     const msg = $('resultMsg');
@@ -1056,13 +1082,7 @@ function validarCierre() {
         return;
     }
 
-    if ($('realTransf').value === '') {
-        btn.disabled = true;
-        btn.textContent = 'INGRESE LAS TRANSFERENCIAS REALES';
-        return;
-    }
-
-    if (hayDiferencia || hayDiferenciaTransf) {
+    if (hayDiferencia) {
         $('lblObs').classList.add('required-label');
         $('obsArqueo').classList.add('required-field');
         $('obsArqueo').placeholder = '⚠️ EXISTE UNA DIFERENCIA. DEBE JUSTIFICAR EL MOTIVO AQUÍ.';
@@ -1084,7 +1104,6 @@ function validarCierre() {
 }
 
 $('realEfectivo').oninput = actualizarDiferencia;
-$('realTransf').oninput = actualizarDiferencia;
 $('obsArqueo').oninput = validarCierre;
 
 $('selPeriodo').onchange = () => {
@@ -1092,7 +1111,6 @@ $('selPeriodo').onchange = () => {
         choferActual = '';
         seleccionados.clear();
         $('realEfectivo').value = '';
-        $('realTransf').value = '';
         $('obsArqueo').value = '';
     }
     cargarDatos();
@@ -1100,7 +1118,7 @@ $('selPeriodo').onchange = () => {
 
 // ---------------- Guardado ----------------
 function mostrarCierreExitoso(datos) {
-    const { idCierre, chofer, realTotal, realTransf, difTotal, difTransf, dias, movs } = datos;
+    const { idCierre, chofer, realTotal, realTransf, difTotal, dias, movs } = datos;
     $('successCierreId').textContent = idCierre;
     $('successChofer').textContent = chofer || '—';
     $('successReal').textContent = money(realTotal, 2);
@@ -1110,10 +1128,6 @@ function mostrarCierreExitoso(datos) {
     const dif = $('successDif');
     dif.textContent = money(difTotal, 2);
     dif.style.color = Math.abs(difTotal) <= 0.01 ? 'var(--ok)' : 'var(--error)';
-
-    const difT = $('successDifTransf');
-    difT.textContent = money(difTransf, 2);
-    difT.style.color = Math.abs(difTransf) <= 0.01 ? 'var(--ok)' : 'var(--error)';
 
     $('successFinLink').href =
         `controlfinanzas.html?k=${encodeURIComponent(k || '')}&arqueo=${encodeURIComponent(idCierre)}`;
@@ -1171,10 +1185,6 @@ function repartirEfectivoReal(seleccion, realTotal) {
     return repartirProporcional(seleccion, realTotal, g => g.efectivo - g.gastos);
 }
 
-function repartirTransfReal(seleccion, realTotal) {
-    return repartirProporcional(seleccion, realTotal, g => g.transf);
-}
-
 $('btnCerrarCaja').onclick = async () => {
     const c = gruposPorChofer.get(choferActual);
     if (!c) return showToast('Seleccione un chofer.', 'error');
@@ -1188,19 +1198,14 @@ $('btnCerrarCaja').onclick = async () => {
     const realRaw = $('realEfectivo').value;
     if (realRaw === '') return showToast('Ingrese el efectivo real.', 'error');
 
-    const realTransfRaw = $('realTransf').value;
-    if (realTransfRaw === '') return showToast('Ingrese las transferencias reales.', 'error');
-
     const realTotal = num(realRaw);
-    const realTransfTotal = num(realTransfRaw);
+    const realTransfTotal = round2(sisData.transf);
     const obs = $('obsArqueo').value.trim();
     const difTotal = round2(realTotal - sisData.total);
-    const difTransf = round2(realTransfTotal - sisData.transf);
 
     if (realTotal < 0) return showToast('El efectivo real no puede ser negativo.', 'error');
-    if (realTransfTotal < 0) return showToast('Las transferencias reales no pueden ser negativas.', 'error');
 
-    if ((Math.abs(difTotal) > 50 || Math.abs(difTransf) > 0.01) && obs.length < 5) {
+    if (Math.abs(difTotal) > 50 && obs.length < 5) {
         return showToast('Debe justificar la diferencia (mínimo 5 caracteres).', 'error');
     }
 
@@ -1214,7 +1219,7 @@ $('btnCerrarCaja').onclick = async () => {
     if (!confirm(
         `¿Confirmar cierre para ${c.nombre} (${seleccion.length} día/s seleccionados)?\n\n` +
         `Efectivo: ${money(realTotal)} (diferencia ${money(difTotal)})\n` +
-        `Transferencias: ${money(realTransfTotal)} (diferencia ${money(difTransf)})`
+        `Transferencias (sistema): ${money(realTransfTotal)}`
     )) return;
 
     const btn = $('btnCerrarCaja');
@@ -1230,7 +1235,7 @@ $('btnCerrarCaja').onclick = async () => {
 
         const batch = writeBatch(db);
         const reparto = repartirEfectivoReal(seleccion, realTotal);
-        const repartoTransf = repartirTransfReal(seleccion, realTransfTotal);
+        const repartoTransf = seleccion.map(g => round2(g.transf));
 
         seleccion.forEach((g, i) => {
             const teorico = round2(g.efectivo - g.gastos);
@@ -1279,7 +1284,7 @@ $('btnCerrarCaja').onclick = async () => {
             hora,
             rubro: 'GAS',
             subrubro: 'ARQUEO DE VENTA',
-            detalle: `Arqueo consolidado (${seleccion.length} día/s) | Chofer: ${plain(c.nombre)} | Efectivo físico: ${money(realTotal)} | Transferencias verificadas: ${money(realTransfTotal)}`,
+            detalle: `Arqueo consolidado (${seleccion.length} día/s) | Chofer: ${plain(c.nombre)} | Efectivo físico: ${money(realTotal)} | Transferencias sistema (revisión manual): ${money(realTransfTotal)}`,
             monto: round2(realTotal),
             chofer: plain(c.nombre),
             choferUsuario: c.usuario,
@@ -1294,9 +1299,9 @@ $('btnCerrarCaja').onclick = async () => {
             arqueoSisTransf: round2(sisData.transf),
             arqueoSisGastos: round2(sisData.gastos),
             arqueoSisTotal: round2(sisData.total),
-            arqueoRealTransf: round2(realTransfTotal),
+            arqueoRealTransf: round2(sisData.transf),
             arqueoDiferencia: round2(difTotal),
-            arqueoDiferenciaTransf: round2(difTransf),
+            arqueoDiferenciaTransf: 0,
             arqueoObservaciones: plain(obs),
             arqueoFechaDesde: seleccion[0]?.fecha || '',
             arqueoFechaHasta: seleccion[seleccion.length - 1]?.fecha || '',
@@ -1314,16 +1319,6 @@ $('btnCerrarCaja').onclick = async () => {
             });
         }
 
-        if (Math.abs(difTransf) > 0.01) {
-            batch.set(doc(collection(db, 'alarmas')), {
-                tipo: 'DIFERENCIA_TRANSFERENCIA',
-                descripcion: `Arqueo ${idCierre}. Chofer: ${plain(c.nombre)}. Transferencias verificadas: ${money(realTransfTotal)} · sistema: ${money(sisData.transf)} · diferencia: ${money(difTransf)}. Obs: ${plain(obs)}`,
-                usuario: auditor,
-                pendiente: true,
-                fecha_hora: serverTimestamp()
-            });
-        }
-
         await batch.commit();
 
         toggleLoader(false);
@@ -1334,7 +1329,6 @@ $('btnCerrarCaja').onclick = async () => {
             realTotal,
             realTransf: realTransfTotal,
             difTotal,
-            difTransf,
             dias: seleccion.length,
             movs: movsTotal
         });
