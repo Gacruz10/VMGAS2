@@ -407,7 +407,6 @@ async function init() {
         if (AUDIO_HABILITADO) iniciarManejadorAudio();
         else { const bx = document.querySelector('.audio-recorder-box'); if (bx) bx.style.display = 'none'; }
         aplicarAutoFoco();
-        actualizarDisponibilidadGastos();
 
         sugerirClientesCercanos();
 
@@ -529,6 +528,14 @@ function cerrarLoader() {
 
 function aplicarAutoFoco() {
     document.querySelectorAll('input').forEach(input => {
+        // Solo los campos numéricos se seleccionan al enfocar. En nombre,
+        // dirección y teléfono se debe poder escribir normalmente.
+        const numerico = String(input.getAttribute('inputmode') || '').toLowerCase() === 'numeric'
+            || input.classList.contains('money-input')
+            || input.classList.contains('garrafa-cantidad')
+            || input.type === 'number';
+        if (!numerico) return;
+
         input.addEventListener('focus', function () {
             setTimeout(() => {
                 try {
@@ -616,36 +623,138 @@ function checkVisibilidadCascada() {
     document.getElementById('seccionesOperativas').style.display = (hasClient || isNew || isGasto) ? 'block' : 'none';
 }
 
-function gastosBloqueadoPorCliente() {
-    return document.getElementById('cliente').value !== "" || document.getElementById('nuevoCliente').checked;
+function limpiarCamposGasto() {
+    const monto = document.getElementById('montoGastos');
+    const desc = document.getElementById('descripcionGastos');
+    if (monto) monto.value = '';
+    if (desc) {
+        desc.value = '';
+        desc.classList.remove('input-error');
+    }
 }
 
-function actualizarDisponibilidadGastos() {
-    const chk = document.getElementById('declaracionGastos');
-    if (!chk) return;
+// Un gasto es una operación independiente: se descarta el cliente y todo lo cargado.
+function limpiarClienteYOperacion() {
+    const cliente = document.getElementById('cliente');
+    const zona = document.getElementById('zona');
+    if (cliente) {
+        cliente.value = '';
+        cliente.innerHTML = '<option value="">Elija Zona</option>';
+    }
+    if (zona) zona.value = '';
+    clienteSeleccionado = null;
+    idClienteSeleccionado = '';
 
-    const contenedor = document.getElementById('chkGastos');
-    const seccion = document.getElementById('sectionGastos');
-    const bloqueado = gastosBloqueadoPorCliente();
+    document.getElementById('clientInfoBox').style.display = 'none';
+    document.getElementById('tipoClienteDisplay').style.display = 'none';
+    document.getElementById('acuerdoDisplay').style.display = 'none';
+    document.getElementById('pagoDeudaContainer').style.display = 'none';
+    document.getElementById('pagoDeuda').checked = false;
+    document.getElementById('sectionPagoDeuda').style.display = 'none';
+    document.getElementById('pagoDeudaDinero').value = '';
 
-    chk.disabled = bloqueado;
-    if (contenedor) {
-        contenedor.style.opacity = bloqueado ? '0.45' : '';
-        contenedor.style.cursor = bloqueado ? 'not-allowed' : '';
-        contenedor.title = bloqueado ? 'No disponible: ya hay un cliente seleccionado' : '';
+    const buscador = document.getElementById('buscadorGlobal');
+    if (buscador) buscador.value = '';
+    document.getElementById('resultadosBusqueda').style.display = 'none';
+
+    limpiarNuevoCliente();
+
+    ['esRetiroEnPlanta', 'ventaPlanta', 'entregaGas', 'ventaEnvases'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.checked = false;
+    });
+    ['sectionPlanta', 'sectionGas', 'sectionEnvases', 'sectionPagoDeuda'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
+    ['cantidadGarrafa1', 'cantidadGarrafa2', 'cantidadGarrafa3',
+        'plantaLlenos10', 'plantaLlenos15', 'plantaLlenos45',
+        'plantaVacios10', 'plantaVacios15', 'plantaVacios45',
+        'cantVentaEnv10', 'cantVentaEnv15', 'cantVentaEnv45',
+        'comodato10', 'comodato15', 'comodato45',
+        'dev10', 'dev15', 'dev45'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = 0;
+        });
+
+    ['flotanteCliente10', 'flotanteCliente15', 'flotanteCliente45'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '0';
+    });
+
+    // El gasto se registra en efectivo: no se cargan medios de pago.
+    ['pagoEfectivo', 'pagoTransferencia'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.checked = false;
+    });
+    document.getElementById('efectivoInput').style.display = 'none';
+    document.getElementById('transferenciaInput').style.display = 'none';
+    document.getElementById('montoEfectivo').value = '';
+    document.getElementById('montoTransferencia').value = '';
+
+    ['manualPriceCheck1', 'manualPriceCheck2', 'manualPriceCheck3', 'precioAutorizadoCheck'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.checked = false;
+    });
+    ['precioGarrafa1', 'precioGarrafa2', 'precioGarrafa3', 'precioVentaEnv10', 'precioVentaEnv15', 'precioVentaEnv45'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.setAttribute('readonly', true);
+    });
+
+    const modo = document.getElementById('modoEnvase');
+    if (modo) {
+        modo.value = 'venta';
+        document.getElementById('uiVentaEnvase').style.display = 'block';
+        document.getElementById('uiComodatoEnvase').style.display = 'none';
     }
 
-    if (bloqueado && chk.checked) {
-        chk.checked = false;
-        if (seccion) seccion.style.display = 'none';
-        document.getElementById('montoGastos').value = '';
-        document.getElementById('descripcionGastos').value = '';
-        document.getElementById('descripcionGastos').classList.remove('input-error');
-        toggleMutuallyExclusive('declaracionGastos');
-        verificarSiNecesitaPin();
-    }
-
+    verificarSiNecesitaPin();
+    actualizarPreciosAutomaticos();
     checkVisibilidadCascada();
+}
+
+function bloquearPorGasto(bloquear) {
+    const controles = [
+        'zona', 'cliente', 'buscadorGlobal', 'nuevoCliente',
+        'esRetiroEnPlanta', 'ventaPlanta', 'entregaGas', 'ventaEnvases',
+        'pagoDeuda', 'pagoEfectivo', 'pagoTransferencia', 'modoEnvase',
+        'manualPriceCheck1', 'manualPriceCheck2', 'manualPriceCheck3',
+        'precioAutorizadoCheck'
+    ];
+    controles.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = !!bloquear;
+    });
+
+    ['selectoresPrincipales', 'nuevoCliente', 'buscadorGlobal'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const cont = id === 'buscadorGlobal'
+            ? el.closest('.search-container')
+            : (el.closest('.checkbox-item') || el);
+        if (!cont) return;
+        cont.style.opacity = bloquear ? '0.45' : '';
+        cont.style.pointerEvents = bloquear ? 'none' : '';
+    });
+
+    ['chkRetiraPlanta', 'chkVentaPlanta', 'chkEntregaGas', 'chkVentaEnvases'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = bloquear ? 'none' : '';
+    });
+
+    const contPagoDeuda = document.getElementById('pagoDeudaContainer');
+    if (contPagoDeuda) contPagoDeuda.style.display = 'none';
+
+    ['pagoEfectivo', 'pagoTransferencia'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const cont = el.closest('.checkbox-item');
+        if (cont) cont.style.display = bloquear ? 'none' : '';
+    });
+
+    document.getElementById('efectivoInput').style.display = 'none';
+    document.getElementById('transferenciaInput').style.display = 'none';
 }
 
 // Al elegir un cliente se descarta cualquier alta de cliente que haya quedado a medio cargar.
@@ -1018,14 +1127,19 @@ function validarPagos(objetivo, esConsignacion) {
         const tel = document.getElementById('nuevoTelefono').value.trim();
         const nZona = document.getElementById('nuevaZona').value;
         const nCat = document.getElementById('categoria').value;
+        const minDatos = 3;
 
-        document.getElementById('nombreCliente').classList.toggle('input-error', !nom);
-        document.getElementById('nuevaDireccion').classList.toggle('input-error', !dir);
-        document.getElementById('nuevoTelefono').classList.toggle('input-error', !tel);
+        const nomOk = nom.length >= minDatos;
+        const dirOk = dir.length >= minDatos;
+        const telOk = tel.replace(/\D/g, '').length >= minDatos;
+
+        document.getElementById('nombreCliente').classList.toggle('input-error', !nomOk);
+        document.getElementById('nuevaDireccion').classList.toggle('input-error', !dirOk);
+        document.getElementById('nuevoTelefono').classList.toggle('input-error', !telOk);
         document.getElementById('nuevaZona').classList.toggle('input-error', !nZona);
         document.getElementById('categoria').classList.toggle('input-error', !nCat);
 
-        if (!nom || !dir || !tel || !nZona || !nCat) {
+        if (!nomOk || !dirOk || !telOk || !nZona || !nCat) {
             el.textContent = "FALTAN DATOS DEL CLIENTE";
             el.className = "payment-counter pending";
             el.classList.remove('clickable');
@@ -1119,7 +1233,7 @@ document.getElementById('zona').onchange = function () {
     document.getElementById('sectionPagoDeuda').style.display = 'none';
     idClienteSeleccionado = '';
     clienteSeleccionado = null;
-    actualizarDisponibilidadGastos(); actualizarTotales();
+    checkVisibilidadCascada(); actualizarTotales();
 };
 
 document.getElementById('cliente').onchange = function () {
@@ -1132,7 +1246,7 @@ document.getElementById('cliente').onchange = function () {
         document.getElementById('sectionPagoDeuda').style.display = 'none';
         idClienteSeleccionado = '';
         clienteSeleccionado = null;
-        actualizarDisponibilidadGastos(); actualizarTotales(); return;
+        checkVisibilidadCascada(); actualizarTotales(); return;
     }
 
     // Si había un alta de cliente a medio cargar, se descarta al elegir un cliente existente.
@@ -1228,7 +1342,7 @@ document.getElementById('cliente').onchange = function () {
         containerPago.style.display = 'none';
     }
 
-    actualizarDisponibilidadGastos(); actualizarPreciosAutomaticos();
+    checkVisibilidadCascada(); actualizarPreciosAutomaticos();
 };
 
 document.getElementById('nuevoCliente').onchange = function () {
@@ -1259,7 +1373,7 @@ document.getElementById('nuevoCliente').onchange = function () {
         document.getElementById('nuevaZona').classList.remove('input-error');
         document.getElementById('categoria').classList.remove('input-error');
     }
-    actualizarDisponibilidadGastos(); actualizarPreciosAutomaticos();
+    checkVisibilidadCascada(); actualizarPreciosAutomaticos();
 };
 
 document.getElementById('categoria').onchange = () => actualizarPreciosAutomaticos();
@@ -1315,7 +1429,23 @@ document.getElementById('ventaPlanta').onclick = () => {
 
 document.getElementById('entregaGas').onclick = () => { document.getElementById('sectionGas').style.display = document.getElementById('entregaGas').checked ? 'block' : 'none'; actualizarTotales(); toggleMutuallyExclusive('entregaGas'); };
 document.getElementById('ventaEnvases').onclick = () => { document.getElementById('sectionEnvases').style.display = document.getElementById('ventaEnvases').checked ? 'block' : 'none'; verificarSiNecesitaPin(); actualizarTotales(); toggleMutuallyExclusive('ventaEnvases'); };
-document.getElementById('declaracionGastos').onclick = () => { document.getElementById('sectionGastos').style.display = document.getElementById('declaracionGastos').checked ? 'block' : 'none'; checkVisibilidadCascada(); verificarSiNecesitaPin(); actualizarTotales(); toggleMutuallyExclusive('declaracionGastos'); };
+document.getElementById('declaracionGastos').onclick = () => {
+    const activo = document.getElementById('declaracionGastos').checked;
+    document.getElementById('sectionGastos').style.display = activo ? 'block' : 'none';
+
+    if (activo) {
+        limpiarClienteYOperacion();
+        bloquearPorGasto(true);
+    } else {
+        limpiarCamposGasto();
+        bloquearPorGasto(false);
+    }
+
+    checkVisibilidadCascada();
+    verificarSiNecesitaPin();
+    actualizarTotales();
+    toggleMutuallyExclusive('declaracionGastos');
+};
 document.getElementById('pagoDeuda').onclick = () => { document.getElementById('sectionPagoDeuda').style.display = document.getElementById('pagoDeuda').checked ? 'block' : 'none'; checkVisibilidadCascada(); actualizarTotales(); };
 document.getElementById('pagoEfectivo').onclick = () => { const on = document.getElementById('pagoEfectivo').checked; document.getElementById('efectivoInput').style.display = on ? 'block' : 'none'; if (!on) document.getElementById('montoEfectivo').value = ''; actualizarTotales(); };
 document.getElementById('pagoTransferencia').onclick = () => { const on = document.getElementById('pagoTransferencia').checked; document.getElementById('transferenciaInput').style.display = on ? 'block' : 'none'; if (!on) document.getElementById('montoTransferencia').value = ''; actualizarTotales(); };
@@ -1869,7 +1999,7 @@ async function guardar() {
         USUARIO_ID: window.idUsuarioFirebase || '',
         G: esGasto ? document.getElementById('descripcionGastos').value : '', GASTO_TOTAL: esGasto ? parseM('montoGastos') : 0,
         declaracionGastos: esGasto, garrafas: JSON.stringify(garrafasArray), pin: pinParaEnviar, esClienteNuevo: esNuevo, clienteNombre: esNuevo ? document.getElementById('nombreCliente').value : '',
-        clienteZona: esNuevo ? document.getElementById('nuevaZona').value : document.getElementById('zona').value, clienteCategoria: cat, clienteDireccion: document.getElementById('nuevaDireccion').value, clienteTelefono: document.getElementById('nuevoTelefono').value, clienteMail: document.getElementById('nuevoMail').value,
+        clienteZona: esGasto ? '' : (esNuevo ? document.getElementById('nuevaZona').value : document.getElementById('zona').value), clienteCategoria: esGasto ? '' : cat, clienteDireccion: esGasto ? '' : document.getElementById('nuevaDireccion').value, clienteTelefono: esGasto ? '' : document.getElementById('nuevoTelefono').value, clienteMail: esGasto ? '' : document.getElementById('nuevoMail').value,
         operacionEnvase: modoEnv,
         ventaDesdePlanta: isRetiroPlanta,
         esFlotante: isModoFlotante,

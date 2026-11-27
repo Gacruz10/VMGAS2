@@ -92,7 +92,7 @@
         <div class="checkbox-item"><input type="checkbox" id="nuevoCliente"><label for="nuevoCliente" class="red-label">ALTA NUEVO CLIENTE</label></div>
 
         <div id="nuevoClienteSection" class="hidden-section">
-            <input type="text" id="nombreCliente" placeholder="Nombre Local / Cliente" style="margin-bottom:10px">
+            <input type="text" id="nombreCliente" minlength="3" placeholder="Nombre Local / Cliente" style="margin-bottom:10px">
             <input type="text" inputmode="numeric" pattern="[0-9]*" id="nuevoCuit" placeholder="CUIT / DNI (Ej: 20-12345678-9)" style="margin-bottom:10px">
 
             <select id="nuevaZona" style="margin-bottom:10px">
@@ -103,15 +103,17 @@
                 <option value="">Seleccione Categoría (Obligatorio)...</option>
             </select>
 
-            <input type="text" id="nuevaDireccion" placeholder="Dirección" style="margin-bottom:10px">
-            <input type="tel" id="nuevoTelefono" placeholder="Teléfono" style="margin-bottom:10px">
+            <input type="text" id="nuevaDireccion" minlength="3" placeholder="Dirección" style="margin-bottom:10px">
+            <input type="tel" id="nuevoTelefono" minlength="3" placeholder="Teléfono" style="margin-bottom:10px">
             <input type="email" id="nuevoMail" placeholder="Email (Opcional)">
+            <div style="margin-top:4px; font-size:12px; color:var(--text-muted);">Nombre, dirección y teléfono: mínimo 3 caracteres.</div>
         </div>
 
         <div class="checkbox-item" id="chkGastos"><input type="checkbox" id="declaracionGastos"><label for="declaracionGastos" class="red-label">DECLARAR GASTO</label></div>
         <div id="sectionGastos" class="hidden-section">
             <input type="text" inputmode="numeric" pattern="[0-9]*" id="montoGastos" placeholder="Monto $" class="money-input">
             <input type="text" id="descripcionGastos" placeholder="Motivo del gasto (OBLIGATORIO)..." style="margin-top:10px">
+            <div style="margin-top:8px; font-size:12px; color:var(--text-muted);">💵 El gasto se registra en efectivo.</div>
         </div>
 
         <div id="seccionesOperativas" style="display:none;">
@@ -252,6 +254,6 @@
         </div>
     </div>
 
-    <script type="module" src="app.js?v=20261122"></script>
+    <script type="module" src="app.js?v=20261126"></script>
 </body>
 </html>
